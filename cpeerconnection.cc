@@ -13,13 +13,20 @@
 using namespace std;
 using namespace webrtc;
 
-void omg() {
-  // PeerChannel clients;
-}
+typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
+const MediaConstraintsInterface* constraints;
 
-CPeerConnection NewPeerConnection() {
+class Callbacks : CreateSessionDescriptionObserver {
+ public:
+  void OnSuccess() {
+  }
+  void OnFailure() {
+  }
+  int AddRef() {}
+  int Release() {}
+};
 
-  const MediaConstraintsInterface* constraints;
+PeerConnection NewPeerConnection() {
 
   rtc::scoped_refptr<PeerConnectionFactoryInterface> pc_factory;
   pc_factory = CreatePeerConnectionFactory();
@@ -41,7 +48,10 @@ CPeerConnection NewPeerConnection() {
   ice_server.uri = "stun:stun.l.google.com:19302";
   ice_servers.push_back(ice_server);
 
-  rtc::scoped_refptr<webrtc::PeerConnectionInterface> pc;
+  cout << ice_server.uri << endl;
+
+  // rtc::scoped_refptr<webrtc::PeerConnectionInterface> pc;
+  PC pc;
   pc = pc_factory->CreatePeerConnection(
     ice_servers,
     constraints,
@@ -50,5 +60,26 @@ CPeerConnection NewPeerConnection() {
     NULL // pc observer
     );
   return (void *)pc;
-  // return NULL;
+  // return pc;
 }
+
+void CreateOffer(PeerConnection pc, void(*onsuccess), void(*onfailure)) {
+  // rtc::scoped_refptr<webrtc::PeerConnectionInterface>pc
+  cout << "[C] CreateOffer callback is " << onsuccess << onfailure << endl;
+  PC *cPC = (PC*)pc;
+  CreateSessionDescriptionObserver obs = new Callbacks();
+  obs.OnSuccess = onsuccess;
+  obs.OnFailure = onfailure;
+  // (CreateSessionDescriptionObserver*)callback;
+  cout << "[c] CreateOffer" << endl;
+  // Constraints...
+  cPC->get()->CreateOffer(obs, NULL);
+  cout << "[c] CreateOffer done" << endl;
+}
+
+void CreateAnswer(PeerConnection pc, void* callback) {
+}
+
+// PeerConnectionInterface::IceServers GetIceServers(PeerConnection pc) {
+  // return pc.ice_servers;
+// }
