@@ -6,15 +6,20 @@ import (
 )
 
 // Prepare a PeerConnection client, and create an offer.
-func TestCreateOffer(*testing.T) {
+func TestCreateOffer(t *testing.T) {
   fmt.Println("Test - [RTCPeerConnection]: CreateOffer")
   r := make(chan bool, 1)
 
   // Pretend to be the "Signalling" thread.
   go func() {
 
-    pc := NewPeerConnection()
-    fmt.Println("PeerConnection: ", pc)
+    pc, err := NewPeerConnection()
+    if (nil != err) {
+      t.Error(err)
+      r <- false
+      t.FailNow()
+    }
+    fmt.Printf("PeerConnection: %+v\n", pc)
 
     success := func () {
       fmt.Println("CreateOffer Succeeded.")
@@ -29,3 +34,5 @@ func TestCreateOffer(*testing.T) {
   <-r
   fmt.Println("Done")
 }
+
+// TODO: Test video / audio stream support.
