@@ -34,41 +34,41 @@ package webrtc
 */
 import "C"
 import (
-  "fmt"
+	"fmt"
 )
 
 type Callback func()
 type Obs func(Callback, Callback)
 
 type RTCPeerConnection struct {
-  // CreateOffer Obs
+	// CreateOffer Obs
 
-  // CreateAnswer func(Callback)
-  // setLocalDescription
-  // localDescription
+	// CreateAnswer func(Callback)
+	// setLocalDescription
+	// localDescription
 
-  // currentLocalDescription
-  // pendingLocalDescription
-  // setRemoteDescription
+	// currentLocalDescription
+	// pendingLocalDescription
+	// setRemoteDescription
 
-  // remoteDescription
-  // currentRemoteDescription
-  // pendingRemoteDescription
-  // addIceCandidate
-  // signalingState
-  // iceGatheringState
-  // iceConnectionState
-  // canTrickleIceCandidates
-  // getConfiguration
-  // setConfiguration
-  // close
-  // onnegotiationneeded
-  OnIceCandidate func()
-  // onsignalingstatechange
-  // oniceconnectionstatechange
-  // onicegatheringstatechange
-  pc C.PeerConnection
-  IceServers string
+	// remoteDescription
+	// currentRemoteDescription
+	// pendingRemoteDescription
+	// addIceCandidate
+	// signalingState
+	// iceGatheringState
+	// iceConnectionState
+	// canTrickleIceCandidates
+	// getConfiguration
+	// setConfiguration
+	// close
+	// onnegotiationneeded
+	OnIceCandidate func()
+	// onsignalingstatechange
+	// oniceconnectionstatechange
+	// onicegatheringstatechange
+	pc         C.PeerConnection
+	IceServers string
 }
 
 // CreateOffer prepares ICE candidates which should be sent to the target
@@ -77,25 +77,32 @@ type RTCPeerConnection struct {
 // TODO: This method blocks until success or failure occurs. Maybe it should
 // be async to the user?
 func (pc RTCPeerConnection) CreateOffer(success Callback, failure Callback) {
-  fmt.Println("[go] creating offer...")
+	fmt.Println("[go] creating offer...")
 
-  // Pass return value from C through a go channel, to allow a goroutine-based
-  // callback paradigm.
-  // TODO(keroserene): Generalize and test this channel-based mechanism.
-  r := make(chan bool, 1)
-  go func() {
-    success := C.CreateOffer(pc.pc)
-    if 0 == success { r <- true
-    } else { r <- false }
-  }()
-  status := <-r
-  fmt.Println("Success: ", status)
-  // Fire callbacks
-  if status { success() }  else { failure() }
+	// Pass return value from C through a go channel, to allow a goroutine-based
+	// callback paradigm.
+	// TODO(keroserene): Generalize and test this channel-based mechanism.
+	r := make(chan bool, 1)
+	go func() {
+		success := C.CreateOffer(pc.pc)
+		if 0 == success {
+			r <- true
+		} else {
+			r <- false
+		}
+	}()
+	status := <-r
+	fmt.Println("Success: ", status)
+	// Fire callbacks
+	if status {
+		success()
+	} else {
+		failure()
+	}
 }
 
 // func createAnswer(pc RTCPeerConnection, c Callback) {
-  // C.CreateAnswer(pc.pc, c)
+// C.CreateAnswer(pc.pc, c)
 // }
 
 // Install a handler for receiving ICE Candidates.
@@ -103,21 +110,21 @@ func (pc RTCPeerConnection) CreateOffer(success Callback, failure Callback) {
 // }
 
 func NewPeerConnection() RTCPeerConnection {
-  var ret RTCPeerConnection
-  ret.pc = C.NewPeerConnection()
-  // ret.IceServers = C.GetIceServers(ret.pc)
-  // Assign "methods"
-  // ret.CreateOffer = func(success Callback, failure Callback) {
-    // createOffer(ret, success, failure)
-  // }
-  // ret.CreateAnswer = func(c Callback) {
-    // createAnswer(ret, c)
-  // }
-  return ret
+	var ret RTCPeerConnection
+	ret.pc = C.NewPeerConnection()
+	// ret.IceServers = C.GetIceServers(ret.pc)
+	// Assign "methods"
+	// ret.CreateOffer = func(success Callback, failure Callback) {
+	// createOffer(ret, success, failure)
+	// }
+	// ret.CreateAnswer = func(c Callback) {
+	// createAnswer(ret, c)
+	// }
+	return ret
 }
 
-
 type RTCSignalingState int
+
 /*
 const {
   stable RTCSignallingState = iota
@@ -136,10 +143,10 @@ type RTCIceCredentialType struct {
 }
 
 type RTCIceServer struct {
-  Urls        string
-  Username    string
-  Credential  string
-  // credentialType   RTCIceCredentialType
+	Urls       string
+	Username   string
+	Credential string
+	// credentialType   RTCIceCredentialType
 }
 
 type RTCIceTransportPolicy struct {
