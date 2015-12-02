@@ -2,3 +2,11 @@ machine:
   pre:
     - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
     - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+
+dependencies:
+  post:
+    - go get -u github.com/jstemmer/go-junit-report
+
+test:
+  override:
+    - go test -v -race | tee /dev/tty | go-junit-report > $CIRCLE_TEST_REPORTS/gotests
