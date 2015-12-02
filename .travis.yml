@@ -1,7 +1,19 @@
 language: go
 
+addons:
+  apt:
+    sources:
+    - r-packages-precise
+    packages:
+    - gcc-4.8
+    - g++-4.8
+
 go:
   - tip
 
+compiler:
+  - gcc
+
 script:
+  - gcc -v
   - go test

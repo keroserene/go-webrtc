@@ -19,7 +19,8 @@ package webrtc
 
 /*
 #cgo CPPFLAGS: -Ithird_party/libwebrtc/
-#cgo CXXFLAGS: -std=gnu++11 -Wno-c++0x-extensions
+#cgo CXXFLAGS: -std=c++0x
+// -Wno-c++0x-extensions
 #cgo LDFLAGS: -Wl,-z,now -Wl,-z,relro -Wl,--fatal-warnings -Wl,-z,defs -pthread
 #cgo LDFLAGS: -Wl,-z,noexecstack -fPIC -fuse-ld=gold
 #cgo LDFLAGS: -Bbin
