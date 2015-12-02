@@ -7,14 +7,16 @@
 extern "C" {
 #endif
 
+  typedef void (*Callback)();
+
   typedef void* PeerConnection;
   PeerConnection NewPeerConnection();
 
   // PeerConnectionInterface::IceServers
   void* GetIceServers(PeerConnection pc);
 
-
-  void CreateOffer(PeerConnection pc, void* callback);
+  // void CreateOffer(PeerConnection pc, Callback onsuccess, Callback onfailure);
+  int CreateOffer(PeerConnection pc);
   void CreateAnswer(PeerConnection pc, void* callback);
 
 #ifdef __cplusplus

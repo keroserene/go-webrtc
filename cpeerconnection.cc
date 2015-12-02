@@ -10,20 +10,43 @@
 #include "talk/app/webrtc/peerconnectioninterface.h"
 #include <iostream>
 
+#define SUCCESS 0
+#define FAILURE 1
+
 using namespace std;
 using namespace webrtc;
 
 typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
 const MediaConstraintsInterface* constraints;
 
+/*
+ * Stub out all callbacks to become blocking, and return boolean success / fail.
+ * Since the user wants to write go code, it'd be better to support goroutines
+ * instead of callbacks.
+ * This prevents the complication of casting Go function pointers and
+ * then dealing with the risk of concurrently calling Go code from C from Go...
+ * Which should be a much easier and safer for users of this library.
+ * TODO(keroserene): Expand on this if there are more complicated callbacks.
+ */
 class Callbacks : CreateSessionDescriptionObserver {
  public:
-  void OnSuccess() {
+  // void (*SuccessCallback)() = NULL;
+  // void (*FailureCallback)() = NULL;
+  Callback SuccessCallback = NULL;
+  Callback FailureCallback = NULL;
+  void OnSuccess(SessionDescriptionInterface* desc) {
+    cout << "success" << endl;
+    if (this->SuccessCallback) {
+      this->SuccessCallback();
+    }
   }
-  void OnFailure() {
+  void OnFailure(const std::string& error) {
+    if (this->FailureCallback) {
+      this->FailureCallback();
+    }
   }
-  int AddRef() {}
-  int Release() {}
+  int AddRef() const {}
+  int Release() const {}
 };
 
 PeerConnection NewPeerConnection() {
@@ -63,18 +86,21 @@ PeerConnection NewPeerConnection() {
   // return pc;
 }
 
-void CreateOffer(PeerConnection pc, void(*onsuccess), void(*onfailure)) {
+// void CreateOffer(PeerConnection pc, Callback onsuccess, Callback onfailure) {
+/*
+ * Blocking version of CreateOffer:
+ * Returns 0 on success, -1 on failure.
+ */
+int CreateOffer(PeerConnection pc) {
   // rtc::scoped_refptr<webrtc::PeerConnectionInterface>pc
-  cout << "[C] CreateOffer callback is " << onsuccess << onfailure << endl;
   PC *cPC = (PC*)pc;
-  CreateSessionDescriptionObserver obs = new Callbacks();
-  obs.OnSuccess = onsuccess;
-  obs.OnFailure = onfailure;
+  Callbacks *obs = new Callbacks();
   // (CreateSessionDescriptionObserver*)callback;
   cout << "[c] CreateOffer" << endl;
   // Constraints...
-  cPC->get()->CreateOffer(obs, NULL);
+  // cPC->get()->CreateOffer((CreateSessionDescriptionObserver*)obs, NULL);
   cout << "[c] CreateOffer done" << endl;
+  return SUCCESS;
 }
 
 void CreateAnswer(PeerConnection pc, void* callback) {

@@ -22,15 +22,17 @@ package webrtc
 */
 import "C"
 import (
-  "unsafe"
+  // "unsafe"
   "fmt"
 )
 
 type Callback func()
+type Obs func(Callback, Callback)
 
 type RTCPeerConnection struct {
-  CreateOffer func(Callback, Callback)
-  CreateAnswer func(Callback)
+  // CreateOffer Obs
+
+  // CreateAnswer func(Callback)
   // setLocalDescription
   // localDescription
 
@@ -41,7 +43,6 @@ type RTCPeerConnection struct {
   // remoteDescription
   // currentRemoteDescription
   // pendingRemoteDescription
-
   // addIceCandidate
   // signalingState
   // iceGatheringState
@@ -50,7 +51,6 @@ type RTCPeerConnection struct {
   // getConfiguration
   // setConfiguration
   // close
-
   // onnegotiationneeded
   OnIceCandidate func()
   // onsignalingstatechange
@@ -60,10 +60,36 @@ type RTCPeerConnection struct {
   IceServers string
 }
 
-func createOffer(pc RTCPeerConnection, success Callback, fail Callback) {
+func (pc RTCPeerConnection) CreateOffer(success Callback, failure Callback) {
   fmt.Println("[go] creating offer...")
-  C.CreateOffer(pc.pc, unsafe.Pointer(&c))
+  // C.CreateOffer(pc.pc, unsafe.Pointer(&success), unsafe.Pointer(&failure))
+  // C.CreateOffer(pc.pc, C.Callback(success), C.Callback(failure))
+  // C.CreateOffer(pc.pc, C.Callback(unsafe.Pointer(success)), failure)
+
+  // Use channels to pass the boolean result from the C callbacks, allowing
+  // the goroutine-only paradigm.
+  r := make(chan bool, 1)
+  go func() {
+    success := C.CreateOffer(pc.pc)
+    if 0 == success {
+      r <- true
+    } else {
+      r <- false
+    }
+  }()
+  status := <-r
+  fmt.Println("Success: ", status)
+                // C.Callback(unsafe.Pointer(&success)),
+                // C.Callback(unsafe.Pointer(&failure)))
 }
+
+// func createOffer(pc RTCPeerConnection, success Callback, failure Callback) {
+  // fmt.Println("[go] creating offer...")
+  // C.CreateOffer(pc.pc, unsafe.Pointer(&success), unsafe.Pointer(&failure))
+  // C.CreateOffer(pc.pc, unsafe.Pointer(success), unsafe.Pointer(failure))
+  // C.CreateOffer(pc.pc, C.Callback(unsafe.Pointer(success)), C.Callback(failure))
+  // C.CreateOffer(pc.pc, C.Callback(unsafe.Pointer(success)), C.Callback(failure))
+// }
 
 // func createAnswer(pc RTCPeerConnection, c Callback) {
   // C.CreateAnswer(pc.pc, c)
@@ -78,9 +104,9 @@ func NewPeerConnection() RTCPeerConnection {
   ret.pc = C.NewPeerConnection()
   // ret.IceServers = C.GetIceServers(ret.pc)
   // Assign "methods"
-  ret.CreateOffer = func(c Callback) {
-    createOffer(ret, c)
-  }
+  // ret.CreateOffer = func(success Callback, failure Callback) {
+    // createOffer(ret, success, failure)
+  // }
   // ret.CreateAnswer = func(c Callback) {
     // createAnswer(ret, c)
   // }
