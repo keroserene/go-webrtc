@@ -4,6 +4,7 @@ addons:
   apt:
     sources:
     - r-packages-precise
+    - ubuntu-toolchain-r-rest
     packages:
     - gcc-4.8
     - g++-4.8
