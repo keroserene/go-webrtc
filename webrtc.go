@@ -81,7 +81,6 @@ type PeerConnection struct {
 // be async to the user?
 func (pc PeerConnection) CreateOffer(success Callback, failure Callback) {
 	fmt.Println("[go] creating offer...")
-
 	// Pass return value from C through a go channel, to allow a goroutine-based
 	// callback paradigm.
 	// TODO(keroserene): Generalize and test this channel-based mechanism.
@@ -113,7 +112,6 @@ func (pc PeerConnection) CreateOffer(success Callback, failure Callback) {
 // }
 
 func NewPeerConnection() (PeerConnection, error) {
-	// ret := new(PeerConnection)
 	var ret PeerConnection
 	ret.pc = C.NewPeerConnection()
 	if nil == ret.pc {
@@ -161,6 +159,3 @@ type RTCIceTransportPolicy struct {
 
 type RTCBundlePolicy struct {
 }
-
-// func main() {
-// }
