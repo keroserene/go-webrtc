@@ -19,55 +19,92 @@ using namespace webrtc;
 
 typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
 
-const MediaConstraintsInterface* constraints;
+// Peer acts as the glue between go and native code PeerConnectionInterface.
+// However, it is not directly accessible through cgo.
+class Peer
+  : public CreateSessionDescriptionObserver,
+    public PeerConnectionObserver {
 
-/*
- * Stub out all callbacks to become blocking, and return boolean success / fail.
- * Since the user wants to write go code, it'd be better to support goroutines
- * instead of callbacks.
- * This prevents the complication of casting Go function pointers and
- * then dealing with the risk of concurrently calling Go code from C from Go...
- * Which should be a much easier and safer for users of this library.
- * TODO(keroserene): Expand on this if there are more complicated callbacks.
- */
-class Callbacks : public CreateSessionDescriptionObserver {
  public:
-  // void (*SuccessCallback)() = NULL;
-  // void (*FailureCallback)() = NULL;
+
+  /*
+   * Stub out all callbacks to become blocking, and return boolean success / fail.
+   * Since the user wants to write go code, it'd be better to support goroutines
+   * instead of callbacks.
+   * This prevents the complication of casting Go function pointers and
+   * then dealing with the risk of concurrently calling Go code from C from Go...
+   * Which should be a much easier and safer for users of this library.
+   * TODO(keroserene): Expand on this if there are more complicated callbacks.
+   */
   Callback SuccessCallback = NULL;
   Callback FailureCallback = NULL;
+
+  // CreateSessionDescriptionObserver implementation
   void OnSuccess(SessionDescriptionInterface* desc) {
     cout << "success" << endl;
-    if (this->SuccessCallback) {
-      this->SuccessCallback();
-    }
+    // if (this->SuccessCallback) {
+      // this->SuccessCallback();
+    // }
   }
   void OnFailure(const std::string& error) {
-    if (this->FailureCallback) {
-      this->FailureCallback();
-    }
+    cout << "failure" << endl;
+    // if (this->FailureCallback) {
+      // this->FailureCallback();
+    // }
   }
   int AddRef() const {}
   int Release() const {}
+
+  // PeerConnectionObserver Implementation
+  void OnStateChange(PeerConnectionObserver::StateType state) {
+    cout << "OnStateChange" << endl;
+  }
+
+  void OnAddStream(webrtc::MediaStreamInterface* stream) {
+    cout << "OnAddStream" << endl;
+  }
+
+  void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
+    cout << "OnRemoveStream" << endl;
+  }
+
+  void OnRenegotiationNeeded() {
+    cout << "OnRenegotiationNeeded" << endl;
+  }
+
+  void OnIceCandidate(const IceCandidateInterface* candidate) {
+    cout << "OnIceCandidate" << endl;
+  }
+
+  void OnDataChannel(DataChannelInterface* data_channel) {
+    cout << "OnDataChannel" << endl;
+  }
+
+  PeerConnectionInterface::RTCConfiguration *config;
+  PeerConnectionInterface::RTCOfferAnswerOptions options;
+  const MediaConstraintsInterface* constraints;
+
+  PC pc_;  // This scoped_refptr must live in an object of some sort, or it will
+           // be prematurely deallocated.
+
 };
 
-// class Peer : public PeerConnectionClientObserver {
-// };
+// TODO: Wrap as much as possible within the Peer class?
+Peer *peer;
 
-// TODO: Wrap everything in here in a "Peer" class.
-Callbacks *obs = new Callbacks();
-PC pc = NULL;
 
 // Create and return a PeerConnection object.
 PeerConnection NewPeerConnection() {
 
   rtc::scoped_refptr<PeerConnectionFactoryInterface> pc_factory;
+  // TODO: Need to use a different constructor, later.
   pc_factory = CreatePeerConnectionFactory();
   if (!pc_factory.get()) {
     cout << "ERROR: Could not create PeerConnectionFactory" << endl;
     return NULL;
   }
-  PortAllocatorFactoryInterface *allocator;
+  // PortAllocatorFactoryInterface *allocator;
+  peer = new Peer();
 
   // TODO: prepare and expose IceServers for real.
   PeerConnectionInterface::IceServers ice_servers;
@@ -75,69 +112,45 @@ PeerConnection NewPeerConnection() {
   ice_server.uri = "stun:stun.l.google.com:19302";
   ice_servers.push_back(ice_server);
 
-  // cout << ice_server.uri << endl;
-
   // Prepare RTC Configuration object. This is just the default one, for now.
   // TODO: A Go struct that can be passed and converted here.
-  cout << "Preparing RTCConfiguration..." << endl;
-  // TODO: Memory leak...
-  PeerConnectionInterface::RTCConfiguration *config = new
-      PeerConnectionInterface::RTCConfiguration();
-  config->servers = ice_servers;
-  // TODO(keroserene): DTLS Certificates
+  // TODO: Memory leak.
+  peer->config = new PeerConnectionInterface::RTCConfiguration();
+  peer->config->servers = ice_servers;
+  cout << "Preparing RTCConfiguration..." << peer->config << endl;
+  // TODO: DTLS Certificates
 
-  /* Apparently this is the to-be-deprecated way...
-  pc = pc_factory->CreatePeerConnection(
-    ice_servers,
-    constraints,
-    allocator,  // port allocator,
-    NULL, // dtls
-    NULL // pc observer
-    );
-  */
-
-  // rtc::scoped_refptr<webrtc::PeerConnectionInterface> pc;
-  pc = pc_factory->CreatePeerConnection(
-    *config,
-    constraints,
+  // Prepare a native PeerConnection object.
+  peer->pc_ = pc_factory->CreatePeerConnection(
+    *peer->config,
+    peer->constraints,
     NULL, // port allocator
     NULL, // dtls
-    NULL  // pc observer TODO: This might be mandatory.
+    peer
     );
-  if (!pc.get()) {
+  if (!peer->pc_.get()) {
     cout << "ERROR: Could not create PeerConnection." << endl;
-    fflush(stdout);
-    sleep(1);
     return NULL;
   }
-  // return (void *)pc;
-  cout << "Made a PeerConnection! " << pc << endl;
-  cout << "Callbacks Observer is at " << obs << endl;
-  return pc;
+  cout << "[C] Made a PeerConnection: " << peer->pc_ << endl;
+  return (PeerConnection)peer;
 }
 
-// void CreateOffer(PeerConnection pc, Callback onsuccess, Callback onfailure) {
-/*
- * Blocking version of CreateOffer:
- * Returns 0 on success, -1 on failure.
- */
+
+// Blocking version of CreateOffer (or, will be soon)
+// Returns 0 on success, -1 on failure.
 int CreateOffer(PeerConnection pc) {
-  // rtc::scoped_refptr<webrtc::PeerConnectionInterface>pc
-  PC *cPC = (PC*)pc;
-  // (CreateSessionDescriptionObserver*)callback;
-  cout << "[c] CreateOffer" << endl;
-  // Constraints...
-  // cPC->get()->CreateOffer((CreateSessionDescriptionObserver*)obs, NULL);
-  // cPC->get()->CreateOffer(NULL, NULL);
-  fflush(stdout);
-  sleep(3);
-  cout << "[c] CreateOffer done! :)" << endl;
+  PC cPC = ((Peer*)pc)->pc_;
+  cout << "[C] CreateOffer" << peer << endl;
+
+  // TODO: Provide an actual RTCOfferOptions as an argument.
+  cPC->CreateOffer(peer, peer->options);
+
+  // TODO: Up in PeerConnectionFactory, should probably use custom threads in
+  // order for the callbacks to be *actually* registered correctly.
+  cout << "[C] CreateOffer done! :)" << endl;
   return SUCCESS;
 }
 
 void CreateAnswer(PeerConnection pc, void* callback) {
 }
-
-// PeerConnectionInterface::IceServers GetIceServers(PeerConnection pc) {
-  // return pc.ice_servers;
-// }
