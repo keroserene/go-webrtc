@@ -15,7 +15,6 @@ extern "C" {
   // PeerConnectionInterface::IceServers
   void* GetIceServers(PeerConnection pc);
 
-  // void CreateOffer(PeerConnection pc, Callback onsuccess, Callback onfailure);
   int CreateOffer(PeerConnection pc);
   void CreateAnswer(PeerConnection pc, void* callback);
 

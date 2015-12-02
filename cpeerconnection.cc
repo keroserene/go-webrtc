@@ -71,7 +71,7 @@ PeerConnection NewPeerConnection() {
   ice_server.uri = "stun:stun.l.google.com:19302";
   ice_servers.push_back(ice_server);
 
-  cout << ice_server.uri << endl;
+  // cout << ice_server.uri << endl;
 
   // rtc::scoped_refptr<webrtc::PeerConnectionInterface> pc;
   PC pc;
@@ -98,7 +98,8 @@ int CreateOffer(PeerConnection pc) {
   // (CreateSessionDescriptionObserver*)callback;
   cout << "[c] CreateOffer" << endl;
   // Constraints...
-  // cPC->get()->CreateOffer((CreateSessionDescriptionObserver*)obs, NULL);
+  cPC->get()->CreateOffer((CreateSessionDescriptionObserver*)obs, NULL);
+  sleep(3);
   cout << "[c] CreateOffer done" << endl;
   return SUCCESS;
 }

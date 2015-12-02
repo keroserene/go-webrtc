@@ -1,4 +1,16 @@
-// Go wrapper for libwebrtc.
+/*
+Package webrtc is a golang wrapper for libwebrtc.
+
+To provide an easier experience for users of this package, there are differences
+inherent in the interface written here and the original native code WebRTC. This
+allows users to use WebRTC in a more idiomatic golang way. For example, callback
+mechanism has a layer of indirection that allows goroutines instead.
+
+There is also a complication in building the dependent static library for this
+to work. More later...
+
+TODO(keroserene): More package documentation, and documentation in general.
+*/
 package webrtc
 
 /*
@@ -22,7 +34,6 @@ package webrtc
 */
 import "C"
 import (
-  // "unsafe"
   "fmt"
 )
 
@@ -60,36 +71,28 @@ type RTCPeerConnection struct {
   IceServers string
 }
 
+// CreateOffer prepares ICE candidates which should be sent to the target
+// peer over a signalling channel.
+//
+// TODO: This method blocks until success or failure occurs. Maybe it should
+// be async to the user?
 func (pc RTCPeerConnection) CreateOffer(success Callback, failure Callback) {
   fmt.Println("[go] creating offer...")
-  // C.CreateOffer(pc.pc, unsafe.Pointer(&success), unsafe.Pointer(&failure))
-  // C.CreateOffer(pc.pc, C.Callback(success), C.Callback(failure))
-  // C.CreateOffer(pc.pc, C.Callback(unsafe.Pointer(success)), failure)
 
-  // Use channels to pass the boolean result from the C callbacks, allowing
-  // the goroutine-only paradigm.
+  // Pass return value from C through a go channel, to allow a goroutine-based
+  // callback paradigm.
+  // TODO(keroserene): Generalize and test this channel-based mechanism.
   r := make(chan bool, 1)
   go func() {
     success := C.CreateOffer(pc.pc)
-    if 0 == success {
-      r <- true
-    } else {
-      r <- false
-    }
+    if 0 == success { r <- true
+    } else { r <- false }
   }()
   status := <-r
   fmt.Println("Success: ", status)
-                // C.Callback(unsafe.Pointer(&success)),
-                // C.Callback(unsafe.Pointer(&failure)))
+  // Fire callbacks
+  if status { success() }  else { failure() }
 }
-
-// func createOffer(pc RTCPeerConnection, success Callback, failure Callback) {
-  // fmt.Println("[go] creating offer...")
-  // C.CreateOffer(pc.pc, unsafe.Pointer(&success), unsafe.Pointer(&failure))
-  // C.CreateOffer(pc.pc, unsafe.Pointer(success), unsafe.Pointer(failure))
-  // C.CreateOffer(pc.pc, C.Callback(unsafe.Pointer(success)), C.Callback(failure))
-  // C.CreateOffer(pc.pc, C.Callback(unsafe.Pointer(success)), C.Callback(failure))
-// }
 
 // func createAnswer(pc RTCPeerConnection, c Callback) {
   // C.CreateAnswer(pc.pc, c)
