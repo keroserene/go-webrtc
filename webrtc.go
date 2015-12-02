@@ -22,7 +22,7 @@ package webrtc
 #cgo CXXFLAGS: -std=gnu++11 -Wno-c++0x-extensions
 #cgo LDFLAGS: -Wl,-z,now -Wl,-z,relro -Wl,--fatal-warnings -Wl,-z,defs -pthread
 #cgo LDFLAGS: -Wl,-z,noexecstack -fPIC -fuse-ld=gold
-#cgo LDFLAGS: -B/home/serene/code/webrtc-check/src/third_party/binutils/Linux_x64/Release/bin
+#cgo LDFLAGS: -Bbin
 #cgo LDFLAGS: -Wl,--disable-new-dtags -pthread -m64 -Wl,--detect-odr-violations
 // #cgo LDFLAGS: -Wl,--icf=all -Wl,-O1 -Wl,--as-needed -Wl,--gc-sections
 #cgo LDFLAGS: -Llib
