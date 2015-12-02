@@ -117,7 +117,7 @@ PeerConnection NewPeerConnection() {
   // TODO: Memory leak.
   peer->config = new PeerConnectionInterface::RTCConfiguration();
   peer->config->servers = ice_servers;
-  cout << "Preparing RTCConfiguration..." << peer->config << endl;
+  // cout << "Preparing RTCConfiguration..." << peer->config << endl;
   // TODO: DTLS Certificates
 
   // Prepare a native PeerConnection object.
@@ -148,7 +148,7 @@ int CreateOffer(PeerConnection pc) {
 
   // TODO: Up in PeerConnectionFactory, should probably use custom threads in
   // order for the callbacks to be *actually* registered correctly.
-  cout << "[C] CreateOffer done! :)" << endl;
+  cout << "[C] CreateOffer done!" << endl;
   return SUCCESS;
 }
 
