@@ -20,7 +20,7 @@ extern "C" {
   void* GetIceServers(PeerConnection pc);
 
   int CreateOffer(PeerConnection pc);
-  void CreateAnswer(PeerConnection pc, void* callback);
+  int CreateAnswer(PeerConnection pc);
 
 #ifdef __cplusplus
 }

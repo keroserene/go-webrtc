@@ -95,8 +95,6 @@ func (pc PeerConnection) CreateOffer(success Callback, failure Callback) {
 		}
 	}()
 	status := <-r
-	fmt.Println("Success: ", status)
-	// Fire callbacks
 	if status {
 		success()
 	} else {

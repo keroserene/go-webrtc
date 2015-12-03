@@ -9,4 +9,4 @@ dependencies:
 
 test:
   override:
-    - go test -v -race | tee /dev/tty | go-junit-report > $CIRCLE_TEST_REPORTS/gotests
+    - go test -v -race | tee /dev/tty | go-junit-report > $CIRCLE_TEST_REPORTS/tests.xml

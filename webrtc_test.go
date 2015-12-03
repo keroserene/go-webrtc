@@ -3,24 +3,30 @@ package webrtc
 import (
 	"fmt"
 	"testing"
+	"runtime"
 )
+
+// TODO: Try Gucumber or some other fancier test framework.
 
 var pc PeerConnection
 var err error
 
-// Prepare a PeerConnection client, and create an offer.
+// runtime.GOMAXPROCS = 3
+// Create a PeerConnection object.
 func TestCreatePeerConnection(t *testing.T) {
-	fmt.Println("\nTest: [PeerConnection] Creating")
+	fmt.Println(runtime.NumCPU())
+	x := runtime.GOMAXPROCS(4)
+	fmt.Println(x)
 	pc, err = NewPeerConnection()
 	if nil != err {
 		t.Fatal(err)
 	}
-	// fmt.Printf("PeerConnection: %+v\n", pc)
 }
 
+// Use the PeerConnection client from above to create an offer,
+// and see if an SDP is generated in the callback.
 func TestCreateOffer(t *testing.T) {
-	fmt.Println("\nTest: [PeerConnection] CreateOffer")
-	r := make(chan bool, 1)
+	r := make(chan bool, 2)
 
 	// Pretend to be the "Signalling" thread.
 	go func() {
@@ -37,4 +43,5 @@ func TestCreateOffer(t *testing.T) {
 	fmt.Println("Done\n")
 }
 
+// func Test	
 // TODO: Test video / audio stream support.
