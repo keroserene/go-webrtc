@@ -3,7 +3,6 @@ package webrtc
 import (
 	"fmt"
 	"testing"
-	"runtime"
 )
 
 // TODO: Try Gucumber or some other fancier test framework.
@@ -14,9 +13,9 @@ var err error
 // runtime.GOMAXPROCS = 3
 // Create a PeerConnection object.
 func TestCreatePeerConnection(t *testing.T) {
-	fmt.Println(runtime.NumCPU())
-	x := runtime.GOMAXPROCS(4)
-	fmt.Println(x)
+
+	StartPeerLoop()
+
 	pc, err = NewPeerConnection()
 	if nil != err {
 		t.Fatal(err)
@@ -31,10 +30,10 @@ func TestCreateOffer(t *testing.T) {
 	// Pretend to be the "Signalling" thread.
 	go func() {
 		success := func() {
-			fmt.Println("CreateOffer Succeeded.")
+			fmt.Println("success!")
 		}
 		failure := func() {
-			fmt.Println("CreateOffer Failed.")
+			t.Error("CreateOffer failed...")
 		}
 		pc.CreateOffer(success, failure)
 		r <- true

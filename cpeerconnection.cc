@@ -8,12 +8,14 @@
 // #include "talk/app/webrtc/peerconnection.h"
 // #include "talk/app/webrtc/peerconnectionfactory.h"
 #include "talk/app/webrtc/peerconnectioninterface.h"
+#include "talk/app/webrtc/test/fakeconstraints.h"
 #include <iostream>
 #include <unistd.h>
 #include <future>
 
 #define SUCCESS 0
 #define FAILURE 1
+#define TIMEOUT_SECS 3
 
 using namespace std;
 using namespace webrtc;
@@ -34,6 +36,7 @@ class Peer
     // OnSDP = async(launch::async, &Peer::OnSuccess, this);
     promiseSDP = promise<SDP>();
     // promiseSDP.set_value(NULL);
+    cout << "go webrtc Peer initialized" << endl;
   }
 
   /*
@@ -47,7 +50,6 @@ class Peer
    */
   Callback SuccessCallback = NULL;
   Callback FailureCallback = NULL;
-
 
   //
   // CreateSessionDescriptionObserver implementation
@@ -69,6 +71,7 @@ class Peer
 
   //
   // PeerConnectionObserver Implementation
+  // TODO: cgo hooks
   //
   void OnStateChange(PeerConnectionObserver::StateType state) {
     cout << "OnStateChange" << endl;
@@ -98,8 +101,7 @@ class Peer
   PeerConnectionInterface::RTCOfferAnswerOptions options;
   const MediaConstraintsInterface* constraints;
 
-  PC pc_;  // This scoped_refptr must live in an object of some sort, or it will
-           // be prematurely deallocated.
+  PC pc_;
 
   // Passing SDPs through promises instead of callbacks.
   future<SDP> OnSDP;
@@ -114,12 +116,28 @@ class Peer
 rtc::scoped_refptr<Peer> peer;
 
 
-// Create and return a PeerConnection object.
-// This cannot be a method in |Peer|, because this must be accessible to cgo.
-PeerConnection NewPeerConnection() {
+// Expected this to be within the separate signalling thread, so nothing
+// disappears.
+void Initialize() {
   // peer = new Peer();
   peer = new rtc::RefCountedObject<Peer>();
   peer->Initialize();
+  FakeConstraints constraints;
+  // TODO: DTLS
+  constraints.AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp,
+      "false");
+  peer->constraints = &constraints;
+  // Main loop
+  while (1) {
+    sleep(5);
+    cout << "Peer loop 5s elapsed" << endl;
+  }
+}
+
+
+// Create and return a PeerConnection object.
+// This cannot be a method in |Peer|, because this must be accessible to cgo.
+CGOPeer NewPeerConnection() {
   // TODO: Maybe need to use the more complex constructor with rtc::threads.
   peer->pc_factory = CreatePeerConnectionFactory();
   if (!peer->pc_factory.get()) {
@@ -137,7 +155,6 @@ PeerConnection NewPeerConnection() {
   // TODO: A Go struct that can be passed and converted here.
   peer->config = new PeerConnectionInterface::RTCConfiguration();
   peer->config->servers = peer->ice_servers;
-  // cout << "Preparing RTCConfiguration..." << peer->config << endl;
 
   // Prepare a native PeerConnection object.
   peer->pc_ = peer->pc_factory->CreatePeerConnection(
@@ -152,32 +169,43 @@ PeerConnection NewPeerConnection() {
     return NULL;
   }
   cout << "[C] Made a PeerConnection: " << peer->pc_ << endl;
-  return (PeerConnection)peer;
+  return (CGOPeer)peer;
 }
 
 
 // Blocking version of CreateOffer (or, will be soon)
 // Returns 0 on success, -1 on failure.
-int CreateOffer(PeerConnection pc) {
+int CGOCreateOffer(CGOPeer pc) {
   PC cPC = ((Peer*)pc)->pc_;
-  cout << "[C] CreateOffer" << peer << endl;
+  // cout << "[C] CreateOffer peer at: " << peer << peer->pc_
+       // << " vs " << pc << cPC << endl;
 
   auto r = peer->promiseSDP.get_future();
   // TODO: Provide an actual RTCOfferOptions as an argument.
-  cPC->CreateOffer(peer, peer->options);
-  // sleep(5);
+  // cPC->CreateOffer(peer, peer->options);
+
+  // auto p = peer->pc_;
+  // p->CreateOffer(peer, peer->options);
+  // webrtc::PeerConnection::CreateOffer(p, p, peer->options);
+  // peer->pc_->CreateOffer(peer, peer->options);
+  peer->pc_->CreateOffer(peer.get(), NULL);
   // peer->promiseSDP.set_value(NULL);
   // async(cPC->CreateOffer(peer, peer->options);
   // async(&PeerConnectionInterface::CreateOffer, cPC, peer, peer->options);
   // TODO: Up in PeerConnectionFactory, should probably use custom threads in
   // order for the callbacks to be *actually* registered correctly.
-  SDP sdp = r.get();  // blocking
-  // SDP sdp = OnSDP.get();  // blocking
-  cout << "[C] CreateOffer done! SDP: " << sdp << endl;
+  // auto status = r.wait_for(chrono::seconds(TIMEOUT_SECS));
+  // if (future_status::ready != status) {
+    // cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS
+         // << " seconds. status=" << (int)status << endl;
+    // return FAILURE;
+  // }
+  SDP sdp = r.get();
+  cout << "[C] CreateOffer don! SDP: " << sdp << endl;
   return SUCCESS;
 }
 
-int CreateAnswer(PeerConnection pc) {
+int CGOCreateAnswer(CGOPeer pc) {
   PC cPC = ((Peer*)pc)->pc_;
   cout << "[C] CreateAnswer" << peer << endl;
 

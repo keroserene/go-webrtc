@@ -71,8 +71,10 @@ type PeerConnection struct {
 	// onsignalingstatechange
 	// oniceconnectionstatechange
 	// onicegatheringstatechange
-	pc         C.PeerConnection
 	IceServers string
+
+	// Internal PeerConnection functionality.
+	cgoPeer	 C.CGOPeer
 }
 
 // CreateOffer prepares ICE candidates which should be sent to the target
@@ -87,7 +89,7 @@ func (pc PeerConnection) CreateOffer(success Callback, failure Callback) {
 	// TODO(keroserene): Generalize and test this channel-based mechanism.
 	r := make(chan bool, 1)
 	go func() {
-		success := C.CreateOffer(pc.pc)
+		success := C.CGOCreateOffer(pc.cgoPeer)
 		if 0 == success {
 			r <- true
 		} else {
@@ -102,6 +104,13 @@ func (pc PeerConnection) CreateOffer(success Callback, failure Callback) {
 	}
 }
 
+// Start a separate signalling thread to house the peer.
+func StartPeerLoop() {
+	go func() {
+		C.Initialize()
+	}()
+}
+
 // func createAnswer(pc PeerConnection, c Callback) {
 // C.CreateAnswer(pc.pc, c)
 // }
@@ -112,18 +121,11 @@ func (pc PeerConnection) CreateOffer(success Callback, failure Callback) {
 
 func NewPeerConnection() (PeerConnection, error) {
 	var ret PeerConnection
-	ret.pc = C.NewPeerConnection()
-	if nil == ret.pc {
+	// Prepare internal CGO Peer.
+	ret.cgoPeer = C.NewPeerConnection()
+	if nil == ret.cgoPeer {
 		return ret, errors.New("[C ERROR] Could not create PeerConnection.")
 	}
-	// ret.IceServers = C.GetIceServers(ret.pc)
-	// Assign "methods"
-	// ret.CreateOffer = func(success Callback, failure Callback) {
-	// createOffer(ret, success, failure)
-	// }
-	// ret.CreateAnswer = func(c Callback) {
-	// createAnswer(ret, c)
-	// }
 	return ret, nil
 }
 
