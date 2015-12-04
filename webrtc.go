@@ -17,7 +17,7 @@ TODO(keroserene): More package documentation, and more documentation in general.
 package webrtc
 
 /*
-#cgo CPPFLAGS: -Ithird_party/libwebrtc/
+#cgo CPPFLAGS: -Iinclude/
 #cgo CXXFLAGS: -std=c++0x
 // -Wno-c++0x-extensions
 #cgo LDFLAGS: -Wl,-z,now -Wl,-z,relro -Wl,--fatal-warnings -Wl,-z,defs -pthread
