@@ -46,7 +46,6 @@ type Obs func(Callback, Callback)
 
 type PeerConnection struct {
 
-	// CreateAnswer func(Callback)
 	// setLocalDescription
 	// localDescription
 
@@ -77,7 +76,10 @@ type PeerConnection struct {
 }
 
 type SDPHeader struct {
-	description string
+	// Keep track of both a pointer to the C++ SessionDescription object,
+	// and the serialized string version (which native code generates)
+	cgoSdp        C.CGOsdp
+	description   string
 }
 
 func NewPeerConnection() (*PeerConnection, error) {
@@ -99,8 +101,14 @@ func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
 		return nil, errors.New("[C ERROR] CreateOffer - could not prepare SDP offer.");
 	}
 	offer := new(SDPHeader)
-	offer.description = C.GoString(sdp)
+	offer.cgoSdp = sdp
+	offer.description = C.GoString(C.CGOSerializeSDP(sdp))
 	return offer, nil
+}
+
+func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
+	C.CGOSetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
+	return nil
 }
 
 // CreateAnswer prepares an SDP "answer" message, which should be sent in
@@ -112,7 +120,8 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 		return nil, errors.New("[C ERROR] CreateAnswer - could not prepare SDP offer.");
 	}
 	answer := new(SDPHeader)
-	answer.description = C.GoString(sdp)
+	answer.cgoSdp = sdp
+	answer.description = C.GoString(C.CGOSerializeSDP(sdp))
 	return answer, nil
 }
 

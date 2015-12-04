@@ -14,14 +14,18 @@ extern "C" {
   typedef void (*Callback)();
 
   typedef void* CGOPeer;
-  typedef const char* CGOsdp;
-  CGOPeer NewPeerConnection();
+  typedef void* CGOsdp;  // Pointer to SessionDescriptionInterface*
+  typedef const char* CGOsdpString;
 
+  CGOPeer NewPeerConnection();
   // PeerConnectionInterface::IceServers
   // void* GetIceServers(CGOPeePeerConnection pc);
 
   CGOsdp CGOCreateOffer(CGOPeer pc);
   CGOsdp CGOCreateAnswer(CGOPeer pc);
+
+  CGOsdpString CGOSerializeSDP(CGOsdp sdp);
+  void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp);
 
   void Initialize();
 

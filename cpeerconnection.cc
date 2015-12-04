@@ -125,6 +125,24 @@ class Peer
 };  // class Peer
 rtc::scoped_refptr<Peer> peer;
 
+// TODO: Make a better generalized class for every "Observer" later.
+class PeerSDPObserver : public SetSessionDescriptionObserver {
+ public:
+  static PeerSDPObserver* Create() {
+    return new rtc::RefCountedObject<PeerSDPObserver>();
+  }
+  virtual void OnSuccess() {
+    cout << "local description set!" << endl;
+  }
+  virtual void OnFailure(const std::string& error) {
+    cout << error << endl;
+  }
+
+ protected:
+  PeerSDPObserver() {}
+  ~PeerSDPObserver() {}
+
+};  // class PeerSDPObserver
 
 //
 // extern "C" Go-accessible functions.
@@ -184,7 +202,7 @@ bool SDPtimeout(future<SDP> *f, int seconds) {
 
 // PeerConnection::CreateOffer
 // Blocks until libwebrtc succeeds in generating the SDP offer,
-// @returns SDP, or NULL on timeeout.
+// @returns SDP (pointer), or NULL on timeeout.
 CGOsdp CGOCreateOffer(CGOPeer pc) {
   // TODO: Provide an actual RTCOfferOptions as an argument.
   PC cPC = ((Peer*)pc)->pc_;
@@ -199,12 +217,9 @@ CGOsdp CGOCreateOffer(CGOPeer pc) {
   }
   SDP sdp = r.get();  // blocking
   peer->resetPromise();
-
-  // Serialize SDP offer so Go can use it.
-  auto s = new string();
-  sdp->ToString(s);
-  return (CGOsdp)s->c_str();
+  return (CGOsdp)sdp;
 }
+
 
 // PeerConnection::CreateAnswer
 // Blocks until libwebrtc succeeds in generating the SDP answer.
@@ -221,9 +236,20 @@ CGOsdp CGOCreateAnswer(CGOPeer pc) {
   }
   SDP sdp = r.get();  // blocking
   peer->resetPromise();
+  return (CGOsdp)sdp;
+}
 
-  // Serialize SDP answer so Go can use it.
+
+// Serialize SDP message to a string Go can use.
+CGOsdpString CGOSerializeSDP(CGOsdp sdp) {
   auto s = new string();
-  sdp->ToString(s);
-  return (CGOsdp)s->c_str();
+  SDP cSDP = (SDP)sdp;
+  cSDP->ToString(s);
+  return (CGOsdpString)s->c_str();
+}
+
+
+void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp) {
+  PC cPC = ((Peer*)pc)->pc_;
+  cPC->SetLocalDescription(PeerSDPObserver::Create(), (SDP)sdp);
 }

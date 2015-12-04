@@ -23,7 +23,11 @@ func TestCreateOffer(t *testing.T) {
 	if nil != err {
 		t.Fatal(err)
 	}
-	fmt.Println("SDP Offer: ", header.description)
+	fmt.Println("SDP Offer:\n", header.description)
+}
+
+func TestSetLocalDescription(t *testing.T) {
+	
 }
 
 /*
