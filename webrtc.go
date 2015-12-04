@@ -12,9 +12,6 @@ There is also a complication in building the dependent static library for this
 to work. Furthermore it is possible that this will break on future versions
 of libwebrtc, because the interface with the native code is be fragile.
 
-Latest tested / compatible version of webrtc HEAD: cb3f9bd
-More later...
-
 TODO(keroserene): More package documentation, and more documentation in general.
 */
 package webrtc
