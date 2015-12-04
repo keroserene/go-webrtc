@@ -18,21 +18,31 @@ extern "C" {
   typedef void* CGODataChannel;
   typedef const char* CGOsdpString;
 
+  typedef struct {
+    char **IceServers;
+    char *IceTransportPolicy;
+    char *BundlePolicy;
+    char *RtcpMuxPolicy;
+    char *PeerIdentity;
+    char **Certificates;
+    int IceCandidatePoolSize;
+  } CGORTCConfiguration;
+
   CGOPeer CGOInitializePeer();
   // Below are "C methods" for the Peer class, which must be hidden from cgo.
 
-  CGOPeer NewPeerConnection(CGOPeer cgoPeer);
+  int CGOCreatePeerConnection(CGOPeer, CGORTCConfiguration*);
   // PeerConnectionInterface::IceServers
   // void* GetIceServers(CGOPeePeerConnection pc);
 
-  CGOsdp CGOCreateOffer(CGOPeer pc);
-  CGOsdp CGOCreateAnswer(CGOPeer pc);
+  CGOsdp CGOCreateOffer(CGOPeer);
+  CGOsdp CGOCreateAnswer(CGOPeer);
 
-  CGOsdpString CGOSerializeSDP(CGOsdp sdp);
-  int CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp);
-  int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp);
+  CGOsdpString CGOSerializeSDP(CGOsdp);
+  int CGOSetLocalDescription(CGOPeer, CGOsdp);
+  int CGOSetRemoteDescription(CGOPeer, CGOsdp);
 
-  CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict);
+  CGODataChannel CGOCreateDataChannel(CGOPeer, char*, void*);
 
 #ifdef __cplusplus
 }

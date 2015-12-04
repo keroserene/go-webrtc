@@ -12,16 +12,20 @@ var pcA *PeerConnection
 var pcB *PeerConnection
 var err error
 var sdp *SDPHeader
+var config *RTCConfiguration
 
 func TestCreatePeerConnection(t *testing.T) {
-	pcA, err = NewPeerConnection()
+	config = NewRTCConfiguration()
+	// ["stun:stun.l.google.com:19302"]
+	// )
+	pcA, err = NewPeerConnection(config)
 	if nil != err {
 		t.Fatal(err)
 	}
 }
 
 func TestCreateSecondPeerConnections(t *testing.T) {
-	pcB, err = NewPeerConnection()
+	pcB, err = NewPeerConnection(config)
 	if nil != err {
 		t.Fatal(err)
 	}

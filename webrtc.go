@@ -6,6 +6,8 @@ inherent in the interface written here and the original native code WebRTC. This
 allows users to use WebRTC in a more idiomatic golang way. For example, callback
 mechanism has a layer of indirection that allows goroutines instead.
 
+The interface here is based mostly on: w3c.github.io/webrtc-pc
+
 There is also a complication in building the dependent static library for this
 to work. Furthermore it is possible that this will break on future versions
 of libwebrtc, because the interface with the native code is be fragile.
@@ -49,13 +51,51 @@ type SDPHeader struct {
 	description string
 }
 
+type RTCConfiguration struct {
+	// TODO: Implement, and provide as argument to CreatePeerConnection
+	IceServers           []string
+	IceTransportPolicy   string
+	BundlePolicy         string
+	RtcpMuxPolicy        string
+	PeerIdentity         string // Target peer identity
+	Certificates         []string // TODO: implement to allow key continuity
+	IceCandidatePoolSize int
+
+	// Internal RTCConfiguration for C
+	cgoConfig  *C.CGORTCConfiguration
+}
+
+// Create a new RTCConfiguration with spec default values.
+func NewRTCConfiguration() *RTCConfiguration {
+	c := new(RTCConfiguration)
+	// c.IceServers = make([]string, 0)
+	c.IceServers = nil
+	c.IceTransportPolicy = "all"
+	c.BundlePolicy = "balanced"
+	c.RtcpMuxPolicy = "require"
+	c.Certificates = make([]string, 0)
+	return c
+}
+func (config *RTCConfiguration) CGO() C.CGORTCConfiguration{
+	c := new(C.CGORTCConfiguration)
+	// c.IceServers = unsafe.Pointer(&config.IceServers)
+	c.IceTransportPolicy = C.CString(config.IceTransportPolicy)
+	c.BundlePolicy = C.CString(config.BundlePolicy)
+	c.RtcpMuxPolicy = C.CString(config.RtcpMuxPolicy)
+	c.PeerIdentity = C.CString(config.PeerIdentity)
+	// c.Certificates = config.Certificates
+	c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
+	config.cgoConfig = c
+	return *c
+}
+
 type PeerConnection struct {
 
 	// currentLocalDescription
 	// pendingLocalDescription
 	// setRemoteDescription
-	localDescription   *SDPHeader
-	remoteDescription  *SDPHeader
+	localDescription  *SDPHeader
+	remoteDescription *SDPHeader
 	// remoteDescription
 	// currentRemoteDescription
 	// pendingRemoteDescription
@@ -85,21 +125,25 @@ type DataChannelInit struct {
 }
 
 // PeerConnection constructor.
-func NewPeerConnection() (*PeerConnection, error) {
+func NewPeerConnection(config *RTCConfiguration) (*PeerConnection, error) {
 	pc := new(PeerConnection)
-	// Prepare internal CGO Peer.
-	pc.cgoPeer = C.CGOInitializePeer()
+	pc.cgoPeer = C.CGOInitializePeer()  // internal CGO Peer.
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
-	_ = C.NewPeerConnection(pc.cgoPeer)
+	// Convert config to C struct.
+	// cConfig := (*C.CGORTCConfiguration)(unsafe.Pointer(&config))
+	// cConfig. C.CString(config.IceServers)
+	cConfig := config.CGO()
+	if 0 != C.CGOCreatePeerConnection(pc.cgoPeer, &cConfig) {
+		return nil, errors.New("PeerConnection: could not create from config.")
+	}
 	return pc, nil
 }
 
 // CreateOffer prepares an SDP "offer" message, which should be sent to the target
 // peer over a signalling channel.
 func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
-	fmt.Println("[go] creating offer...")
 	sdp := C.CGOCreateOffer(pc.cgoPeer)
 	if nil == sdp {
 		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
@@ -178,10 +222,6 @@ const {
   closed
 }
 */
-
-type RTCConfiguration struct {
-	// TODO: Implement and provide as argument to CreateOffer.
-}
 
 type RTCIceCredentialType struct {
 }

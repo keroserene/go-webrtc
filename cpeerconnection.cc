@@ -181,15 +181,18 @@ CGOPeer CGOInitializePeer() {
   return localPeer;
 }
 
-
-// Create and return a PeerConnection object.
-// This cannot be a method in |Peer|, because this must be accessible to cgo.
-CGOPeer NewPeerConnection(CGOPeer cgoPeer) {
+// |Peer| method: create a native code PeerConnection object.
+// Returns 0 on Success.
+int CGOCreatePeerConnection(CGOPeer cgoPeer, CGORTCConfiguration *cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
   PeerConnectionInterface::IceServer *server = new
       PeerConnectionInterface::IceServer();
   server->uri = "stun:stun.l.google.com:19302";
   peer->ice_servers.push_back(*server);
+
+  cout << "Config: " << cgoConfig->IceTransportPolicy <<
+      cgoConfig->BundlePolicy <<
+      cgoConfig->RtcpMuxPolicy << endl;
 
   // Prepare RTC Configuration object. This is just the default one, for now.
   // TODO: A Go struct that can be passed and converted here.
@@ -206,10 +209,10 @@ CGOPeer NewPeerConnection(CGOPeer cgoPeer) {
     );
   if (!peer->pc_.get()) {
     cout << "ERROR: Could not create PeerConnection." << endl;
-    return NULL;
+    return -1;
   }
-  cout << "[C] Made a PeerConnection: " << peer->pc_ << endl;
-  return (CGOPeer)peer;
+  cout << "[C] Made PeerConnection: " << peer->pc_ << endl;
+  return 0;
 }
 
 bool SDPtimeout(future<SDP> *f, int seconds) {
@@ -286,7 +289,8 @@ CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict) {
   DataChannelInit config;
   string *l = new string(label);
   // TODO: a real config struct.
-  auto channel = cPC->CreateDataChannel(*l, &config);
+  // auto channel = cPC->CreateDataChannel(*l, &config);
+  auto channel = cPC->CreateDataChannel(*l, NULL);
   cout << "Created data channel: " << channel << endl;
   return (CGODataChannel)channel;
 }
