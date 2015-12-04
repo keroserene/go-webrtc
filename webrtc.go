@@ -41,12 +41,20 @@ import (
 	"fmt"
 )
 
+type SDPHeader struct {
+	// Keep track of both a pointer to the C++ SessionDescription object,
+	// and the serialized string version (which native code generates)
+	cgoSdp      C.CGOsdp
+	description string
+}
+
 type PeerConnection struct {
 
 	// currentLocalDescription
 	// pendingLocalDescription
 	// setRemoteDescription
-
+	localDescription   *SDPHeader
+	remoteDescription  *SDPHeader
 	// remoteDescription
 	// currentRemoteDescription
 	// pendingRemoteDescription
@@ -67,13 +75,6 @@ type PeerConnection struct {
 
 	// Internal PeerConnection functionality.
 	cgoPeer C.CGOPeer
-}
-
-type SDPHeader struct {
-	// Keep track of both a pointer to the C++ SessionDescription object,
-	// and the serialized string version (which native code generates)
-	cgoSdp      C.CGOsdp
-	description string
 }
 
 // PeerConnection constructor.
@@ -104,7 +105,23 @@ func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
 
 func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
 	C.CGOSetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
+	pc.localDescription = sdp
 	return nil
+}
+
+// readonly localDescription
+func (pc *PeerConnection) LocalDescription() (sdp *SDPHeader) {
+	return pc.localDescription
+}
+
+func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
+	C.CGOSetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
+	return nil
+}
+
+// readonly remoteDescription
+func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
+	return pc.remoteDescription
 }
 
 // CreateAnswer prepares an SDP "answer" message, which should be sent in

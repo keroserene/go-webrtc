@@ -29,6 +29,7 @@ extern "C" {
 
   CGOsdpString CGOSerializeSDP(CGOsdp sdp);
   void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp);
+  void CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp);
 
 
 #ifdef __cplusplus

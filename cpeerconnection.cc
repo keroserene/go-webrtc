@@ -83,7 +83,7 @@ class Peer
   }
 
   void OnFailure(const std::string& error) {
-    cout << "failure: " << error << endl;
+    cout << "[C] SDP Failure: " << error << endl;
     promiseSDP.set_value(NULL);
   }
 
@@ -150,10 +150,10 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
     return new rtc::RefCountedObject<PeerSDPObserver>();
   }
   virtual void OnSuccess() {
-    cout << "local description set!" << endl;
+    cout << "[C] SDP Set Success!" << endl;
   }
   virtual void OnFailure(const std::string& error) {
-    cout << error << endl;
+    cout << "[C] SDP Set Error: " << error << endl;
   }
 
  protected:
@@ -261,4 +261,8 @@ CGOsdpString CGOSerializeSDP(CGOsdp sdp) {
 void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp) {
   PC cPC = ((Peer*)pc)->pc_;
   cPC->SetLocalDescription(PeerSDPObserver::Create(), (SDP)sdp);
+}
+void CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
+  PC cPC = ((Peer*)pc)->pc_;
+  cPC->SetRemoteDescription(PeerSDPObserver::Create(), (SDP)sdp);
 }
