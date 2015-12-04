@@ -2,11 +2,7 @@
  * C wrapper for the C++ PeerConnection code, to be go-compatible.
  */
 #include "cpeerconnection.h"
-// #include "webrtc/base/thread.h"
 #include "webrtc/base/common.h"
-#include "webrtc/base/common.h"
-// #include "talk/app/webrtc/peerconnection.h"
-// #include "talk/app/webrtc/peerconnectionfactory.h"
 #include "talk/app/webrtc/peerconnectioninterface.h"
 #include "talk/app/webrtc/test/fakeconstraints.h"
 #include <iostream>
@@ -24,49 +20,53 @@ using namespace webrtc;
 typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
 typedef SessionDescriptionInterface* SDP;
 
+
 // Peer acts as the glue between go and native code PeerConnectionInterface.
-// However, it is not directly accessible to cgo.
+// However, it's not directly accessible from the Go side, which can only
+// see what's exposed in the more pure extern "C" header file...
+//
+// This class also stubs libwebrtc's callback interface to be blocking,
+// which allows the usage of goroutines, which is more idiomatic and easier
+// for users of this library.
+// The alternative would require casting Go function pointers, calling Go code
+// from C code from Go code, which is less likely to be a good time..
+// TODO(keroserene): More documentation...
 class Peer
   : public CreateSessionDescriptionObserver,
     public PeerConnectionObserver {
-
  public:
 
   void Initialize() {
-    // OnSDP = async(launch::async, &Peer::OnSuccess, this);
     promiseSDP = promise<SDP>();
-    // promiseSDP.set_value(NULL);
-    cout << "go webrtc Peer initialized" << endl;
+    // Due to the different threading model, in order for PeerConnectionFactory
+    // to be able to post async messages without getting blocked, we need to use
+    // external signalling and worker threads.
+    signal_thread = new rtc::Thread();
+    worker_thread = new rtc::Thread();
+    signal_thread->Start();
+    worker_thread->Start();
+    // TODO: DTLS
+    // TODO: Make actual media constraints, with an exposed Go interface.
+    auto c = new FakeConstraints();
+    c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, "false");
+    c->SetMandatoryReceiveAudio(false);
+    c->SetMandatoryReceiveVideo(false);
+    constraints = c;
+    cout << "Peer initialized" << endl;
   }
 
-  /*
-   * Stub out all callbacks to become blocking, and return boolean success / fail.
-   * Since the user wants to write go code, it'd be better to support goroutines
-   * instead of callbacks.
-   * This prevents the complication of casting Go function pointers and
-   * then dealing with the risk of concurrently calling Go code from C from Go...
-   * Which should be a much easier and safer for users of this library.
-   * TODO(keroserene): Expand on this if there are more complicated callbacks.
-   */
-  Callback SuccessCallback = NULL;
-  Callback FailureCallback = NULL;
 
   //
   // CreateSessionDescriptionObserver implementation
   //
   void OnSuccess(SDP desc) {
-    cout << "SDP successfully created: " << desc << endl;
+    cout << "[C] SDP created: " << desc << endl;
     promiseSDP.set_value(desc);
-    // if (this->SuccessCallback) {
-      // this->SuccessCallback();
-    // }
   }
+
   void OnFailure(const std::string& error) {
     cout << "failure: " << error << endl;
     promiseSDP.set_value(NULL);
-    // if (this->FailureCallback) {
-      // this->FailureCallback();
-    // }
   }
 
   //
@@ -110,36 +110,33 @@ class Peer
   rtc::scoped_refptr<PeerConnectionFactoryInterface> pc_factory;
   // TODO: prepare and expose IceServers for real.
   PeerConnectionInterface::IceServers ice_servers;
-};
 
-// TODO: Wrap as much as possible within the Peer class?
+  rtc::Thread *signal_thread;
+  rtc::Thread *worker_thread;
+
+};  // class Peer
 rtc::scoped_refptr<Peer> peer;
 
+
+//
+// extern "C" Go-accessible functions.
+//
 
 // Expected this to be within the separate signalling thread, so nothing
 // disappears.
 void Initialize() {
-  // peer = new Peer();
   peer = new rtc::RefCountedObject<Peer>();
   peer->Initialize();
-  FakeConstraints constraints;
-  // TODO: DTLS
-  constraints.AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp,
-      "false");
-  peer->constraints = &constraints;
-  // Main loop
-  while (1) {
-    sleep(5);
-    cout << "Peer loop 5s elapsed" << endl;
-  }
 }
 
 
 // Create and return a PeerConnection object.
 // This cannot be a method in |Peer|, because this must be accessible to cgo.
 CGOPeer NewPeerConnection() {
-  // TODO: Maybe need to use the more complex constructor with rtc::threads.
-  peer->pc_factory = CreatePeerConnectionFactory();
+  peer->pc_factory = CreatePeerConnectionFactory(
+    peer->signal_thread,
+    peer->worker_thread,
+    NULL, NULL, NULL);
   if (!peer->pc_factory.get()) {
     cout << "ERROR: Could not create PeerConnectionFactory" << endl;
     return NULL;
@@ -173,38 +170,26 @@ CGOPeer NewPeerConnection() {
 }
 
 
-// Blocking version of CreateOffer (or, will be soon)
-// Returns 0 on success, -1 on failure.
-int CGOCreateOffer(CGOPeer pc) {
-  PC cPC = ((Peer*)pc)->pc_;
-  // cout << "[C] CreateOffer peer at: " << peer << peer->pc_
-       // << " vs " << pc << cPC << endl;
-
-  auto r = peer->promiseSDP.get_future();
+// PeerConnection::CreateOffer
+// Blocks until libwebrtc succeeds in generating the SDP message,
+// or times-out after TIMEOUT_SECS.
+// @returns SDP, or NULL on failure.
+CGOSDHeader CGOCreateOffer(CGOPeer pc) {
   // TODO: Provide an actual RTCOfferOptions as an argument.
-  // cPC->CreateOffer(peer, peer->options);
-
-  // auto p = peer->pc_;
-  // p->CreateOffer(peer, peer->options);
-  // webrtc::PeerConnection::CreateOffer(p, p, peer->options);
-  // peer->pc_->CreateOffer(peer, peer->options);
-  peer->pc_->CreateOffer(peer.get(), NULL);
-  // peer->promiseSDP.set_value(NULL);
-  // async(cPC->CreateOffer(peer, peer->options);
-  // async(&PeerConnectionInterface::CreateOffer, cPC, peer, peer->options);
-  // TODO: Up in PeerConnectionFactory, should probably use custom threads in
-  // order for the callbacks to be *actually* registered correctly.
-  // auto status = r.wait_for(chrono::seconds(TIMEOUT_SECS));
-  // if (future_status::ready != status) {
-    // cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS
-         // << " seconds. status=" << (int)status << endl;
-    // return FAILURE;
-  // }
-  SDP sdp = r.get();
-  cout << "[C] CreateOffer don! SDP: " << sdp << endl;
-  return SUCCESS;
+  PC cPC = ((Peer*)pc)->pc_;
+  auto r = peer->promiseSDP.get_future();
+  cPC->CreateOffer(peer.get(), NULL);
+  auto status = r.wait_for(chrono::seconds(TIMEOUT_SECS));
+  if (future_status::ready != status) {
+    cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS
+         << " seconds. status=" << (int)status << endl;
+    return NULL;
+  }
+  SDP sdp = r.get();  // blocking
+  return (CGOSDHeader)sdp;
 }
 
+// TODO: Make this correct.
 int CGOCreateAnswer(CGOPeer pc) {
   PC cPC = ((Peer*)pc)->pc_;
   cout << "[C] CreateAnswer" << peer << endl;

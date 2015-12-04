@@ -14,12 +14,13 @@ extern "C" {
   typedef void (*Callback)();
 
   typedef void* CGOPeer;
+  typedef void* CGOSDHeader;
   CGOPeer NewPeerConnection();
 
   // PeerConnectionInterface::IceServers
   // void* GetIceServers(CGOPeePeerConnection pc);
 
-  int CGOCreateOffer(CGOPeer pc);
+  CGOSDHeader CGOCreateOffer(CGOPeer pc);
   int CGOCreateAnswer(CGOPeer pc);
 
   void Initialize();

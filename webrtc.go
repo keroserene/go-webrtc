@@ -45,7 +45,6 @@ type Callback func()
 type Obs func(Callback, Callback)
 
 type PeerConnection struct {
-	// CreateOffer Obs
 
 	// CreateAnswer func(Callback)
 	// setLocalDescription
@@ -74,41 +73,41 @@ type PeerConnection struct {
 	IceServers string
 
 	// Internal PeerConnection functionality.
-	cgoPeer	 C.CGOPeer
+	cgoPeer C.CGOPeer
 }
 
-// CreateOffer prepares ICE candidates which should be sent to the target
-// peer over a signalling channel.
-//
-// TODO: This method blocks until success or failure occurs. Maybe it should
-// be async to the user?
-func (pc PeerConnection) CreateOffer(success Callback, failure Callback) {
-	fmt.Println("[go] creating offer...")
-	// Pass return value from C through a go channel, to allow a goroutine-based
-	// callback paradigm.
-	// TODO(keroserene): Generalize and test this channel-based mechanism.
-	r := make(chan bool, 1)
-	go func() {
-		success := C.CGOCreateOffer(pc.cgoPeer)
-		if 0 == success {
-			r <- true
-		} else {
-			r <- false
-		}
-	}()
-	status := <-r
-	if status {
-		success()
-	} else {
-		failure()
+type SDPHeader struct {
+	description string
+}
+
+func NewPeerConnection() (*PeerConnection, error) {
+	ret := new(PeerConnection)
+	// Prepare internal CGO Peer.
+	ret.cgoPeer = C.NewPeerConnection()
+	if nil == ret.cgoPeer {
+		return ret, errors.New("[C ERROR] Could not create PeerConnection.")
 	}
+	return ret, nil
 }
 
-// Start a separate signalling thread to house the peer.
-func StartPeerLoop() {
-	go func() {
-		C.Initialize()
-	}()
+// CreateOffer prepares an SDP "offer" message, which should be sent to the target
+// peer over a signalling channel.
+func (pc *PeerConnection) CreateOffer() *SDPHeader {
+	fmt.Println("[go] creating offer...")
+	sdp := C.CGOCreateOffer(pc.cgoPeer)
+	fmt.Println("[go] sdp offer: %v", sdp)
+	offer := new(SDPHeader)
+	return offer
+}
+
+// TODO: Above method blocks until success or failure occurs. Maybe there should
+// actually be a callback version, so the user doesn't have to make their own
+// goroutine.
+// func (pc *PeerConnection) CreateOffer(success Callback, failure Callback) SDPHeader {
+
+// Prepare the Peer. Must succeed before any other PeerConnection activity.
+func InitializePeer() {
+	C.Initialize()
 }
 
 // func createAnswer(pc PeerConnection, c Callback) {
@@ -118,16 +117,6 @@ func StartPeerLoop() {
 // Install a handler for receiving ICE Candidates.
 // func OnIceCandidate(pc PeerConnection) {
 // }
-
-func NewPeerConnection() (PeerConnection, error) {
-	var ret PeerConnection
-	// Prepare internal CGO Peer.
-	ret.cgoPeer = C.NewPeerConnection()
-	if nil == ret.cgoPeer {
-		return ret, errors.New("[C ERROR] Could not create PeerConnection.")
-	}
-	return ret, nil
-}
 
 type RTCSignalingState int
 
