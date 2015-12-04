@@ -29,7 +29,8 @@ typedef SessionDescriptionInterface* SDP;
 // which allows the usage of goroutines, which is more idiomatic and easier
 // for users of this library.
 // The alternative would require casting Go function pointers, calling Go code
-// from C code from Go code, which is less likely to be a good time..
+// from C code from Go code, which is less likely to be a good time.
+//
 // TODO(keroserene): More documentation...
 class Peer
   : public CreateSessionDescriptionObserver,
@@ -55,6 +56,10 @@ class Peer
     cout << "[C] Peer initialized." << endl;
   }
 
+  void resetPromise() {
+    // delete &promiseSDP;
+    promiseSDP = promise<SDP>();
+  }
 
   //
   // CreateSessionDescriptionObserver implementation
@@ -103,8 +108,11 @@ class Peer
 
   PC pc_;
 
-  // Passing SDPs through promises instead of callbacks.
-  future<SDP> OnSDP;
+  // Passing SDPs through promises instead of callbacks, to allow the benefits
+  // as described above.
+  // However, this has the effect that CreateOffer and CreateAnswer must not be
+  // concurrent, to themselves or each other (which isn't expected anyways) due
+  // to the simplistic way in which futures are used here.
   promise<SDP> promiseSDP;
 
   rtc::scoped_refptr<PeerConnectionFactoryInterface> pc_factory;
@@ -186,9 +194,11 @@ CGOsdp CGOCreateOffer(CGOPeer pc) {
   // if (future_status::ready != status) {
   if (SDPtimeout(&r, TIMEOUT_SECS)) {
     cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS << endl;
+    peer->resetPromise();
     return NULL;
   }
   SDP sdp = r.get();  // blocking
+  peer->resetPromise();
 
   // Serialize SDP offer so Go can use it.
   auto s = new string();
@@ -206,9 +216,11 @@ CGOsdp CGOCreateAnswer(CGOPeer pc) {
   cPC->CreateAnswer(peer, peer->constraints);
   if (SDPtimeout(&r, TIMEOUT_SECS)) {
     cout << "[C] CreateAnswer timed out after " << TIMEOUT_SECS << endl;
+    peer->resetPromise();
     return NULL;
   }
   SDP sdp = r.get();  // blocking
+  peer->resetPromise();
 
   // Serialize SDP answer so Go can use it.
   auto s = new string();

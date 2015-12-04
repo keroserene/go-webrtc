@@ -26,6 +26,8 @@ func TestCreateOffer(t *testing.T) {
 	fmt.Println("SDP Offer: ", header.description)
 }
 
+/*
+TODO: Uncomment once SetRemoteDescription is implemented.
 func TestCreateAnswer(t *testing.T) {
 	header, err := pc.CreateAnswer()
 	if nil != err {
@@ -33,5 +35,6 @@ func TestCreateAnswer(t *testing.T) {
 	}
 	fmt.Println("SDP Answer: ", header.description)
 }
+*/
 
 // TODO: Test video / audio stream support.
