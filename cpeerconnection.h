@@ -28,8 +28,8 @@ extern "C" {
   CGOsdp CGOCreateAnswer(CGOPeer pc);
 
   CGOsdpString CGOSerializeSDP(CGOsdp sdp);
-  void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp);
-  void CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp);
+  int CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp);
+  int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp);
 
 
 #ifdef __cplusplus

@@ -37,14 +37,20 @@ func TestCreateOffer(t *testing.T) {
 }
 
 func TestSetLocalDescription(t *testing.T) {
-	pcA.SetLocalDescription(sdp)
+	err = pcA.SetLocalDescription(sdp)
+	if nil != err {
+		t.Fatal(err)
+	}
 	// Pretend pcA sends the SDP offer to pcB through some signalling channel.
 	fmt.Println("\n ~~ Signalling Happens here ~~ \n")
 }
 
 func TestSetRemoteDescription(t *testing.T) {
 	fmt.Println("\n == BOB's PeerConnection ==")
-	pcB.SetRemoteDescription(sdp)
+	err = pcB.SetRemoteDescription(sdp)
+	if nil != err {
+		t.Fatal(err)
+	}
 }
 
 // TODO: Uncomment once SetRemoteDescription is implemented.

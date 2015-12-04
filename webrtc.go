@@ -83,7 +83,7 @@ func NewPeerConnection() (*PeerConnection, error) {
 	// Prepare internal CGO Peer.
 	pc.cgoPeer = C.CGOInitializePeer()
 	if nil == pc.cgoPeer {
-		return pc, errors.New("[C ERROR] PeerConnection - failed to initialize.")
+		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
 	_ = C.NewPeerConnection(pc.cgoPeer)
 	return pc, nil
@@ -95,7 +95,7 @@ func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
 	fmt.Println("[go] creating offer...")
 	sdp := C.CGOCreateOffer(pc.cgoPeer)
 	if nil == sdp {
-		return nil, errors.New("[C ERROR] CreateOffer - could not prepare SDP offer.")
+		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
 	}
 	offer := new(SDPHeader)
 	offer.cgoSdp = sdp
@@ -104,7 +104,10 @@ func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
 }
 
 func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
-	C.CGOSetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
+	r := C.CGOSetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
+	if 0 != r {
+		return errors.New("SetLocalDescription failed.")
+	}
 	pc.localDescription = sdp
 	return nil
 }
@@ -115,7 +118,11 @@ func (pc *PeerConnection) LocalDescription() (sdp *SDPHeader) {
 }
 
 func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
-	C.CGOSetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
+	r := C.CGOSetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
+	if 0 != r {
+		return errors.New("SetRemoteDescription failed.")
+	}
+	pc.remoteDescription = sdp
 	return nil
 }
 

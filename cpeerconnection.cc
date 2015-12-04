@@ -72,7 +72,6 @@ class Peer
   }
 
   void resetPromise() {
-    // delete &promiseSDP;
     promiseSDP = promise<SDP>();
   }
 
@@ -94,27 +93,27 @@ class Peer
   // TODO: cgo hooks
   //
   void OnStateChange(PeerConnectionObserver::StateType state) {
-    cout << "OnStateChange" << endl;
+    cout << "[C] OnStateChange: " << state << endl;
   }
 
   void OnAddStream(webrtc::MediaStreamInterface* stream) {
-    cout << "OnAddStream" << endl;
+    cout << "[C] OnAddStream: " << stream << endl;
   }
 
   void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
-    cout << "OnRemoveStream" << endl;
+    cout << "[C] OnRemoveStream: " << stream << endl;
   }
 
   void OnRenegotiationNeeded() {
-    cout << "OnRenegotiationNeeded" << endl;
+    cout << "[C] OnRenegotiationNeeded" << endl;
   }
 
   void OnIceCandidate(const IceCandidateInterface* candidate) {
-    cout << "OnIceCandidate" << candidate << endl;
+    cout << "[C] OnIceCandidate" << candidate << endl;
   }
 
   void OnDataChannel(DataChannelInterface* data_channel) {
-    cout << "OnDataChannel" << endl;
+    cout << "[C] OnDataChannel: " << data_channel << endl;
   }
 
   PeerConnectionInterface::RTCConfiguration *config;
@@ -153,10 +152,13 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
   }
   virtual void OnSuccess() {
     cout << "[C] SDP Set Success!" << endl;
+    promiseSet.set_value(0);
   }
   virtual void OnFailure(const std::string& error) {
     cout << "[C] SDP Set Error: " << error << endl;
+    promiseSet.set_value(-1);
   }
+  promise<int> promiseSet = promise<int>();
 
  protected:
   PeerSDPObserver() {}
@@ -260,12 +262,18 @@ CGOsdpString CGOSerializeSDP(CGOsdp sdp) {
   return (CGOsdpString)s->c_str();
 }
 
-void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp) {
+int CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp) {
   PC cPC = ((Peer*)pc)->pc_;
-  cPC->SetLocalDescription(PeerSDPObserver::Create(), (SDP)sdp);
+  auto obs = PeerSDPObserver::Create();
+  auto r = obs->promiseSet.get_future();
+  cPC->SetLocalDescription(obs, (SDP)sdp);
+  return r.get();
 }
 
-void CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
+int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
   PC cPC = ((Peer*)pc)->pc_;
-  cPC->SetRemoteDescription(PeerSDPObserver::Create(), (SDP)sdp);
+  auto obs = PeerSDPObserver::Create();
+  auto r = obs->promiseSet.get_future();
+  cPC->SetRemoteDescription(obs, (SDP)sdp);
+  return r.get();
 }
