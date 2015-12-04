@@ -23,7 +23,9 @@ typedef SessionDescriptionInterface* SDP;
 
 // Peer acts as the glue between go and native code PeerConnectionInterface.
 // However, it's not directly accessible from the Go side, which can only
-// see what's exposed in the more pure extern "C" header file...
+// see what's exposed in the more pure extern "C" header file.
+//
+// The Go side may access this class through C.CGOPeer.
 //
 // This class also stubs libwebrtc's callback interface to be blocking,
 // which allows the usage of goroutines, which is more idiomatic and easier
@@ -138,9 +140,9 @@ class Peer
 
 };  // class Peer
 
-// Global variable to prevent deallocatunio, due to the required scoped_refptr.
-// (Probably fix later)
-rtc::scoped_refptr<Peer> localPeer;
+// Keep track of Peers in global scope to prevent deallocation, due to the
+// required scoped_refptr from implementing the Observer interface.
+vector<rtc::scoped_refptr<Peer>> localPeers;
 
 
 // TODO: Make a better generalized class for every "Observer" later.
@@ -170,8 +172,9 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
 // Create and return the Peer object, which provides initial native code
 // glue for the PeerConnection constructor.
 CGOPeer CGOInitializePeer() {
-  localPeer = new rtc::RefCountedObject<Peer>();
+  rtc::scoped_refptr<Peer> localPeer = new rtc::RefCountedObject<Peer>();
   localPeer->Initialize();
+  localPeers.push_back(localPeer);
   return localPeer;
 }
 
@@ -257,11 +260,11 @@ CGOsdpString CGOSerializeSDP(CGOsdp sdp) {
   return (CGOsdpString)s->c_str();
 }
 
-
 void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp) {
   PC cPC = ((Peer*)pc)->pc_;
   cPC->SetLocalDescription(PeerSDPObserver::Create(), (SDP)sdp);
 }
+
 void CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
   PC cPC = ((Peer*)pc)->pc_;
   cPC->SetRemoteDescription(PeerSDPObserver::Create(), (SDP)sdp);
