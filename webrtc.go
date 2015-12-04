@@ -85,20 +85,35 @@ func NewPeerConnection() (*PeerConnection, error) {
 	// Prepare internal CGO Peer.
 	ret.cgoPeer = C.NewPeerConnection()
 	if nil == ret.cgoPeer {
-		return ret, errors.New("[C ERROR] Could not create PeerConnection.")
+		return ret, errors.New("[C ERROR] PeerConnection - failed to initialize.")
 	}
 	return ret, nil
 }
 
 // CreateOffer prepares an SDP "offer" message, which should be sent to the target
 // peer over a signalling channel.
-func (pc *PeerConnection) CreateOffer() *SDPHeader {
+func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
 	fmt.Println("[go] creating offer...")
 	sdp := C.CGOCreateOffer(pc.cgoPeer)
+	if nil == sdp {
+		return nil, errors.New("[C ERROR] CreateOffer - could not prepare SDP offer.");
+	}
 	offer := new(SDPHeader)
-	offer.description = string(*sdp)
-	fmt.Println("[go] sdp offer: ", offer.description)
-	return offer
+	offer.description = C.GoString(sdp)
+	return offer, nil
+}
+
+// CreateAnswer prepares an SDP "answer" message, which should be sent in
+// response to a peer that has sent an offer, over the signalling channel.
+func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
+	fmt.Println("[go] creating answer...")
+	sdp := C.CGOCreateAnswer(pc.cgoPeer)
+	if nil == sdp {
+		return nil, errors.New("[C ERROR] CreateAnswer - could not prepare SDP offer.");
+	}
+	answer := new(SDPHeader)
+	answer.description = C.GoString(sdp)
+	return answer, nil
 }
 
 // TODO: Above method blocks until success or failure occurs. Maybe there should

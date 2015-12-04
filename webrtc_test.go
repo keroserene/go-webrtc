@@ -19,8 +19,19 @@ func TestPeerConnection(t *testing.T) {
 }
 
 func TestCreateOffer(t *testing.T) {
-	header := pc.CreateOffer()
-	fmt.Println("SDP created: ", header)
+	header, err := pc.CreateOffer()
+	if nil != err {
+		t.Fatal(err)
+	}
+	fmt.Println("SDP Offer: ", header.description)
+}
+
+func TestCreateAnswer(t *testing.T) {
+	header, err := pc.CreateAnswer()
+	if nil != err {
+		t.Fatal(err)
+	}
+	fmt.Println("SDP Answer: ", header.description)
 }
 
 // TODO: Test video / audio stream support.

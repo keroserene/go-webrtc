@@ -52,7 +52,7 @@ class Peer
     c->SetMandatoryReceiveAudio(false);
     c->SetMandatoryReceiveVideo(false);
     constraints = c;
-    cout << "Peer initialized" << endl;
+    cout << "[C] Peer initialized." << endl;
   }
 
 
@@ -60,7 +60,7 @@ class Peer
   // CreateSessionDescriptionObserver implementation
   //
   void OnSuccess(SDP desc) {
-    cout << "[C] SDP created: " << desc << endl;
+    cout << "[C] SDP successfully created at " << desc << endl;
     promiseSDP.set_value(desc);
   }
 
@@ -169,39 +169,49 @@ CGOPeer NewPeerConnection() {
   return (CGOPeer)peer;
 }
 
+bool SDPtimeout(future<SDP> *f, int seconds) {
+  auto status = f->wait_for(chrono::seconds(TIMEOUT_SECS));
+  return future_status::ready != status;
+}
 
 // PeerConnection::CreateOffer
-// Blocks until libwebrtc succeeds in generating the SDP message,
-// or times-out after TIMEOUT_SECS.
-// @returns SDP, or NULL on failure.
+// Blocks until libwebrtc succeeds in generating the SDP offer,
+// @returns SDP, or NULL on timeeout.
 CGOsdp CGOCreateOffer(CGOPeer pc) {
   // TODO: Provide an actual RTCOfferOptions as an argument.
   PC cPC = ((Peer*)pc)->pc_;
   auto r = peer->promiseSDP.get_future();
   cPC->CreateOffer(peer.get(), NULL);
-  auto status = r.wait_for(chrono::seconds(TIMEOUT_SECS));
-  if (future_status::ready != status) {
-    cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS
-         << " seconds. status=" << (int)status << endl;
+  // auto status = r.wait_for(chrono::seconds(TIMEOUT_SECS));
+  // if (future_status::ready != status) {
+  if (SDPtimeout(&r, TIMEOUT_SECS)) {
+    cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS << endl;
     return NULL;
   }
   SDP sdp = r.get();  // blocking
-  // Serialize SDP message and pass string to Go.
-  string *s = new string();
+
+  // Serialize SDP offer so Go can use it.
+  auto s = new string();
   sdp->ToString(s);
-  cout << "sdp string: " << *s << endl;
-  return (CGOsdp)s;
+  return (CGOsdp)s->c_str();
 }
 
-// TODO: Make this correct.
-int CGOCreateAnswer(CGOPeer pc) {
+// PeerConnection::CreateAnswer
+// Blocks until libwebrtc succeeds in generating the SDP answer.
+// @returns SDP, or NULL on timeout.
+CGOsdp CGOCreateAnswer(CGOPeer pc) {
   PC cPC = ((Peer*)pc)->pc_;
   cout << "[C] CreateAnswer" << peer << endl;
-
+  auto r = peer->promiseSDP.get_future();
   cPC->CreateAnswer(peer, peer->constraints);
+  if (SDPtimeout(&r, TIMEOUT_SECS)) {
+    cout << "[C] CreateAnswer timed out after " << TIMEOUT_SECS << endl;
+    return NULL;
+  }
+  SDP sdp = r.get();  // blocking
 
-  // TODO: Up in PeerConnectionFactory, should probably use custom threads in
-  // order for the callbacks to be *actually* registered correctly.
-  cout << "[C] CreateAnswer done!" << endl;
-  return SUCCESS;
+  // Serialize SDP answer so Go can use it.
+  auto s = new string();
+  sdp->ToString(s);
+  return (CGOsdp)s->c_str();
 }
