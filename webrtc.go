@@ -41,13 +41,7 @@ import (
 	"fmt"
 )
 
-type Callback func()
-type Obs func(Callback, Callback)
-
 type PeerConnection struct {
-
-	// setLocalDescription
-	// localDescription
 
 	// currentLocalDescription
 	// pendingLocalDescription
@@ -78,18 +72,20 @@ type PeerConnection struct {
 type SDPHeader struct {
 	// Keep track of both a pointer to the C++ SessionDescription object,
 	// and the serialized string version (which native code generates)
-	cgoSdp        C.CGOsdp
-	description   string
+	cgoSdp      C.CGOsdp
+	description string
 }
 
+// PeerConnection constructor.
 func NewPeerConnection() (*PeerConnection, error) {
-	ret := new(PeerConnection)
+	pc := new(PeerConnection)
 	// Prepare internal CGO Peer.
-	ret.cgoPeer = C.NewPeerConnection()
-	if nil == ret.cgoPeer {
-		return ret, errors.New("[C ERROR] PeerConnection - failed to initialize.")
+	pc.cgoPeer = C.CGOInitializePeer()
+	if nil == pc.cgoPeer {
+		return pc, errors.New("[C ERROR] PeerConnection - failed to initialize.")
 	}
-	return ret, nil
+	_ = C.NewPeerConnection(pc.cgoPeer)
+	return pc, nil
 }
 
 // CreateOffer prepares an SDP "offer" message, which should be sent to the target
@@ -98,7 +94,7 @@ func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
 	fmt.Println("[go] creating offer...")
 	sdp := C.CGOCreateOffer(pc.cgoPeer)
 	if nil == sdp {
-		return nil, errors.New("[C ERROR] CreateOffer - could not prepare SDP offer.");
+		return nil, errors.New("[C ERROR] CreateOffer - could not prepare SDP offer.")
 	}
 	offer := new(SDPHeader)
 	offer.cgoSdp = sdp
@@ -117,7 +113,7 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 	fmt.Println("[go] creating answer...")
 	sdp := C.CGOCreateAnswer(pc.cgoPeer)
 	if nil == sdp {
-		return nil, errors.New("[C ERROR] CreateAnswer - could not prepare SDP offer.");
+		return nil, errors.New("[C ERROR] CreateAnswer - could not prepare SDP offer.")
 	}
 	answer := new(SDPHeader)
 	answer.cgoSdp = sdp
@@ -125,19 +121,11 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 	return answer, nil
 }
 
-// TODO: Above method blocks until success or failure occurs. Maybe there should
+// TODO: LocalDescription getter.
+
+// TODO: Above methods blocks until success or failure occurs. Maybe there should
 // actually be a callback version, so the user doesn't have to make their own
 // goroutine.
-// func (pc *PeerConnection) CreateOffer(success Callback, failure Callback) SDPHeader {
-
-// Prepare the Peer. Must succeed before any other PeerConnection activity.
-func InitializePeer() {
-	C.Initialize()
-}
-
-// func createAnswer(pc PeerConnection, c Callback) {
-// C.CreateAnswer(pc.pc, c)
-// }
 
 // Install a handler for receiving ICE Candidates.
 // func OnIceCandidate(pc PeerConnection) {
@@ -157,6 +145,7 @@ const {
 */
 
 type RTCConfiguration struct {
+	// TODO: Implement and provide as argument to CreateOffer.
 }
 
 type RTCIceCredentialType struct {

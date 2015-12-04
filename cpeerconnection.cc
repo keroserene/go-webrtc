@@ -37,7 +37,9 @@ class Peer
     public PeerConnectionObserver {
  public:
 
-  void Initialize() {
+  bool Initialize() {
+    // Prepare everything.
+    // Should be called before anything else happens.
     promiseSDP = promise<SDP>();
     // Due to the different threading model, in order for PeerConnectionFactory
     // to be able to post async messages without getting blocked, we need to use
@@ -46,6 +48,16 @@ class Peer
     worker_thread = new rtc::Thread();
     signal_thread->Start();
     worker_thread->Start();
+    pc_factory = CreatePeerConnectionFactory(
+      signal_thread,
+      worker_thread,
+      NULL, NULL, NULL);
+    if (!pc_factory.get()) {
+      cout << "ERROR: Could not create PeerConnectionFactory" << endl;
+      return false;
+    }
+    // PortAllocatorFactoryInterface *allocator;
+
     // TODO: DTLS
     // TODO: Make actual media constraints, with an exposed Go interface.
     auto c = new FakeConstraints();
@@ -54,6 +66,7 @@ class Peer
     c->SetMandatoryReceiveVideo(false);
     constraints = c;
     cout << "[C] Peer initialized." << endl;
+    return true;
   }
 
   void resetPromise() {
@@ -119,11 +132,16 @@ class Peer
   // TODO: prepare and expose IceServers for real.
   PeerConnectionInterface::IceServers ice_servers;
 
+ protected:
   rtc::Thread *signal_thread;
   rtc::Thread *worker_thread;
 
 };  // class Peer
-rtc::scoped_refptr<Peer> peer;
+
+// Global variable to prevent deallocatunio, due to the required scoped_refptr.
+// (Probably fix later)
+rtc::scoped_refptr<Peer> localPeer;
+
 
 // TODO: Make a better generalized class for every "Observer" later.
 class PeerSDPObserver : public SetSessionDescriptionObserver {
@@ -144,31 +162,24 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
 
 };  // class PeerSDPObserver
 
+
 //
 // extern "C" Go-accessible functions.
 //
 
-// Expected this to be within the separate signalling thread, so nothing
-// disappears.
-void Initialize() {
-  peer = new rtc::RefCountedObject<Peer>();
-  peer->Initialize();
+// Create and return the Peer object, which provides initial native code
+// glue for the PeerConnection constructor.
+CGOPeer CGOInitializePeer() {
+  localPeer = new rtc::RefCountedObject<Peer>();
+  localPeer->Initialize();
+  return localPeer;
 }
 
 
 // Create and return a PeerConnection object.
 // This cannot be a method in |Peer|, because this must be accessible to cgo.
-CGOPeer NewPeerConnection() {
-  peer->pc_factory = CreatePeerConnectionFactory(
-    peer->signal_thread,
-    peer->worker_thread,
-    NULL, NULL, NULL);
-  if (!peer->pc_factory.get()) {
-    cout << "ERROR: Could not create PeerConnectionFactory" << endl;
-    return NULL;
-  }
-  // PortAllocatorFactoryInterface *allocator;
-
+CGOPeer NewPeerConnection(CGOPeer cgoPeer) {
+  Peer *peer = (Peer*)cgoPeer;
   PeerConnectionInterface::IceServer *server = new
       PeerConnectionInterface::IceServer();
   server->uri = "stun:stun.l.google.com:19302";
@@ -203,13 +214,11 @@ bool SDPtimeout(future<SDP> *f, int seconds) {
 // PeerConnection::CreateOffer
 // Blocks until libwebrtc succeeds in generating the SDP offer,
 // @returns SDP (pointer), or NULL on timeeout.
-CGOsdp CGOCreateOffer(CGOPeer pc) {
+CGOsdp CGOCreateOffer(CGOPeer cgoPeer) {
   // TODO: Provide an actual RTCOfferOptions as an argument.
-  PC cPC = ((Peer*)pc)->pc_;
+  Peer* peer = (Peer*)cgoPeer;
   auto r = peer->promiseSDP.get_future();
-  cPC->CreateOffer(peer.get(), NULL);
-  // auto status = r.wait_for(chrono::seconds(TIMEOUT_SECS));
-  // if (future_status::ready != status) {
+  peer->pc_->CreateOffer(peer, peer->constraints);
   if (SDPtimeout(&r, TIMEOUT_SECS)) {
     cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS << endl;
     peer->resetPromise();
@@ -224,11 +233,11 @@ CGOsdp CGOCreateOffer(CGOPeer pc) {
 // PeerConnection::CreateAnswer
 // Blocks until libwebrtc succeeds in generating the SDP answer.
 // @returns SDP, or NULL on timeout.
-CGOsdp CGOCreateAnswer(CGOPeer pc) {
-  PC cPC = ((Peer*)pc)->pc_;
+CGOsdp CGOCreateAnswer(CGOPeer cgoPeer) {
+  Peer *peer = (Peer*)cgoPeer;
   cout << "[C] CreateAnswer" << peer << endl;
   auto r = peer->promiseSDP.get_future();
-  cPC->CreateAnswer(peer, peer->constraints);
+  peer->pc_->CreateAnswer(peer, peer->constraints);
   if (SDPtimeout(&r, TIMEOUT_SECS)) {
     cout << "[C] CreateAnswer timed out after " << TIMEOUT_SECS << endl;
     peer->resetPromise();

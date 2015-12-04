@@ -9,9 +9,9 @@ import (
 
 var pc *PeerConnection
 var err error
+var sdp *SDPHeader
 
 func TestPeerConnection(t *testing.T) {
-	InitializePeer()
 	pc, err = NewPeerConnection()
 	if nil != err {
 		t.Fatal(err)
@@ -19,15 +19,15 @@ func TestPeerConnection(t *testing.T) {
 }
 
 func TestCreateOffer(t *testing.T) {
-	header, err := pc.CreateOffer()
+	sdp, err = pc.CreateOffer()
 	if nil != err {
 		t.Fatal(err)
 	}
-	fmt.Println("SDP Offer:\n", header.description)
+	fmt.Println("SDP Offer:\n", sdp.description)
 }
 
 func TestSetLocalDescription(t *testing.T) {
-	
+	pc.SetLocalDescription(sdp)
 }
 
 /*
@@ -41,4 +41,5 @@ func TestCreateAnswer(t *testing.T) {
 }
 */
 
-// TODO: Test video / audio stream support.
+// TODO: datachannel tests
+// TODO: tests for video / audio stream support.

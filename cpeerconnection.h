@@ -17,7 +17,10 @@ extern "C" {
   typedef void* CGOsdp;  // Pointer to SessionDescriptionInterface*
   typedef const char* CGOsdpString;
 
-  CGOPeer NewPeerConnection();
+  CGOPeer CGOInitializePeer();
+  // Below are "C methods" for the Peer class, which must be hidden from cgo.
+
+  CGOPeer NewPeerConnection(CGOPeer cgoPeer);
   // PeerConnectionInterface::IceServers
   // void* GetIceServers(CGOPeePeerConnection pc);
 
@@ -27,7 +30,6 @@ extern "C" {
   CGOsdpString CGOSerializeSDP(CGOsdp sdp);
   void CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp);
 
-  void Initialize();
 
 #ifdef __cplusplus
 }
