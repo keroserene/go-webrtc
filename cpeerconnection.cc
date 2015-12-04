@@ -174,7 +174,7 @@ CGOPeer NewPeerConnection() {
 // Blocks until libwebrtc succeeds in generating the SDP message,
 // or times-out after TIMEOUT_SECS.
 // @returns SDP, or NULL on failure.
-CGOSDHeader CGOCreateOffer(CGOPeer pc) {
+CGOsdp CGOCreateOffer(CGOPeer pc) {
   // TODO: Provide an actual RTCOfferOptions as an argument.
   PC cPC = ((Peer*)pc)->pc_;
   auto r = peer->promiseSDP.get_future();
@@ -186,7 +186,11 @@ CGOSDHeader CGOCreateOffer(CGOPeer pc) {
     return NULL;
   }
   SDP sdp = r.get();  // blocking
-  return (CGOSDHeader)sdp;
+  // Serialize SDP message and pass string to Go.
+  string *s = new string();
+  sdp->ToString(s);
+  cout << "sdp string: " << *s << endl;
+  return (CGOsdp)s;
 }
 
 // TODO: Make this correct.

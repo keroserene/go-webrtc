@@ -95,8 +95,9 @@ func NewPeerConnection() (*PeerConnection, error) {
 func (pc *PeerConnection) CreateOffer() *SDPHeader {
 	fmt.Println("[go] creating offer...")
 	sdp := C.CGOCreateOffer(pc.cgoPeer)
-	fmt.Println("[go] sdp offer: %v", sdp)
 	offer := new(SDPHeader)
+	offer.description = string(*sdp)
+	fmt.Println("[go] sdp offer: ", offer.description)
 	return offer
 }
 
