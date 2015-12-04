@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PROJECT_DIR=$(pwd)
 THIRD_PARTY_DIR="$PROJECT_DIR/third_party"
@@ -10,10 +10,12 @@ ARCH=$(go env GOARCH)
 CONFIG="Debug"
 COMMIT="cb3f9bd"
 
+INCLUDE_DIR="$PROJECT_DIR/include"
 
 # TODO(arlolra): depot_tools
 
 mkdir -p $THIRD_PARTY_DIR
+mkdir -p $INCLUDE_DIR
 
 if [[ -d $WEBRTC_DIR ]]; then
 	echo "Sync'ing webrtc ..."
@@ -42,6 +44,15 @@ popd
 echo "Building webrtc ..."
 pushd $WEBRTC_SRC
 ninja -C out/$CONFIG
+popd
+
+echo "Copying headers ..."
+pushd $WEBRTC_SRC
+for h in $(find talk/ webrtc/ -type f -name '*.h')
+do
+	mkdir -p "$INCLUDE_DIR/$(dirname $h)"
+	cp $h "$INCLUDE_DIR/$h"
+done
 popd
 
 echo "Build complete."
