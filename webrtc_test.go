@@ -62,5 +62,13 @@ func TestCreateAnswer(t *testing.T) {
 	fmt.Println("SDP Answer:\n", sdp.description)
 }
 
-// TODO: datachannel tests
+// TODO: real datachannel tests
+func TestCreateDataChannel(t *testing.T) {
+	channel, err := pcA.CreateDataChannel("test", DataChannelInit{})
+	if nil != err {
+		t.Fatal(err)
+	}
+	fmt.Println("Data channel: ", channel)
+}
+
 // TODO: tests for video / audio stream support.

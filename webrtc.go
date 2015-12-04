@@ -39,6 +39,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"unsafe"
 )
 
 type SDPHeader struct {
@@ -75,6 +76,12 @@ type PeerConnection struct {
 
 	// Internal PeerConnection functionality.
 	cgoPeer C.CGOPeer
+}
+
+type DataChannel struct {
+}
+
+type DataChannelInit struct {
 }
 
 // PeerConnection constructor.
@@ -145,11 +152,15 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 	return answer, nil
 }
 
-// TODO: LocalDescription getter.
-
 // TODO: Above methods blocks until success or failure occurs. Maybe there should
 // actually be a callback version, so the user doesn't have to make their own
 // goroutine.
+
+func (pc *PeerConnection) CreateDataChannel(label string, dict DataChannelInit) (*DataChannel, error) {
+	C.CGOCreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
+	d := new(DataChannel)
+	return d, nil
+}
 
 // Install a handler for receiving ICE Candidates.
 // func OnIceCandidate(pc PeerConnection) {

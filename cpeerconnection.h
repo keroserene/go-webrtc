@@ -15,6 +15,7 @@ extern "C" {
 
   typedef void* CGOPeer;
   typedef void* CGOsdp;  // Pointer to SessionDescriptionInterface*
+  typedef void* CGODataChannel;
   typedef const char* CGOsdpString;
 
   CGOPeer CGOInitializePeer();
@@ -31,6 +32,7 @@ extern "C" {
   int CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp);
   int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp);
 
+  CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict);
 
 #ifdef __cplusplus
 }

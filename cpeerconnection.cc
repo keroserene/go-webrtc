@@ -8,6 +8,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <future>
+#include <string>
 
 #define SUCCESS 0
 #define FAILURE 1
@@ -19,7 +20,7 @@ using namespace webrtc;
 // Smaller typedefs
 typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
 typedef SessionDescriptionInterface* SDP;
-
+typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
 
 // Peer acts as the glue between go and native code PeerConnectionInterface.
 // However, it's not directly accessible from the Go side, which can only
@@ -276,4 +277,16 @@ int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
   auto r = obs->promiseSet.get_future();
   cPC->SetRemoteDescription(obs, (SDP)sdp);
   return r.get();
+}
+
+
+CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict) {
+  PC cPC = ((Peer*)pc)->pc_;
+  DataChannelInit *r = (DataChannelInit*)dict;
+  DataChannelInit config;
+  string *l = new string(label);
+  // TODO: a real config struct.
+  auto channel = cPC->CreateDataChannel(*l, &config);
+  cout << "Created data channel: " << channel << endl;
+  return (CGODataChannel)channel;
 }
