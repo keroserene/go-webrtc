@@ -197,6 +197,7 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
 
   // Fragile cast from Go const "enum" to C++ Enum based on int ordering assumptions.
   // May need something better later.
+  c->type = (PeerConnectionInterface::IceTransportsType)cgoConfig->IceTransportPolicy;
   c->bundle_policy = (PeerConnectionInterface::BundlePolicy)cgoConfig->BundlePolicy;
   return c;
 }
@@ -303,3 +304,4 @@ CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict) {
   cout << "Created data channel: " << channel << endl;
   return (CGODataChannel)channel;
 }
+

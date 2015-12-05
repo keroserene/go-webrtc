@@ -20,7 +20,7 @@ extern "C" {
 
   typedef struct {
     CGOArray IceServers;
-    char     *IceTransportPolicy;
+    int      IceTransportPolicy;
     int      BundlePolicy;
     char     *RtcpMuxPolicy;
     char     *PeerIdentity;
