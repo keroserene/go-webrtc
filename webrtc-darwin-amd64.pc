@@ -1,0 +1,16 @@
+pc=${pcfiledir}
+
+Name: webrtc
+Description: webrtc
+Version: 1
+
+Cflags: \
+	-I${pc}/include \
+	-DPOSIX
+
+Libs: \
+	-L${pc}/lib \
+	-lwebrtc-darwin-amd64-magic \
+	-framework AppKit \
+	-framework CoreAudio \
+	-framework AudioToolbox
