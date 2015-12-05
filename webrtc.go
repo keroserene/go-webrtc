@@ -57,18 +57,17 @@ type RTCConfiguration struct {
 	IceTransportPolicy   string
 	BundlePolicy         string
 	RtcpMuxPolicy        string
-	PeerIdentity         string // Target peer identity
+	PeerIdentity         string   // Target peer identity
 	Certificates         []string // TODO: implement to allow key continuity
 	IceCandidatePoolSize int
 
-	// Internal RTCConfiguration for C
-	cgoConfig  *C.CGORTCConfiguration
+	cgoConfig *C.CGORTCConfiguration // Native code internals
 }
 
 // Create a new RTCConfiguration with spec default values.
 func NewRTCConfiguration() *RTCConfiguration {
 	c := new(RTCConfiguration)
-	// c.IceServers = make([]string, 0)
+	c.IceServers = make([]string, 0)
 	c.IceServers = nil
 	c.IceTransportPolicy = "all"
 	c.BundlePolicy = "balanced"
@@ -76,9 +75,10 @@ func NewRTCConfiguration() *RTCConfiguration {
 	c.Certificates = make([]string, 0)
 	return c
 }
-func (config *RTCConfiguration) CGO() C.CGORTCConfiguration{
+func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
 	c := new(C.CGORTCConfiguration)
-	// c.IceServers = unsafe.Pointer(&config.IceServers)
+	// TODO: Fix go slices to C arrays conversion
+	// c.IceServers = (C.CGOArray)(unsafe.Pointer(&config.IceServers[0]))
 	c.IceTransportPolicy = C.CString(config.IceTransportPolicy)
 	c.BundlePolicy = C.CString(config.BundlePolicy)
 	c.RtcpMuxPolicy = C.CString(config.RtcpMuxPolicy)
@@ -114,30 +114,49 @@ type PeerConnection struct {
 	// onicegatheringstatechange
 	IceServers string
 
-	// Internal PeerConnection functionality.
-	cgoPeer C.CGOPeer
+	cgoPeer C.CGOPeer // Native code internals
 }
 
 type DataChannel struct {
+	Label                      string
+	Ordered                    bool
+	MaxPacketLifeTime          uint
+	MaxRetransmits             uint
+	Protocol                   string
+	Negotiated                 bool
+	ID                         uint
+	ReadyState                 string // RTCDataChannelState
+	BufferedAmount             int
+	BufferedAmountLowThreshold int
+	// TODO: Close() and Send()
+	// TODO: OnOpen, OnBufferedAmountLow, OnError, OnClose, OnMessage,
+	BinaryType string
+
+	cgoDataChannel C.CGODataChannel // Internal PeerConnection functionality.
 }
 
 type DataChannelInit struct {
+	// TODO: defaults
+	Ordered           bool
+	MaxPacketLifeTime uint
+	MaxRetransmits    uint
+	Protocol          string
+	Negotiated        bool
+	ID                uint
 }
 
 // PeerConnection constructor.
 func NewPeerConnection(config *RTCConfiguration) (*PeerConnection, error) {
 	pc := new(PeerConnection)
-	pc.cgoPeer = C.CGOInitializePeer()  // internal CGO Peer.
+	pc.cgoPeer = C.CGOInitializePeer() // internal CGO Peer.
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
-	// Convert config to C struct.
-	// cConfig := (*C.CGORTCConfiguration)(unsafe.Pointer(&config))
-	// cConfig. C.CString(config.IceServers)
-	cConfig := config.CGO()
+	cConfig := config.CGO() // Convert for CGO
 	if 0 != C.CGOCreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
 	}
+	fmt.Println("Created PeerConnection: ", pc)
 	return pc, nil
 }
 
@@ -185,10 +204,9 @@ func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
 // CreateAnswer prepares an SDP "answer" message, which should be sent in
 // response to a peer that has sent an offer, over the signalling channel.
 func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
-	fmt.Println("[go] creating answer...")
 	sdp := C.CGOCreateAnswer(pc.cgoPeer)
 	if nil == sdp {
-		return nil, errors.New("[C ERROR] CreateAnswer - could not prepare SDP offer.")
+		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
 	}
 	answer := new(SDPHeader)
 	answer.cgoSdp = sdp
@@ -200,10 +218,15 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 // actually be a callback version, so the user doesn't have to make their own
 // goroutine.
 
-func (pc *PeerConnection) CreateDataChannel(label string, dict DataChannelInit) (*DataChannel, error) {
-	C.CGOCreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
-	d := new(DataChannel)
-	return d, nil
+func (pc *PeerConnection) CreateDataChannel(label string, dict DataChannelInit) (
+	*DataChannel, error) {
+	cDC := C.CGOCreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
+	if nil == cDC {
+		return nil, errors.New("Failed to CreateDataChannel")
+	}
+	dc := new(DataChannel)
+	dc.cgoDataChannel = cDC
+	return dc, nil
 }
 
 // Install a handler for receiving ICE Candidates.

@@ -11,7 +11,7 @@ extern "C" {
   // can directly reference header files from libwebrtc / C++ world. All the
   // casting must be hidden in the .cc file.
 
-  typedef void (*Callback)();
+  typedef void* CGOArray;
 
   typedef void* CGOPeer;
   typedef void* CGOsdp;  // Pointer to SessionDescriptionInterface*
@@ -19,13 +19,13 @@ extern "C" {
   typedef const char* CGOsdpString;
 
   typedef struct {
-    char **IceServers;
-    char *IceTransportPolicy;
-    char *BundlePolicy;
-    char *RtcpMuxPolicy;
-    char *PeerIdentity;
-    char **Certificates;
-    int IceCandidatePoolSize;
+    CGOArray IceServers;
+    char     *IceTransportPolicy;
+    char     *BundlePolicy;
+    char     *RtcpMuxPolicy;
+    char     *PeerIdentity;
+    CGOArray Certificates;
+    int      IceCandidatePoolSize;
   } CGORTCConfiguration;
 
   CGOPeer CGOInitializePeer();

@@ -10,8 +10,10 @@
 #include <future>
 #include <string>
 
+
+#define DTLS_SRTP "true"
 #define SUCCESS 0
-#define FAILURE 1
+#define FAILURE -1
 #define TIMEOUT_SECS 3
 
 using namespace std;
@@ -61,10 +63,9 @@ class Peer
     }
     // PortAllocatorFactoryInterface *allocator;
 
-    // TODO: DTLS
     // TODO: Make actual media constraints, with an exposed Go interface.
     auto c = new FakeConstraints();
-    c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, "false");
+    c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, DTLS_SRTP);
     c->SetMandatoryReceiveAudio(false);
     c->SetMandatoryReceiveVideo(false);
     constraints = c;
@@ -209,10 +210,10 @@ int CGOCreatePeerConnection(CGOPeer cgoPeer, CGORTCConfiguration *cgoConfig) {
     );
   if (!peer->pc_.get()) {
     cout << "ERROR: Could not create PeerConnection." << endl;
-    return -1;
+    return FAILURE;
   }
   cout << "[C] Made PeerConnection: " << peer->pc_ << endl;
-  return 0;
+  return SUCCESS;
 }
 
 bool SDPtimeout(future<SDP> *f, int seconds) {
@@ -286,11 +287,10 @@ int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
 CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict) {
   PC cPC = ((Peer*)pc)->pc_;
   DataChannelInit *r = (DataChannelInit*)dict;
+  // TODO: a real config struct, with correct fields
   DataChannelInit config;
   string *l = new string(label);
-  // TODO: a real config struct.
-  // auto channel = cPC->CreateDataChannel(*l, &config);
-  auto channel = cPC->CreateDataChannel(*l, NULL);
+  auto channel = cPC->CreateDataChannel(*l, &config);
   cout << "Created data channel: " << channel << endl;
   return (CGODataChannel)channel;
 }
