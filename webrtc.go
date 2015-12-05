@@ -39,6 +39,7 @@ package webrtc
 */
 import "C"
 import (
+	"github.com/keroserene/go-webrtc/datachannel"
 	"errors"
 	"fmt"
 	"unsafe"
@@ -155,14 +156,14 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 // actually be a callback version, so the user doesn't have to make their own
 // goroutine.
 
-func (pc *PeerConnection) CreateDataChannel(label string, dict DataChannelInit) (
-	*DataChannel, error) {
+func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init) (
+	*datachannel.DataChannel, error) {
 	cDC := C.CGOCreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
 	if nil == cDC {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
-	dc := newDataChannel()
-	dc.cgoDataChannel = cDC
+	dc := datachannel.New()
+	// dc.cgoDataChannel = cDC
 	return dc, nil
 }
 

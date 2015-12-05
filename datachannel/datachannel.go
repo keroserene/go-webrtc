@@ -1,6 +1,6 @@
-package webrtc
+package datachannel
 
-// #include "cpeerconnection.h"
+// #include "../cpeerconnection.h"
 import "C"
 
 type DataChannel struct {
@@ -18,10 +18,12 @@ type DataChannel struct {
 	// TODO: OnOpen, OnBufferedAmountLow, OnError, OnClose, OnMessage,
 	BinaryType string
 
+	// TODO: Think about visibility and the implications of having
+	// multiple packages like this...
 	cgoDataChannel C.CGODataChannel // Internal PeerConnection functionality.
 }
 
-type DataChannelInit struct {
+type Init struct {
 	// TODO: defaults
 	Ordered           bool
 	MaxPacketLifeTime uint
@@ -35,6 +37,6 @@ type DataChannelInit struct {
   // return (C.CGODataChannel)
 // }
 
-func newDataChannel() *DataChannel {
+func New() *DataChannel {
   return new(DataChannel)
 }

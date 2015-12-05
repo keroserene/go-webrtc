@@ -1,6 +1,7 @@
 package webrtc
 
 import (
+	"github.com/keroserene/go-webrtc/datachannel"
 	"fmt"
 	"testing"
 )
@@ -68,7 +69,7 @@ func TestCreateAnswer(t *testing.T) {
 
 // TODO: real datachannel tests
 func TestCreateDataChannel(t *testing.T) {
-	channel, err := pcA.CreateDataChannel("test", DataChannelInit{})
+	channel, err := pcA.CreateDataChannel("test", datachannel.Init{})
 	if nil != err {
 		t.Fatal(err)
 	}
