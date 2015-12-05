@@ -10,11 +10,7 @@ Cflags: \
 
 Libs: \
 	-L${pc}/lib \
-	-lwebrtc-darwin-amd64-magic
-	# -framework CoreServices \
-	# -framework CoreFoundation \
-	# -framework AudioUnit \
-	# -framework AudioToolbox \
-	# -framework CoreAudio \
-	# -framework AppKit \
-	# -framework QTKit
+	-lwebrtc-darwin-amd64-magic \
+	-framework AppKit \
+	-framework CoreAudio \
+	-framework AudioToolbox
