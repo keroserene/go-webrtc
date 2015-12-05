@@ -6,4 +6,9 @@ This repository is currently fluctuating a lot.
 This currently only builds on linux, but OSX is in progress.
 Actual documentation is on the way.
 
-Please run `go fmt` before every commit.
+## Conventions
+
+- Please run `go fmt` before every commit.
+
+- There is a `.CGO()` method for every Go struct which expects being passed to
+  native code.

@@ -1,5 +1,5 @@
 /*
-Package webrtc is a golang wrapper for libwebrtc.
+Package webrtc is a golang wrapper on native code WebRTC.
 
 To provide an easier experience for users of this package, there are differences
 inherent in the interface written here and the original native code WebRTC. This
@@ -51,98 +51,35 @@ type SDPHeader struct {
 	description string
 }
 
-type RTCConfiguration struct {
-	// TODO: Implement, and provide as argument to CreatePeerConnection
-	IceServers           []string
-	IceTransportPolicy   string
-	BundlePolicy         string
-	RtcpMuxPolicy        string
-	PeerIdentity         string   // Target peer identity
-	Certificates         []string // TODO: implement to allow key continuity
-	IceCandidatePoolSize int
-
-	cgoConfig *C.CGORTCConfiguration // Native code internals
-}
-
-// Create a new RTCConfiguration with spec default values.
-func NewRTCConfiguration() *RTCConfiguration {
-	c := new(RTCConfiguration)
-	c.IceServers = make([]string, 0)
-	c.IceServers = nil
-	c.IceTransportPolicy = "all"
-	c.BundlePolicy = "balanced"
-	c.RtcpMuxPolicy = "require"
-	c.Certificates = make([]string, 0)
-	return c
-}
-func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
-	c := new(C.CGORTCConfiguration)
-	// TODO: Fix go slices to C arrays conversion
-	// c.IceServers = (C.CGOArray)(unsafe.Pointer(&config.IceServers[0]))
-	c.IceTransportPolicy = C.CString(config.IceTransportPolicy)
-	c.BundlePolicy = C.CString(config.BundlePolicy)
-	c.RtcpMuxPolicy = C.CString(config.RtcpMuxPolicy)
-	c.PeerIdentity = C.CString(config.PeerIdentity)
-	// c.Certificates = config.Certificates
-	c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
-	config.cgoConfig = c
-	return *c
-}
-
 type PeerConnection struct {
 
+	localDescription				*SDPHeader
 	// currentLocalDescription
 	// pendingLocalDescription
-	// setRemoteDescription
-	localDescription  *SDPHeader
-	remoteDescription *SDPHeader
-	// remoteDescription
+
+	remoteDescription				*SDPHeader
 	// currentRemoteDescription
 	// pendingRemoteDescription
-	// addIceCandidate
-	// signalingState
-	// iceGatheringState
-	// iceConnectionState
-	// canTrickleIceCandidates
+
+	// addIceCandidate func()
+	// signalingState  RTCSignalingState
+	// iceGatheringState  RTCIceGatheringState
+	// iceConnectionState  RTCIceConnectionState
+	canTrickleIceCandidates  bool
 	// getConfiguration
 	// setConfiguration
 	// close
-	// onnegotiationneeded
 	OnIceCandidate func()
+
+	// Event handlers:
+	// onnegotiationneeded
+	// onicecandidate
+	// onicecandidateerror
 	// onsignalingstatechange
-	// oniceconnectionstatechange
 	// onicegatheringstatechange
-	IceServers string
+	// oniceconnectionstatechange
 
 	cgoPeer C.CGOPeer // Native code internals
-}
-
-type DataChannel struct {
-	Label                      string
-	Ordered                    bool
-	MaxPacketLifeTime          uint
-	MaxRetransmits             uint
-	Protocol                   string
-	Negotiated                 bool
-	ID                         uint
-	ReadyState                 string // RTCDataChannelState
-	BufferedAmount             int
-	BufferedAmountLowThreshold int
-	// TODO: Close() and Send()
-	// TODO: OnOpen, OnBufferedAmountLow, OnError, OnClose, OnMessage,
-	BinaryType string
-
-	cgoDataChannel C.CGODataChannel // Internal PeerConnection functionality.
-}
-
-type DataChannelInit struct {
-	// TODO: defaults
-	Ordered           bool
-	MaxPacketLifeTime uint
-	MaxRetransmits    uint
-	Protocol          string
-	Negotiated        bool
-	ID                uint
 }
 
 // PeerConnection constructor.
@@ -224,7 +161,7 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict DataChannelInit) 
 	if nil == cDC {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
-	dc := new(DataChannel)
+	dc := newDataChannel()
 	dc.cgoDataChannel = cDC
 	return dc, nil
 }
@@ -232,32 +169,3 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict DataChannelInit) 
 // Install a handler for receiving ICE Candidates.
 // func OnIceCandidate(pc PeerConnection) {
 // }
-
-type RTCSignalingState int
-
-/*
-const {
-  stable RTCSignallingState = iota
-  have-local-offer
-  have-remote-offer
-  have-local-pranswer
-  have-remote-pranswer
-  closed
-}
-*/
-
-type RTCIceCredentialType struct {
-}
-
-type RTCIceServer struct {
-	Urls       string
-	Username   string
-	Credential string
-	// credentialType   RTCIceCredentialType
-}
-
-type RTCIceTransportPolicy struct {
-}
-
-type RTCBundlePolicy struct {
-}
