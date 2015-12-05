@@ -37,6 +37,7 @@ typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
 // from C code from Go code, which is less likely to be a good time.
 //
 // TODO(keroserene): More documentation...
+// TODO: Better logging
 class Peer
   : public CreateSessionDescriptionObserver,
     public PeerConnectionObserver {
@@ -69,7 +70,7 @@ class Peer
     c->SetMandatoryReceiveAudio(false);
     c->SetMandatoryReceiveVideo(false);
     constraints = c;
-    cout << "[C] Peer initialized." << endl;
+    // cout << "[C] Peer initialized." << endl;
     return true;
   }
 
@@ -133,7 +134,7 @@ class Peer
 
   rtc::scoped_refptr<PeerConnectionFactoryInterface> pc_factory;
   // TODO: prepare and expose IceServers for real.
-  PeerConnectionInterface::IceServers ice_servers;
+  // PeerConnectionInterface::IceServers ice_servers;
 
  protected:
   rtc::Thread *signal_thread;
@@ -153,11 +154,11 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
     return new rtc::RefCountedObject<PeerSDPObserver>();
   }
   virtual void OnSuccess() {
-    cout << "[C] SDP Set Success!" << endl;
+    // cout << "[C] SDP Set Success!" << endl;
     promiseSet.set_value(0);
   }
   virtual void OnFailure(const std::string& error) {
-    cout << "[C] SDP Set Error: " << error << endl;
+    cout << "[C ERROR] SessionDescription: " << error << endl;
     promiseSet.set_value(-1);
   }
   promise<int> promiseSet = promise<int>();
@@ -182,23 +183,30 @@ CGOPeer CGOInitializePeer() {
   return localPeer;
 }
 
+// This helper converts RTCConfiguration struct from GO to C++.
+PeerConnectionInterface::RTCConfiguration *castConfig_(
+    CGORTCConfiguration *cgoConfig) {
+  PeerConnectionInterface::RTCConfiguration* c =
+      new PeerConnectionInterface::RTCConfiguration();
+
+  // TODO: Parse Go ice server slice into C++ vector of IceServer structs.
+  PeerConnectionInterface::IceServer *server = new
+      PeerConnectionInterface::IceServer();
+  server->uri = "stun:stun.l.google.com:19302";
+  c->servers.push_back(*server);
+
+  // Fragile cast from Go const "enum" to C++ Enum based on int ordering assumptions.
+  // May need something better later.
+  c->bundle_policy = (PeerConnectionInterface::BundlePolicy)cgoConfig->BundlePolicy;
+  return c;
+}
+
 // |Peer| method: create a native code PeerConnection object.
 // Returns 0 on Success.
 int CGOCreatePeerConnection(CGOPeer cgoPeer, CGORTCConfiguration *cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
-  PeerConnectionInterface::IceServer *server = new
-      PeerConnectionInterface::IceServer();
-  server->uri = "stun:stun.l.google.com:19302";
-  peer->ice_servers.push_back(*server);
-
-  cout << "Config: " << cgoConfig->IceTransportPolicy <<
-      cgoConfig->BundlePolicy <<
-      cgoConfig->RtcpMuxPolicy << endl;
-
-  // Prepare RTC Configuration object. This is just the default one, for now.
-  // TODO: A Go struct that can be passed and converted here.
-  peer->config = new PeerConnectionInterface::RTCConfiguration();
-  peer->config->servers = peer->ice_servers;
+  peer->config = castConfig_(cgoConfig);
+  // cout << "RTCConfiguration: " << peer->config << endl;
 
   // Prepare a native PeerConnection object.
   peer->pc_ = peer->pc_factory->CreatePeerConnection(
@@ -208,11 +216,12 @@ int CGOCreatePeerConnection(CGOPeer cgoPeer, CGORTCConfiguration *cgoConfig) {
     NULL,  // TODO: DTLS
     peer
     );
+
   if (!peer->pc_.get()) {
     cout << "ERROR: Could not create PeerConnection." << endl;
     return FAILURE;
   }
-  cout << "[C] Made PeerConnection: " << peer->pc_ << endl;
+  // cout << "[C] Made PeerConnection: " << peer->pc_ << endl;
   return SUCCESS;
 }
 

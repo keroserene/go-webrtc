@@ -1,8 +1,8 @@
 package webrtc
 
 import (
-	"github.com/keroserene/go-webrtc/datachannel"
 	"fmt"
+	"github.com/keroserene/go-webrtc/datachannel"
 	"testing"
 )
 

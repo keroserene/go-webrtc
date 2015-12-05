@@ -24,9 +24,9 @@ package webrtc
 */
 import "C"
 import (
-	"github.com/keroserene/go-webrtc/datachannel"
 	"errors"
 	"fmt"
+	"github.com/keroserene/go-webrtc/datachannel"
 	"unsafe"
 )
 
@@ -38,12 +38,11 @@ type SDPHeader struct {
 }
 
 type PeerConnection struct {
-
-	localDescription				*SDPHeader
+	localDescription *SDPHeader
 	// currentLocalDescription
 	// pendingLocalDescription
 
-	remoteDescription				*SDPHeader
+	remoteDescription *SDPHeader
 	// currentRemoteDescription
 	// pendingRemoteDescription
 
@@ -51,7 +50,7 @@ type PeerConnection struct {
 	// signalingState  RTCSignalingState
 	// iceGatheringState  RTCIceGatheringState
 	// iceConnectionState  RTCIceConnectionState
-	canTrickleIceCandidates  bool
+	canTrickleIceCandidates bool
 	// getConfiguration
 	// setConfiguration
 	// close
@@ -79,7 +78,7 @@ func NewPeerConnection(config *RTCConfiguration) (*PeerConnection, error) {
 	if 0 != C.CGOCreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
 	}
-	fmt.Println("Created PeerConnection: ", pc)
+	// fmt.Println("Created PeerConnection: ", pc, pc.cgoPeer)
 	return pc, nil
 }
 
@@ -155,3 +154,7 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init)
 // Install a handler for receiving ICE Candidates.
 // func OnIceCandidate(pc PeerConnection) {
 // }
+
+func unused() {
+	fmt.Println("nothing yet")
+}
