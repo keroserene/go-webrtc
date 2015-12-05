@@ -22,7 +22,7 @@ extern "C" {
     CGOArray IceServers;
     int      IceTransportPolicy;
     int      BundlePolicy;
-    char     *RtcpMuxPolicy;
+    int      RtcpMuxPolicy;
     char     *PeerIdentity;
     CGOArray Certificates;
     int      IceCandidatePoolSize;

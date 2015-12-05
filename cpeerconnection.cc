@@ -195,10 +195,13 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
   server->uri = "stun:stun.l.google.com:19302";
   c->servers.push_back(*server);
 
-  // Fragile cast from Go const "enum" to C++ Enum based on int ordering assumptions.
-  // May need something better later.
-  c->type = (PeerConnectionInterface::IceTransportsType)cgoConfig->IceTransportPolicy;
-  c->bundle_policy = (PeerConnectionInterface::BundlePolicy)cgoConfig->BundlePolicy;
+  // Cast Go const "enums" to C++ Enums.
+  c->type = (PeerConnectionInterface::IceTransportsType)
+      cgoConfig->IceTransportPolicy;
+  c->bundle_policy = (PeerConnectionInterface::
+      BundlePolicy)cgoConfig->BundlePolicy;
+  c->rtcp_mux_policy = (PeerConnectionInterface::
+      RtcpMuxPolicy)cgoConfig->RtcpMuxPolicy;
   return c;
 }
 

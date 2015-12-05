@@ -31,3 +31,10 @@ func TestIceTransportPolicy(t *testing.T) {
 	checkEnum(t, "IceTransportPolicyAll",
 		int(IceTransportPolicyAll), _cgoIceTransportPolicyAll)
 }
+
+func TestRtcpMuxPolicy(t *testing.T) {
+	checkEnum(t, "RtcpMuxPolicyNegotiate",
+		int(RtcpMuxPolicyNegotiate), _cgoRtcpMuxPolicyNegotiate)
+	checkEnum(t, "RtcpMuxPolicyRequire",
+		int(RtcpMuxPolicyRequire), _cgoRtcpMuxPolicyRequire)
+}

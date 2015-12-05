@@ -16,6 +16,9 @@ extern "C" {
   extern const int CGOBundlePolicyMaxBundle;
   extern const int CGOBundlePolicyMaxCompat;
 
+  extern const int CGORtcpMuxPolicyNegotiate;
+  extern const int CGORtcpMuxPolicyRequire;
+
 #ifdef __cplusplus
 }
 #endif

@@ -18,3 +18,8 @@ const int CGOBundlePolicyMaxBundle =
     PeerConnectionInterface::BundlePolicy::kBundlePolicyMaxBundle;
 const int CGOBundlePolicyMaxCompat =
     PeerConnectionInterface::BundlePolicy::kBundlePolicyMaxCompat;
+
+const int CGORtcpMuxPolicyNegotiate =
+    PeerConnectionInterface::RtcpMuxPolicy::kRtcpMuxPolicyNegotiate;
+const int CGORtcpMuxPolicyRequire =
+    PeerConnectionInterface::RtcpMuxPolicy::kRtcpMuxPolicyRequire;

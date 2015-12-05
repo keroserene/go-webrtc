@@ -9,6 +9,7 @@ import "C"
 // Bundle Policy Enum
 type RTCBundlePolicy int
 type RTCIceTransportPolicy int
+type RTCRtcpMuxPolicy int
 
 // These "Enum" consts must match order in: peerconnectioninterface.h
 // There doesn't seem to be a way to have a named container for enums
@@ -29,12 +30,17 @@ const (
 	IceTransportPolicyAll
 )
 
+const (
+	RtcpMuxPolicyNegotiate RTCRtcpMuxPolicy = iota
+	RtcpMuxPolicyRequire
+)
+
 type RTCConfiguration struct {
 	// TODO: Implement, and provide as argument to CreatePeerConnection
 	IceServers           []string
 	IceTransportPolicy   RTCIceTransportPolicy
 	BundlePolicy         RTCBundlePolicy
-	RtcpMuxPolicy        string
+	RtcpMuxPolicy        RTCRtcpMuxPolicy
 	PeerIdentity         string   // Target peer identity
 	Certificates         []string // TODO: implement to allow key continuity
 	IceCandidatePoolSize int
@@ -49,7 +55,7 @@ func NewRTCConfiguration() *RTCConfiguration {
 	c.IceServers = nil
 	c.IceTransportPolicy = IceTransportPolicyAll
 	c.BundlePolicy = BundlePolicyBalanced
-	c.RtcpMuxPolicy = "require"
+	c.RtcpMuxPolicy = RtcpMuxPolicyRequire
 	c.Certificates = make([]string, 0)
 	return c
 }
@@ -61,7 +67,7 @@ func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
 	c.IceTransportPolicy = C.int(config.IceTransportPolicy)
 	// c.BundlePolicy = C.CString(config.BundlePolicy)
 	c.BundlePolicy = C.int(config.BundlePolicy)
-	c.RtcpMuxPolicy = C.CString(config.RtcpMuxPolicy)
+	c.RtcpMuxPolicy = C.int(config.RtcpMuxPolicy)
 	c.PeerIdentity = C.CString(config.PeerIdentity)
 	// c.Certificates = config.Certificates
 	c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
@@ -106,3 +112,6 @@ var _cgoIceTransportPolicyAll = int(C.CGOIceTransportPolicyAll)
 var _cgoBundlePolicyBalanced = int(C.CGOBundlePolicyBalanced)
 var _cgoBundlePolicyMaxCompat = int(C.CGOBundlePolicyMaxCompat)
 var _cgoBundlePolicyMaxBundle = int(C.CGOBundlePolicyMaxBundle)
+
+var _cgoRtcpMuxPolicyNegotiate = int(C.CGORtcpMuxPolicyNegotiate)
+var _cgoRtcpMuxPolicyRequire = int(C.CGORtcpMuxPolicyRequire)
