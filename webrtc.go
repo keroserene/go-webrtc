@@ -17,21 +17,9 @@ TODO(keroserene): More package documentation, and more documentation in general.
 package webrtc
 
 /*
-#cgo CPPFLAGS: -Iinclude/
 #cgo CXXFLAGS: -std=c++0x
-// -Wno-c++0x-extensions
-#cgo LDFLAGS: -Wl,-z,now -Wl,-z,relro -Wl,--fatal-warnings -Wl,-z,defs -pthread
-#cgo LDFLAGS: -Wl,-z,noexecstack -fPIC -fuse-ld=gold
-#cgo LDFLAGS: -Bbin
-#cgo LDFLAGS: -Wl,--disable-new-dtags -pthread -m64 -Wl,--detect-odr-violations
-// #cgo LDFLAGS: -Wl,--icf=all -Wl,-O1 -Wl,--as-needed -Wl,--gc-sections
-#cgo LDFLAGS: -Llib
-// libwebrtc_magic is a custom built archive based on many other ninja files.
-#cgo LDFLAGS: -lwebrtc_magic
-#cgo LDFLAGS: -lgthread-2.0 -lgtk-x11-2.0 -lgdk-x11-2.0 -lpangocairo-1.0
-#cgo LDFLAGS: -latk-1.0 -lcairo -lgdk_pixbuf-2.0 -lgio-2.0 -lpangoft2-1.0 -lpango-1.0
-#cgo LDFLAGS: -lgobject-2.0 -lglib-2.0 -lfontconfig -lfreetype -lX11 -lXcomposite
-#cgo LDFLAGS: -lXext -lXrender -ldl -lrt -lexpat -lm
+#cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
+#cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include "cpeerconnection.h"
 */
 import "C"

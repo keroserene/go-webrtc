@@ -11,11 +11,13 @@ CONFIG="Debug"
 COMMIT="cb3f9bd"
 
 INCLUDE_DIR="$PROJECT_DIR/include"
+LIB_DIR="$PROJECT_DIR/lib"
 
 # TODO(arlolra): depot_tools
 
 mkdir -p $THIRD_PARTY_DIR
 mkdir -p $INCLUDE_DIR
+mkdir -p $LIB_DIR
 
 if [[ -d $WEBRTC_DIR ]]; then
 	echo "Sync'ing webrtc ..."
@@ -53,6 +55,12 @@ do
 	mkdir -p "$INCLUDE_DIR/$(dirname $h)"
 	cp $h "$INCLUDE_DIR/$h"
 done
+popd
+
+echo "Concatenating libraries ..."
+pushd $WEBRTC_SRC/out/$CONFIG
+ls *.a > filelist
+libtool -static -o $LIB_DIR/libwebrtc-$OS-$ARCH-magic.a -filelist filelist
 popd
 
 echo "Build complete."
