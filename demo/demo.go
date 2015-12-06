@@ -17,22 +17,14 @@ import (
 
 func main() {
 
-	config := webrtc.NewRTCConfiguration()
-	config.AddIceServer(webrtc.NewIceServer("stun times, omg"))
-	// config = []byte(`{
-		// IceServers: {
-			// urls: "lol"
-		// }
-	// }`)
-	// c := webrtc.RTCConfiguration{
-		// IceServers: nil,
-	// }
-	c := &webrtc.RTCConfiguration{
-		IceServers: nil,
-	}
-	fmt.Println(c)
+	config := webrtc.NewRTCConfiguration(
+		webrtc.OptionIceServer("stun:some.server"),
+		/// There can be as many as you like.
+		)
+	// You can also add IceServers at a different point.
+	config.AddIceServer("turn:another.server")
 
-	alice, err1 := webrtc.NewPeerConnection(c)
+	alice, err1 := webrtc.NewPeerConnection(config)
 	bob, err2 := webrtc.NewPeerConnection(config)
   if nil != err1 || nil != err2 {
     fmt.Println("Failed to create PeerConnections for both Alice and Bob.")

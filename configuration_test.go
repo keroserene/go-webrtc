@@ -42,8 +42,6 @@ func TestIceTransportPolicy(t *testing.T) {
 } */
 
 func TestIceServer(t *testing.T) {	
-	// config := NewRTCConfiguration()
-	// IceServer requires at least one string, for its url list.
 	s, err := NewIceServer()
 	if nil == err {
 		t.Error("NewIceServer should have failed given 0 params",
@@ -78,4 +76,21 @@ func TestIceServer(t *testing.T) {
 		t.Error("NewIceServer should fail given too many params.")
 	}
 	fmt.Println(s)
+}
+
+func TestNewConfiguration(t *testing.T) {	
+	config := NewRTCConfiguration()
+	if nil == config {
+		t.Error("NewRTCConfiguration could not generate basic config.")
+	}
+	config = NewRTCConfiguration(OptionIceServer("stun:a"))
+	if len(config.IceServers) != 1 {
+		t.Error("NewRTCConfiguration should have 1 ICE server.")
+	}
+	config = NewRTCConfiguration(
+		OptionIceServer("stun:a"),
+		OptionIceServer("stun:b, turn:c"))
+	if len(config.IceServers) != 2 {
+		t.Error("NewRTCConfiguration should have 2 ICE servers.")
+	}
 }

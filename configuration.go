@@ -24,6 +24,21 @@ type (
 	RTCSignalingState int
 )
 
+type RTCConfiguration struct {
+	// TODO: Implement, and provide as argument to CreatePeerConnection
+	IceServers           []RTCIceServer
+	IceTransportPolicy   RTCIceTransportPolicy
+	BundlePolicy         RTCBundlePolicy
+	// [ED] RtcpMuxPolicy        RTCRtcpMuxPolicy
+	PeerIdentity         string   // Target peer identity
+
+	// This would allow key continuity.
+	// [ED] Certificates         []string
+	// [ED] IceCandidatePoolSize int
+
+	cgoConfig *C.CGORTCConfiguration  // Native code internals
+}
+
 // These "Enum" consts must match order in: peerconnectioninterface.h
 // There doesn't seem to be a way to have a named container for enums
 // in go, and the idiomatic way seems to be just prefixes.
@@ -76,7 +91,6 @@ func NewIceServer(params ...string) (*RTCIceServer, error) {
 		return nil, errors.New("IceServer: received more strings than expected.")
 	}
 	urls := strings.Split(params[0], ",")
-	// fmt.Println("urls: ", urls, len(urls))
 	username := ""
 	credential:= ""
 	if 0 == len(urls) {
@@ -104,27 +118,18 @@ func NewIceServer(params ...string) (*RTCIceServer, error) {
 	}, nil
 }
 
-type RTCConfiguration struct {
-	// TODO: Implement, and provide as argument to CreatePeerConnection
-	IceServers           []RTCIceServer
-	IceTransportPolicy   RTCIceTransportPolicy
-	BundlePolicy         RTCBundlePolicy
-	// [ED] RtcpMuxPolicy        RTCRtcpMuxPolicy
-	PeerIdentity         string   // Target peer identity
-
-	// This would allow key continuity.
-	// [ED] Certificates         []string
-	// [ED] IceCandidatePoolSize int
-
-	cgoConfig *C.CGORTCConfiguration  // Native code internals
-}
-
 // Create a new RTCConfiguration with default values according to spec.
-func NewRTCConfiguration() *RTCConfiguration {
+// Accepts any number of |RTCIceServer|s.
+func NewRTCConfiguration(options... RTCConfigurationOption) *RTCConfiguration {
 	c := new(RTCConfiguration)
-	// c.IceServers = append(c.IceServers, NewIceServer("stun"))
 	c.IceTransportPolicy = IceTransportPolicyAll
 	c.BundlePolicy = BundlePolicyBalanced
+	for _, op := range options {
+		err := op(c)
+		if nil != err {
+			fmt.Println(err)
+		}
+	}
 	// [ED] c.RtcpMuxPolicy = RtcpMuxPolicyRequire
 	// [ED] c.Certificates = make([]string, 0)
 
@@ -138,15 +143,21 @@ func NewRTCConfiguration() *RTCConfiguration {
 	return c
 }
 
-// Helper to easily add a new IceServer to |config|'s IceServers slice.
-// Expects 1 to 3 strings, in this order:
-// - comma separated URLs
-// - username
-// - credential
-func (config *RTCConfiguration) AddIceServer(s ...string) error {
-	server, err:= NewIceServer(s...)
+// Used in RTCConfiguration's variadic functional constructor
+type RTCConfigurationOption func(c *RTCConfiguration) error
+
+func OptionIceServer(params ...string) RTCConfigurationOption {
+	return func(config *RTCConfiguration) error {
+	// return RTCConfigurationOption {
+  	// for _, server := range servers {
+		return config.AddIceServer(params...)
+	}
+}
+
+func (config *RTCConfiguration) AddIceServer(params ...string) error {
+	server, err := NewIceServer(params...)
 	if nil != err {
-		return errors.New("RTCConfiguration: Failed to add IceServer")
+		return err
 	}
 	config.IceServers = append(config.IceServers, *server)
 	return nil
@@ -165,6 +176,8 @@ func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
 	config.cgoConfig = c
 	return *c
 }
+
+
 
 
 /*
