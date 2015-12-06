@@ -15,6 +15,8 @@ LIB_DIR="$PROJECT_DIR/lib"
 
 # TODO(arlolra): depot_tools
 
+GYP_DEFINES="include_tests=0"
+
 mkdir -p $THIRD_PARTY_DIR
 mkdir -p $INCLUDE_DIR
 mkdir -p $LIB_DIR
@@ -57,6 +59,7 @@ do
 done
 popd
 
+# FIXME(arlolra): only .a's from peerconnection_client.ninja
 echo "Concatenating libraries ..."
 pushd $WEBRTC_SRC/out/$CONFIG
 ls *.a > filelist
