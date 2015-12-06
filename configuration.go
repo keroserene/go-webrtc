@@ -155,6 +155,20 @@ func OptionIceServer(params ...string) RTCConfigurationOption {
 	}
 }
 
+func OptionIceTransportPolicy(policy RTCIceTransportPolicy) RTCConfigurationOption {
+	return func(config *RTCConfiguration) error {
+		config.IceTransportPolicy = policy
+		return nil
+	}
+}
+
+func OptionBundlePolicy(policy RTCBundlePolicy) RTCConfigurationOption {
+	return func(config *RTCConfiguration) error {
+		config.BundlePolicy = policy
+		return nil
+	}
+}
+
 func (config *RTCConfiguration) AddIceServer(params ...string) error {
 	server, err := NewIceServer(params...)
 	if nil != err {

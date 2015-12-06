@@ -97,7 +97,26 @@ func TestNewConfiguration(t *testing.T) {
 	if len(config.IceServers) != 2 {
 		t.Error("NewRTCConfiguration should have 2 ICE servers.")
 	}
+
+	config = NewRTCConfiguration(
+		OptionIceServer("stun:d"),
+		OptionIceTransportPolicy(IceTransportPolicyAll))
+	if IceTransportPolicyAll != config.IceTransportPolicy {
+		t.Error("OptionIceTransportPolicy failed, was ", config.IceTransportPolicy)
+	}
+
+	config = NewRTCConfiguration(
+		OptionIceServer("stun:d"),
+		OptionBundlePolicy(BundlePolicyMaxCompat))
+	if BundlePolicyMaxCompat != config.BundlePolicy {
+		t.Error("OptionBundlePolicy failed, was ", config.BundlePolicy)
+	}
 }
 
 func TestIceServerCGO(t *testing.T) {
+	// TODO
+}
+
+func TestConfigurationCGO(t *testing.T) {
+	// TODO
 }
