@@ -50,13 +50,13 @@ class Peer
     // Due to the different threading model, in order for PeerConnectionFactory
     // to be able to post async messages without getting blocked, we need to use
     // external signalling and worker threads.
-    signal_thread = new rtc::Thread();
+    signaling_thread = new rtc::Thread();
     worker_thread = new rtc::Thread();
-    signal_thread->Start();
+    signaling_thread->Start();
     worker_thread->Start();
     pc_factory = CreatePeerConnectionFactory(
-      signal_thread,
       worker_thread,
+      signaling_thread,
       NULL, NULL, NULL);
     if (!pc_factory.get()) {
       cout << "ERROR: Could not create PeerConnectionFactory" << endl;
@@ -137,7 +137,7 @@ class Peer
   // PeerConnectionInterface::IceServers ice_servers;
 
  protected:
-  rtc::Thread *signal_thread;
+  rtc::Thread *signaling_thread;
   rtc::Thread *worker_thread;
 
 };  // class Peer
