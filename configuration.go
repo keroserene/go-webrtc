@@ -4,9 +4,9 @@ package webrtc
 // #include "ctestenums.h"
 import "C"
 import (
+	"errors"
 	"fmt"
 	"strings"
-	"errors"
 	// "encoding/json"
 )
 
@@ -17,26 +17,26 @@ import (
 // See https://w3c.github.io/webrtc-pc/#idl-def-RTCConfiguration
 
 type (
-	RTCBundlePolicy int
+	RTCBundlePolicy       int
 	RTCIceTransportPolicy int
-	RTCRtcpMuxPolicy int
-	RTCIceCredentialType int
-	RTCSignalingState int
+	RTCRtcpMuxPolicy      int
+	RTCIceCredentialType  int
+	RTCSignalingState     int
 )
 
 type RTCConfiguration struct {
 	// TODO: Implement, and provide as argument to CreatePeerConnection
-	IceServers           []RTCIceServer
-	IceTransportPolicy   RTCIceTransportPolicy
-	BundlePolicy         RTCBundlePolicy
+	IceServers         []RTCIceServer
+	IceTransportPolicy RTCIceTransportPolicy
+	BundlePolicy       RTCBundlePolicy
 	// [ED] RtcpMuxPolicy        RTCRtcpMuxPolicy
-	PeerIdentity         string   // Target peer identity
+	PeerIdentity string // Target peer identity
 
 	// This would allow key continuity.
 	// [ED] Certificates         []string
 	// [ED] IceCandidatePoolSize int
 
-	cgoConfig *C.CGORTCConfiguration  // Native code internals
+	cgoConfig *C.CGORTCConfiguration // Native code internals
 }
 
 // These "Enum" consts must match order in: peerconnectioninterface.h
@@ -71,9 +71,9 @@ const (
 ) */
 
 type RTCIceServer struct {
-	Urls           []string  // The only "required" element.
-	Username       string
-	Credential     string
+	Urls       []string // The only "required" element.
+	Username   string
+	Credential string
 	// [ED] CredentialType RTCIceCredentialType
 }
 
@@ -88,20 +88,20 @@ func NewIceServer(params ...string) (*RTCIceServer, error) {
 		return nil, errors.New("IceServer: missing first comma-separated Urls string.")
 	}
 	if len(params) > 3 {
-		WARN.Println(`IceServer: received %d strings, max expected is 3.
-				Ignoring the extras.`, len(params))
+		WARN.Printf("IceServer: got %d strings, expect <= 3. Ignoring extras.\n",
+			len(params))
 	}
 	urls := strings.Split(params[0], ",")
 	username := ""
-	credential:= ""
+	credential := ""
 	if 0 == len(urls) {
 		return nil, errors.New("IceServer: requires at least one Url")
 	}
-	for i, url := range urls{
+	for i, url := range urls {
 		url = strings.TrimSpace(url)
 		// TODO: Better url validation.
 		if !strings.HasPrefix(url, "stun:") &&
-			 !strings.HasPrefix(url, "turn:") {
+			!strings.HasPrefix(url, "turn:") {
 			msg := fmt.Sprintf("IceServer: received malformed url: <%s>", url)
 			ERROR.Println(msg)
 			return nil, errors.New(msg)
@@ -115,15 +115,16 @@ func NewIceServer(params ...string) (*RTCIceServer, error) {
 		credential = params[2]
 	}
 	return &RTCIceServer{
-		Urls: urls,
-		Username: username,
+		Urls:       urls,
+		Username:   username,
 		Credential: credential,
 	}, nil
 }
 
 // Create a new RTCConfiguration with default values according to spec.
 // Accepts any number of |RTCIceServer|s.
-func NewRTCConfiguration(options... RTCConfigurationOption) *RTCConfiguration {
+// Returns nil if there's an error.
+func NewRTCConfiguration(options ...RTCConfigurationOption) *RTCConfiguration {
 	c := new(RTCConfiguration)
 	c.IceTransportPolicy = IceTransportPolicyAll
 	c.BundlePolicy = BundlePolicyBalanced
@@ -136,6 +137,12 @@ func NewRTCConfiguration(options... RTCConfigurationOption) *RTCConfiguration {
 	// [ED] c.RtcpMuxPolicy = RtcpMuxPolicyRequire
 	// [ED] c.Certificates = make([]string, 0)
 	INFO.Println("Created RTCConfiguration at ", c)
+	INFO.Println("# IceServers: ", len(c.IceServers))
+	// TODO: Determine whether the below is true.
+	// if 0 == len(c.IceServers) {
+	// ERROR.Println("Need at least one ICE server.")
+	// return nil
+	// }
 	return c
 }
 
@@ -157,21 +164,50 @@ func (config *RTCConfiguration) AddIceServer(params ...string) error {
 	return nil
 }
 
+// Helpers which prepare Go-side of cast to eventual C++ RTCConfiguration struct.
+func (server *RTCIceServer) CGO() C.CGOIceServer {
+	cServer := new(C.CGOIceServer)
+	cServer.numUrls = C.int(len(server.Urls))
+	total := C.int(len(server.Urls))
+	// TODO: Make this conversion nicer.
+	cUrls := make([](*C.char), total)
+	for i, url := range server.Urls {
+		cUrls[i] = C.CString(url)
+	}
+	cServer.urls = &cUrls[0]
+	cServer.numUrls = total
+	cServer.username = C.CString(server.Username)
+	cServer.credential = C.CString(server.Credential)
+	return *cServer
+}
+
+// The C side of things will still need to allocate memory, due to the slices.
+// Assumes RTCConfiguration is valid.
 func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
+	INFO.Println("Converting Config: ", config)
 	c := new(C.CGORTCConfiguration)
-	// c.IceServers = (C.CGOArray)(unsafe.Pointer(&config.IceServers[0]))
-	c.IceTransportPolicy = C.int(config.IceTransportPolicy)
-	c.BundlePolicy = C.int(config.BundlePolicy)
+
+	// Need to convert each IceServer struct individually.
+	total := len(config.IceServers)
+	if total > 0 {
+		cServers := make([]C.CGOIceServer, total)
+		for i, server := range config.IceServers {
+			cServers[i] = server.CGO()
+		}
+		c.iceServers = &cServers[0]
+	}
+	c.numIceServers = C.int(total)
+
+	// c.iceServers = (*C.CGOIceServer)(unsafe.Pointer(&config.IceServers))
+	c.iceTransportPolicy = C.int(config.IceTransportPolicy)
+	c.bundlePolicy = C.int(config.BundlePolicy)
 	// [ED] c.RtcpMuxPolicy = C.int(config.RtcpMuxPolicy)
-	c.PeerIdentity = C.CString(config.PeerIdentity)
+	c.peerIdentity = C.CString(config.PeerIdentity)
 	// [ED] c.Certificates = config.Certificates
 	// [ED] c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
 	config.cgoConfig = c
 	return *c
 }
-
-
-
 
 /*
 const {

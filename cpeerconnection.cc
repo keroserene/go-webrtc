@@ -189,18 +189,27 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
   PeerConnectionInterface::RTCConfiguration* c =
       new PeerConnectionInterface::RTCConfiguration();
 
-  // TODO: Parse Go ice server slice into C++ vector of IceServer structs.
-  PeerConnectionInterface::IceServer *server = new
-      PeerConnectionInterface::IceServer();
-  server->uri = "stun:stun.l.google.com:19302";
-  c->servers.push_back(*server);
+  vector<CGOIceServer> servers( cgoConfig->iceServers,
+      cgoConfig->iceServers + cgoConfig->numIceServers);
+  // Pass in all IceServer structs for PeerConnectionInterface.
+  for (auto s : servers) {
+    // cgo only allows C arrays, but webrtc expects std::vectors
+    vector<string> urls(s.urls, s.urls + s.numUrls);
+    c->servers.push_back({
+      "",  // TODO: Remove once webrtc deprecates the first uri field.
+      urls,
+      s.username,
+      s.credential
+    });
+  }
 
   // Cast Go const "enums" to C++ Enums.
   c->type = (PeerConnectionInterface::IceTransportsType)
-      cgoConfig->IceTransportPolicy;
+      cgoConfig->iceTransportPolicy;
   c->bundle_policy = (PeerConnectionInterface::
-      BundlePolicy)cgoConfig->BundlePolicy;
-  // TODO: [ED]
+      BundlePolicy)cgoConfig->bundlePolicy;
+
+  // TODO: [ED] extensions.
   // c->rtcp_mux_policy = (PeerConnectionInterface::
       // RtcpMuxPolicy)cgoConfig->RtcpMuxPolicy;
   return c;

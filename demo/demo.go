@@ -19,7 +19,7 @@ func main() {
 
 	config := webrtc.NewRTCConfiguration(
 		/// There can be as many as you like.
-		webrtc.OptionIceServer("stun:some.server"),
+		webrtc.OptionIceServer("stun:stun.l.google.com:19302, stun:another"),
 		webrtc.OptionIceServer("stun:another.server"),
 		)
 

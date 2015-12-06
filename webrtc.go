@@ -30,8 +30,8 @@ import (
 	"unsafe"
 	// "io"
 	"io/ioutil"
-	"os"
 	"log"
+	"os"
 )
 
 var (
@@ -65,7 +65,8 @@ func SetVerbosity(level int) {
 
 	INFO = *log.New(infoOut,
 		"INFO: ",
-		log.Ldate|log.Ltime|log.Lshortfile)
+		// log.Ldate|log.Ltime|log.Lshortfile)
+		log.Lshortfile)
 	WARN = *log.New(warnOut,
 		"WARNING: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
@@ -78,7 +79,7 @@ func SetVerbosity(level int) {
 }
 
 func init() {
-	SetVerbosity(1)
+	SetVerbosity(0)
 }
 
 type SDPHeader struct {

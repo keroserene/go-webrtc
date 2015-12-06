@@ -17,8 +17,11 @@ var config *RTCConfiguration
 
 func TestCreatePeerConnection(t *testing.T) {
 	config = NewRTCConfiguration()
-	// ["stun:stun.l.google.com:19302"]
-	// )
+	if nil == config {
+		t.Fatal("Unable to create RTCConfiguration")
+	}
+	// config = NewRTCConfiguration(
+	// OptionIceServer("stun:stun.l.google.com:19302"))
 	pcA, err = NewPeerConnection(config)
 	if nil != err {
 		t.Fatal(err)

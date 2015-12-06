@@ -19,13 +19,23 @@ extern "C" {
   typedef const char* CGOsdpString;
 
   typedef struct {
-    CGOArray IceServers;
-    int      IceTransportPolicy;
-    int      BundlePolicy;
-    // int      RtcpMuxPolicy;
-    char     *PeerIdentity;
-    CGOArray Certificates;
-    // int      IceCandidatePoolSize;
+    char **urls;
+    int    numUrls;
+
+    char  *username;
+    char  *credential;
+  } CGOIceServer;
+
+  typedef struct {
+    CGOIceServer  *iceServers;
+    int            numIceServers;
+
+    int            iceTransportPolicy;
+    int            bundlePolicy;
+    // [BD] int      RtcpMuxPolicy;
+    char           *peerIdentity;
+    // [BD] CGOArray Certificates;
+    // [BD] int      IceCandidatePoolSize;
   } CGORTCConfiguration;
 
   CGOPeer CGOInitializePeer();

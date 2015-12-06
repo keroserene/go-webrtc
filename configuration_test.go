@@ -1,11 +1,11 @@
 package webrtc
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
-func init () {
+func init() {
 	// SetVerbosity(0)
 }
 
@@ -45,11 +45,11 @@ func TestIceTransportPolicy(t *testing.T) {
 		int(RtcpMuxPolicyRequire), _cgoRtcpMuxPolicyRequire)
 } */
 
-func TestIceServer(t *testing.T) {	
+func TestIceServer(t *testing.T) {
 	s, err := NewIceServer()
 	if nil == err {
 		t.Error("NewIceServer should have failed given 0 params",
-				s.Urls)
+			s.Urls)
 	}
 	s, err = NewIceServer("")
 	if nil == err {
@@ -82,7 +82,7 @@ func TestIceServer(t *testing.T) {
 	fmt.Println(s)
 }
 
-func TestNewConfiguration(t *testing.T) {	
+func TestNewConfiguration(t *testing.T) {
 	config := NewRTCConfiguration()
 	if nil == config {
 		t.Error("NewRTCConfiguration could not generate basic config.")
@@ -97,4 +97,7 @@ func TestNewConfiguration(t *testing.T) {
 	if len(config.IceServers) != 2 {
 		t.Error("NewRTCConfiguration should have 2 ICE servers.")
 	}
+}
+
+func TestIceServerCGO(t *testing.T) {
 }
