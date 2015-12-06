@@ -18,6 +18,7 @@ import (
 func main() {
 
 	config := webrtc.NewRTCConfiguration()
+	config.AddIceServer(webrtc.NewIceServer("stun times, omg"))
 	// config = []byte(`{
 		// IceServers: {
 			// urls: "lol"

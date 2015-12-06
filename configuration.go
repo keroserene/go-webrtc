@@ -4,7 +4,9 @@ package webrtc
 // #include "ctestenums.h"
 import "C"
 import (
-	// "fmt"
+	"fmt"
+	"strings"
+	"errors"
 	// "encoding/json"
 )
 
@@ -60,6 +62,48 @@ type RTCIceServer struct {
 	// [ED] CredentialType RTCIceCredentialType
 }
 
+// Create a new IceServer object.
+// Expects anywhere from one to three strings, in this order:
+// - comma-separated list of urls.
+// - username
+// - credential
+// TODO: For the ED version, may need to support CredentialType.
+func NewIceServer(params ...string) (*RTCIceServer, error) {
+	if len(params) < 1 {
+		return nil, errors.New("IceServer: missing first comma-separated Urls string.")
+	}
+	if len(params) > 3 {
+		return nil, errors.New("IceServer: received more strings than expected.")
+	}
+	urls := strings.Split(params[0], ",")
+	// fmt.Println("urls: ", urls, len(urls))
+	username := ""
+	credential:= ""
+	if 0 == len(urls) {
+		return nil, errors.New("IceServer: requires at least one Url")
+	}
+	for i, url := range urls{
+		url = strings.TrimSpace(url)
+		// TODO: Better url validation.
+		if !strings.HasPrefix(url, "stun:") && !strings.HasPrefix(url, "turn:") {
+			return nil, errors.New(
+					fmt.Sprintf("IceServer: received malformed url: <%s>", url))
+		}
+		urls[i] = url
+	}
+	if len(params) > 1 {
+		username = params[1]
+	}
+	if len(params) > 2 {
+		credential = params[2]
+	}
+	return &RTCIceServer{
+		Urls: urls,
+		Username: username,
+		Credential: credential,
+	}, nil
+}
+
 type RTCConfiguration struct {
 	// TODO: Implement, and provide as argument to CreatePeerConnection
 	IceServers           []RTCIceServer
@@ -78,7 +122,7 @@ type RTCConfiguration struct {
 // Create a new RTCConfiguration with default values according to spec.
 func NewRTCConfiguration() *RTCConfiguration {
 	c := new(RTCConfiguration)
-	c.IceServers = make([]RTCIceServer, 0)
+	// c.IceServers = append(c.IceServers, NewIceServer("stun"))
 	c.IceTransportPolicy = IceTransportPolicyAll
 	c.BundlePolicy = BundlePolicyBalanced
 	// [ED] c.RtcpMuxPolicy = RtcpMuxPolicyRequire
@@ -90,8 +134,22 @@ func NewRTCConfiguration() *RTCConfiguration {
 	// var c2 RTCConfiguration
 	// _ = json.Unmarshal(b, &c2)
 	// fmt.Println(c2)
-
+	// fmt.Println("RTCConfiguration: ", c)
 	return c
+}
+
+// Helper to easily add a new IceServer to |config|'s IceServers slice.
+// Expects 1 to 3 strings, in this order:
+// - comma separated URLs
+// - username
+// - credential
+func (config *RTCConfiguration) AddIceServer(s ...string) error {
+	server, err:= NewIceServer(s...)
+	if nil != err {
+		return errors.New("RTCConfiguration: Failed to add IceServer")
+	}
+	config.IceServers = append(config.IceServers, *server)
+	return nil
 }
 
 func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
