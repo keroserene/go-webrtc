@@ -28,7 +28,58 @@ import (
 	"fmt"
 	"github.com/keroserene/go-webrtc/datachannel"
 	"unsafe"
+	// "io"
+	"io/ioutil"
+	"os"
+	"log"
 )
+
+var (
+	INFO  log.Logger
+	WARN  log.Logger
+	ERROR log.Logger
+	TRACE log.Logger
+)
+
+// Logging verbosity level, from 0 (nothing) upwards.
+func SetVerbosity(level int) {
+	// handle io.Writer
+	infoOut := ioutil.Discard
+	warnOut := ioutil.Discard
+	errOut := ioutil.Discard
+	traceOut := ioutil.Discard
+
+	// TODO: Better logging levels
+	if level > 0 {
+		errOut = os.Stdout
+	}
+	if level > 1 {
+		warnOut = os.Stdout
+	}
+	if level > 2 {
+		infoOut = os.Stdout
+	}
+	if level > 3 {
+		traceOut = os.Stdout
+	}
+
+	INFO = *log.New(infoOut,
+		"INFO: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+	WARN = *log.New(warnOut,
+		"WARNING: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+	ERROR = *log.New(errOut,
+		"ERROR: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+	TRACE = *log.New(traceOut,
+		"TRACE: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+}
+
+func init() {
+	SetVerbosity(1)
+}
 
 type SDPHeader struct {
 	// Keep track of both a pointer to the C++ SessionDescription object,
@@ -78,7 +129,7 @@ func NewPeerConnection(config *RTCConfiguration) (*PeerConnection, error) {
 	if 0 != C.CGOCreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
 	}
-	// fmt.Println("Created PeerConnection: ", pc, pc.cgoPeer)
+	INFO.Println("Created PeerConnection: ", pc, pc.cgoPeer)
 	return pc, nil
 }
 
@@ -147,7 +198,6 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init)
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
 	dc := datachannel.New()
-	// dc.cgoDataChannel = cDC
 	return dc, nil
 }
 

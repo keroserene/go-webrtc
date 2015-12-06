@@ -88,7 +88,8 @@ func NewIceServer(params ...string) (*RTCIceServer, error) {
 		return nil, errors.New("IceServer: missing first comma-separated Urls string.")
 	}
 	if len(params) > 3 {
-		return nil, errors.New("IceServer: received more strings than expected.")
+		WARN.Println(`IceServer: received %d strings, max expected is 3.
+				Ignoring the extras.`, len(params))
 	}
 	urls := strings.Split(params[0], ",")
 	username := ""
@@ -99,9 +100,11 @@ func NewIceServer(params ...string) (*RTCIceServer, error) {
 	for i, url := range urls{
 		url = strings.TrimSpace(url)
 		// TODO: Better url validation.
-		if !strings.HasPrefix(url, "stun:") && !strings.HasPrefix(url, "turn:") {
-			return nil, errors.New(
-					fmt.Sprintf("IceServer: received malformed url: <%s>", url))
+		if !strings.HasPrefix(url, "stun:") &&
+			 !strings.HasPrefix(url, "turn:") {
+			msg := fmt.Sprintf("IceServer: received malformed url: <%s>", url)
+			ERROR.Println(msg)
+			return nil, errors.New(msg)
 		}
 		urls[i] = url
 	}
@@ -127,19 +130,12 @@ func NewRTCConfiguration(options... RTCConfigurationOption) *RTCConfiguration {
 	for _, op := range options {
 		err := op(c)
 		if nil != err {
-			fmt.Println(err)
+			ERROR.Println(err)
 		}
 	}
 	// [ED] c.RtcpMuxPolicy = RtcpMuxPolicyRequire
 	// [ED] c.Certificates = make([]string, 0)
-
-	// fmt.Println(c)
-	// b, _ := json.Marshal(c)
-	// fmt.Printf("%q\n", b)
-	// var c2 RTCConfiguration
-	// _ = json.Unmarshal(b, &c2)
-	// fmt.Println(c2)
-	// fmt.Println("RTCConfiguration: ", c)
+	INFO.Println("Created RTCConfiguration at ", c)
 	return c
 }
 
@@ -148,8 +144,6 @@ type RTCConfigurationOption func(c *RTCConfiguration) error
 
 func OptionIceServer(params ...string) RTCConfigurationOption {
 	return func(config *RTCConfiguration) error {
-	// return RTCConfigurationOption {
-  	// for _, server := range servers {
 		return config.AddIceServer(params...)
 	}
 }
@@ -167,12 +161,11 @@ func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
 	c := new(C.CGORTCConfiguration)
 	// c.IceServers = (C.CGOArray)(unsafe.Pointer(&config.IceServers[0]))
 	c.IceTransportPolicy = C.int(config.IceTransportPolicy)
-	// c.BundlePolicy = C.CString(config.BundlePolicy)
 	c.BundlePolicy = C.int(config.BundlePolicy)
-	// c.RtcpMuxPolicy = C.int(config.RtcpMuxPolicy)
+	// [ED] c.RtcpMuxPolicy = C.int(config.RtcpMuxPolicy)
 	c.PeerIdentity = C.CString(config.PeerIdentity)
-	// c.Certificates = config.Certificates
-	// c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
+	// [ED] c.Certificates = config.Certificates
+	// [ED] c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
 	config.cgoConfig = c
 	return *c
 }

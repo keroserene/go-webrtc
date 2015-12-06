@@ -18,11 +18,13 @@ import (
 func main() {
 
 	config := webrtc.NewRTCConfiguration(
-		webrtc.OptionIceServer("stun:some.server"),
 		/// There can be as many as you like.
+		webrtc.OptionIceServer("stun:some.server"),
+		webrtc.OptionIceServer("stun:another.server"),
 		)
+
 	// You can also add IceServers at a different point.
-	config.AddIceServer("turn:another.server")
+	config.AddIceServer("turn:and.another.server")
 
 	alice, err1 := webrtc.NewPeerConnection(config)
 	bob, err2 := webrtc.NewPeerConnection(config)
