@@ -3,13 +3,24 @@ package webrtc
 // #include "cpeerconnection.h"
 // #include "ctestenums.h"
 import "C"
+import (
+	// "fmt"
+	// "encoding/json"
+)
 
-// Spec: https://w3c.github.io/webrtc-pc/#configuration
+// Working draft spec: http://www.w3.org/TR/webrtc/#idl-def-RTCConfiguration
+// There are quite a few differences in the latest Editor's draft, but
+// for now they are omitted from this Go interface, or commented out with
+// an [ED] above.)
+// See https://w3c.github.io/webrtc-pc/#idl-def-RTCConfiguration
 
-// Bundle Policy Enum
-type RTCBundlePolicy int
-type RTCIceTransportPolicy int
-type RTCRtcpMuxPolicy int
+type (
+	RTCBundlePolicy int
+	RTCIceTransportPolicy int
+	RTCRtcpMuxPolicy int
+	RTCIceCredentialType int
+	RTCSignalingState int
+)
 
 // These "Enum" consts must match order in: peerconnectioninterface.h
 // There doesn't seem to be a way to have a named container for enums
@@ -30,52 +41,73 @@ const (
 	IceTransportPolicyAll
 )
 
-const (
+// TODO: [ED]
+/* const (
 	RtcpMuxPolicyNegotiate RTCRtcpMuxPolicy = iota
 	RtcpMuxPolicyRequire
-)
+) */
+
+// TODO: [ED]
+/* const (
+	IceCredentialTypePassword RTCIceCredentialType = iota
+	IceCredentialTypeToken
+) */
+
+type RTCIceServer struct {
+	Urls           []string  // The only "required" element.
+	Username       string
+	Credential     string
+	// [ED] CredentialType RTCIceCredentialType
+}
 
 type RTCConfiguration struct {
 	// TODO: Implement, and provide as argument to CreatePeerConnection
-	IceServers           []string
+	IceServers           []RTCIceServer
 	IceTransportPolicy   RTCIceTransportPolicy
 	BundlePolicy         RTCBundlePolicy
-	RtcpMuxPolicy        RTCRtcpMuxPolicy
+	// [ED] RtcpMuxPolicy        RTCRtcpMuxPolicy
 	PeerIdentity         string   // Target peer identity
-	Certificates         []string // TODO: implement to allow key continuity
-	IceCandidatePoolSize int
 
-	cgoConfig *C.CGORTCConfiguration // Native code internals
+	// This would allow key continuity.
+	// [ED] Certificates         []string
+	// [ED] IceCandidatePoolSize int
+
+	cgoConfig *C.CGORTCConfiguration  // Native code internals
 }
 
 // Create a new RTCConfiguration with default values according to spec.
 func NewRTCConfiguration() *RTCConfiguration {
 	c := new(RTCConfiguration)
-	c.IceServers = make([]string, 0)
-	c.IceServers = nil
+	c.IceServers = make([]RTCIceServer, 0)
 	c.IceTransportPolicy = IceTransportPolicyAll
 	c.BundlePolicy = BundlePolicyBalanced
-	c.RtcpMuxPolicy = RtcpMuxPolicyRequire
-	c.Certificates = make([]string, 0)
+	// [ED] c.RtcpMuxPolicy = RtcpMuxPolicyRequire
+	// [ED] c.Certificates = make([]string, 0)
+
+	// fmt.Println(c)
+	// b, _ := json.Marshal(c)
+	// fmt.Printf("%q\n", b)
+	// var c2 RTCConfiguration
+	// _ = json.Unmarshal(b, &c2)
+	// fmt.Println(c2)
+
 	return c
 }
 
 func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
 	c := new(C.CGORTCConfiguration)
-	// TODO: Fix go slices to C arrays conversion
 	// c.IceServers = (C.CGOArray)(unsafe.Pointer(&config.IceServers[0]))
 	c.IceTransportPolicy = C.int(config.IceTransportPolicy)
 	// c.BundlePolicy = C.CString(config.BundlePolicy)
 	c.BundlePolicy = C.int(config.BundlePolicy)
-	c.RtcpMuxPolicy = C.int(config.RtcpMuxPolicy)
+	// c.RtcpMuxPolicy = C.int(config.RtcpMuxPolicy)
 	c.PeerIdentity = C.CString(config.PeerIdentity)
 	// c.Certificates = config.Certificates
-	c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
+	// c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
 	config.cgoConfig = c
 	return *c
 }
 
-type RTCSignalingState int
 
 /*
 const {
@@ -87,16 +119,6 @@ const {
   closed
 }
 */
-
-type RTCIceCredentialType struct {
-}
-
-type RTCIceServer struct {
-	Urls       string
-	Username   string
-	Credential string
-	// credentialType   RTCIceCredentialType
-}
 
 //
 // Below are Go wrappers around intermediary C externs that extract the integer value of enums
@@ -113,5 +135,6 @@ var _cgoBundlePolicyBalanced = int(C.CGOBundlePolicyBalanced)
 var _cgoBundlePolicyMaxCompat = int(C.CGOBundlePolicyMaxCompat)
 var _cgoBundlePolicyMaxBundle = int(C.CGOBundlePolicyMaxBundle)
 
-var _cgoRtcpMuxPolicyNegotiate = int(C.CGORtcpMuxPolicyNegotiate)
-var _cgoRtcpMuxPolicyRequire = int(C.CGORtcpMuxPolicyRequire)
+// [ED]
+// var _cgoRtcpMuxPolicyNegotiate = int(C.CGORtcpMuxPolicyNegotiate)
+// var _cgoRtcpMuxPolicyRequire = int(C.CGORtcpMuxPolicyRequire)

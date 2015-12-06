@@ -22,10 +22,10 @@ extern "C" {
     CGOArray IceServers;
     int      IceTransportPolicy;
     int      BundlePolicy;
-    int      RtcpMuxPolicy;
+    // int      RtcpMuxPolicy;
     char     *PeerIdentity;
     CGOArray Certificates;
-    int      IceCandidatePoolSize;
+    // int      IceCandidatePoolSize;
   } CGORTCConfiguration;
 
   CGOPeer CGOInitializePeer();

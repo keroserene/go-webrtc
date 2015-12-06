@@ -200,8 +200,9 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
       cgoConfig->IceTransportPolicy;
   c->bundle_policy = (PeerConnectionInterface::
       BundlePolicy)cgoConfig->BundlePolicy;
-  c->rtcp_mux_policy = (PeerConnectionInterface::
-      RtcpMuxPolicy)cgoConfig->RtcpMuxPolicy;
+  // TODO: [ED]
+  // c->rtcp_mux_policy = (PeerConnectionInterface::
+      // RtcpMuxPolicy)cgoConfig->RtcpMuxPolicy;
   return c;
 }
 

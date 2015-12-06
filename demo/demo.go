@@ -17,8 +17,22 @@ import (
 
 func main() {
 
-	alice, err1 := webrtc.NewPeerConnection(webrtc.NewRTCConfiguration())
-	bob, err2 := webrtc.NewPeerConnection(webrtc.NewRTCConfiguration())
+	config := webrtc.NewRTCConfiguration()
+	// config = []byte(`{
+		// IceServers: {
+			// urls: "lol"
+		// }
+	// }`)
+	// c := webrtc.RTCConfiguration{
+		// IceServers: nil,
+	// }
+	c := &webrtc.RTCConfiguration{
+		IceServers: nil,
+	}
+	fmt.Println(c)
+
+	alice, err1 := webrtc.NewPeerConnection(c)
+	bob, err2 := webrtc.NewPeerConnection(config)
   if nil != err1 || nil != err2 {
     fmt.Println("Failed to create PeerConnections for both Alice and Bob.")
     return

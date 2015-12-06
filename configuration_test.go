@@ -32,9 +32,10 @@ func TestIceTransportPolicy(t *testing.T) {
 		int(IceTransportPolicyAll), _cgoIceTransportPolicyAll)
 }
 
-func TestRtcpMuxPolicy(t *testing.T) {
+// TODO: [Available in editor's draft only]
+/* func TestRtcpMuxPolicy(t *testing.T) {
 	checkEnum(t, "RtcpMuxPolicyNegotiate",
 		int(RtcpMuxPolicyNegotiate), _cgoRtcpMuxPolicyNegotiate)
 	checkEnum(t, "RtcpMuxPolicyRequire",
 		int(RtcpMuxPolicyRequire), _cgoRtcpMuxPolicyRequire)
-}
+} */
