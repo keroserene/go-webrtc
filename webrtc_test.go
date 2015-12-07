@@ -5,6 +5,7 @@ import (
 	"github.com/keroserene/go-webrtc/datachannel"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 // TODO: Try Gucumber or some potential fancy test framework.
@@ -43,28 +44,32 @@ func TestCreateOffer(t *testing.T) {
 	fmt.Println("SDP Offer:\n", sdp.description)
 }
 
-func TestSetLocalDescription(t *testing.T) {
+// Also test that the SignalingState callback fired. or fail with timeout.
+func TestOnSignalingStateChangeCallback(t *testing.T) {	
 	success := make(chan RTCSignalingState, 1)	
 	pcA.OnSignalingStateChange = func(s RTCSignalingState) {
 		success <- s
 	}
+	cgoOnSignalingStateChange(unsafe.Pointer(pcA), SignalingStateStable);
+	select {
+	case state := <- success:
+		if SignalingStateStable != state {
+			t.Error("Unexpected SignalingState:", state)
+		}
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
+}
+
+func TestSetLocalDescription(t *testing.T) {
 	err = pcA.SetLocalDescription(sdp)
 	if nil != err {
 		t.Fatal(err)
 	}
 
-	// Also test that the SignalingState callback fired. or fail with timeout.
-	select {
-	case state := <- success:
-		INFO.Println(state)
-	case <-time.After(time.Second * 1):
-		t.Fatal("Timed out.")
-	}
-
 	// Pretend pcA sends the SDP offer to pcB through some signalling channel.
 	fmt.Println("\n ~~ Signalling Happens here ~~ \n")
 }
-
 
 func TestSetRemoteDescription(t *testing.T) {
 	fmt.Println("\n == BOB's PeerConnection ==")

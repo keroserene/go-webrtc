@@ -19,7 +19,7 @@ func checkEnum(t *testing.T, desc string, enum int, expected int) {
 	}
 }
 
-func TestBundlePolicy(t *testing.T) {
+func TestBundlePolicyEnums(t *testing.T) {
 	checkEnum(t, "BundlePolicyBalanced",
 		int(BundlePolicyBalanced), _cgoBundlePolicyBalanced)
 	checkEnum(t, "BundlePolicyMaxCompat",
@@ -28,7 +28,7 @@ func TestBundlePolicy(t *testing.T) {
 		int(BundlePolicyMaxBundle), _cgoBundlePolicyMaxBundle)
 }
 
-func TestIceTransportPolicy(t *testing.T) {
+func TestIceTransportPolicyEnums(t *testing.T) {
 	checkEnum(t, "IceTransportPolicyNone",
 		int(IceTransportPolicyNone), _cgoIceTransportPolicyNone)
 	checkEnum(t, "IceTransportPolicyRelay",
@@ -44,6 +44,21 @@ func TestIceTransportPolicy(t *testing.T) {
 	checkEnum(t, "RtcpMuxPolicyRequire",
 		int(RtcpMuxPolicyRequire), _cgoRtcpMuxPolicyRequire)
 } */
+
+func TestSignalingStateEnums(t *testing.T) {
+	checkEnum(t, "SignalingStateStable",
+		int(SignalingStateStable), _cgoSignalingStateStable)
+	checkEnum(t, "SignalingStateHaveLocalOffer",
+		int(SignalingStateHaveLocalOffer), _cgoSignalingStateHaveLocalOffer)
+	checkEnum(t, "SignalingStateHaveLocalPrAnswer",
+		int(SignalingStateHaveLocalPrAnswer), _cgoSignalingStateHaveLocalPrAnswer)
+	checkEnum(t, "SignalingStateHaveRemoteOffer",
+		int(SignalingStateHaveRemoteOffer), _cgoSignalingStateHaveRemoteOffer)
+	checkEnum(t, "SignalingStateHaveRemotePrAnswer",
+		int(SignalingStateHaveRemotePrAnswer), _cgoSignalingStateHaveRemotePrAnswer)
+	checkEnum(t, "SignalingStateClosed",
+		int(SignalingStateClosed), _cgoSignalingStateClosed)
+}
 
 func TestIceServer(t *testing.T) {
 	s, err := NewIceServer()

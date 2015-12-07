@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+  // See talk/app/webrtc/peerconnectioninterface.h
+
   extern const int CGOIceTransportPolicyNone;
   extern const int CGOIceTransportPolicyRelay;
   extern const int CGOIceTransportPolicyNoHost;
@@ -19,6 +21,13 @@ extern "C" {
   // TODO: [ED]
   // extern const int CGORtcpMuxPolicyNegotiate;
   // extern const int CGORtcpMuxPolicyRequire;
+
+  extern const int CGOSignalingStateStable;
+  extern const int CGOSignalingStateHaveLocalOffer;
+  extern const int CGOSignalingStateHaveLocalPrAnswer;
+  extern const int CGOSignalingStateHaveRemoteOffer;
+  extern const int CGOSignalingStateHaveRemotePrAnswer;
+  extern const int CGOSignalingStateClosed;
 
 #ifdef __cplusplus
 }

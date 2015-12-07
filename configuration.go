@@ -263,6 +263,13 @@ var _cgoBundlePolicyBalanced = int(C.CGOBundlePolicyBalanced)
 var _cgoBundlePolicyMaxCompat = int(C.CGOBundlePolicyMaxCompat)
 var _cgoBundlePolicyMaxBundle = int(C.CGOBundlePolicyMaxBundle)
 
+var _cgoSignalingStateStable = int(C.CGOSignalingStateStable)
+var _cgoSignalingStateHaveLocalOffer = int(C.CGOSignalingStateHaveLocalOffer)
+var _cgoSignalingStateHaveLocalPrAnswer = int(C.CGOSignalingStateHaveLocalPrAnswer)
+var _cgoSignalingStateHaveRemoteOffer = int(C.CGOSignalingStateHaveRemoteOffer)
+var _cgoSignalingStateHaveRemotePrAnswer = int(C.CGOSignalingStateHaveRemotePrAnswer)
+var _cgoSignalingStateClosed = int(C.CGOSignalingStateClosed)
+
 // [ED]
 // var _cgoRtcpMuxPolicyNegotiate = int(C.CGORtcpMuxPolicyNegotiate)
 // var _cgoRtcpMuxPolicyRequire = int(C.CGORtcpMuxPolicyRequire)
