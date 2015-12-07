@@ -20,7 +20,7 @@ extern "C" {
 
   typedef struct {
     char **urls;
-    int    numUrls;
+    int   numUrls;
 
     char  *username;
     char  *credential;
@@ -38,7 +38,8 @@ extern "C" {
     // [BD] int      IceCandidatePoolSize;
   } CGORTCConfiguration;
 
-  CGOPeer CGOInitializePeer();
+  CGOPeer CGOInitializePeer(void *pc);
+
   // Below are "C methods" for the Peer class, which must be hidden from cgo.
 
   int CGOCreatePeerConnection(CGOPeer, CGORTCConfiguration*);

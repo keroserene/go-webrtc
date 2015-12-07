@@ -58,6 +58,20 @@ const (
 	IceTransportPolicyAll
 )
 
+const (
+	SignalingStateStable RTCSignalingState = iota
+	SignalingStateHaveLocalOffer
+	SignalingStateHaveLocalPrAnswer
+	SignalingStateHaveRemoteOffer
+	SignalingStateHaveRemotePrAnswer
+	SignalingStateClosed
+)
+
+var RTCSignalingStateString = []string{"Stable",
+	"HaveLocalOffer", "HaveLocalPrAnswer",
+	"HaveRemoteOffer", "HaveRemotePrAnswer",
+	"Closed" }
+
 // TODO: [ED]
 /* const (
 	RtcpMuxPolicyNegotiate RTCRtcpMuxPolicy = iota

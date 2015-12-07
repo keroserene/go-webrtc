@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <future>
 #include <string>
-
+#include "_cgo_export.h"
 
 #define DTLS_SRTP "true"
 #define SUCCESS 0
@@ -95,6 +95,11 @@ class Peer
   // PeerConnectionObserver Implementation
   // TODO: cgo hooks
   //
+  void OnSignalingChange(PeerConnectionInterface::SignalingState state) {
+    // cout << "[C] OnSignalingChange: " << state << endl;
+    cgoOnSignalingStateChange(goPeerConnection, state);
+  }
+
   void OnStateChange(PeerConnectionObserver::StateType state) {
     cout << "[C] OnStateChange: " << state << endl;
   }
@@ -123,7 +128,8 @@ class Peer
   PeerConnectionInterface::RTCOfferAnswerOptions options;
   const MediaConstraintsInterface* constraints;
 
-  PC pc_;
+  PC pc_;                  // Pointer to internal PeerConnection
+  void *goPeerConnection;  // External GO PeerConnection
 
   // Passing SDPs through promises instead of callbacks, to allow the benefits
   // as described above.
@@ -176,10 +182,11 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
 
 // Create and return the Peer object, which provides initial native code
 // glue for the PeerConnection constructor.
-CGOPeer CGOInitializePeer() {
+CGOPeer CGOInitializePeer(void *goPc) {
   rtc::scoped_refptr<Peer> localPeer = new rtc::RefCountedObject<Peer>();
   localPeer->Initialize();
   localPeers.push_back(localPeer);
+  localPeer->goPeerConnection = goPc;
   return localPeer;
 }
 

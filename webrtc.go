@@ -79,7 +79,7 @@ func SetVerbosity(level int) {
 }
 
 func init() {
-	SetVerbosity(0)
+	SetVerbosity(3)
 }
 
 type SDPHeader struct {
@@ -110,9 +110,9 @@ type PeerConnection struct {
 
 	// Event handlers:
 	// onnegotiationneeded
-	// onicecandidate
+	// OnIceCandidate
 	// onicecandidateerror
-	// onsignalingstatechange
+	OnSignalingStateChange func(RTCSignalingState) 
 	// onicegatheringstatechange
 	// oniceconnectionstatechange
 
@@ -122,7 +122,8 @@ type PeerConnection struct {
 // PeerConnection constructor.
 func NewPeerConnection(config *RTCConfiguration) (*PeerConnection, error) {
 	pc := new(PeerConnection)
-	pc.cgoPeer = C.CGOInitializePeer() // internal CGO Peer.
+	INFO.Println("PC at ", unsafe.Pointer(pc))
+	pc.cgoPeer = C.CGOInitializePeer(unsafe.Pointer(pc))  // internal CGO Peer.
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
@@ -200,6 +201,18 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init)
 	}
 	dc := datachannel.New()
 	return dc, nil
+}
+
+
+// Intermediate hooks for firing Go funcs as C callbacks.
+//export cgoOnSignalingStateChange
+func cgoOnSignalingStateChange(p unsafe.Pointer, s RTCSignalingState) {
+	INFO.Println("fired OnSignalingStateChange: ", p,
+		s, RTCSignalingStateString[s])
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnSignalingStateChange {
+		pc.OnSignalingStateChange(s)
+	}
 }
 
 // Install a handler for receiving ICE Candidates.

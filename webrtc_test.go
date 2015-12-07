@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/keroserene/go-webrtc/datachannel"
 	"testing"
+	"time"
 )
 
 // TODO: Try Gucumber or some potential fancy test framework.
@@ -20,8 +21,6 @@ func TestCreatePeerConnection(t *testing.T) {
 	if nil == config {
 		t.Fatal("Unable to create RTCConfiguration")
 	}
-	// config = NewRTCConfiguration(
-	// OptionIceServer("stun:stun.l.google.com:19302"))
 	pcA, err = NewPeerConnection(config)
 	if nil != err {
 		t.Fatal(err)
@@ -45,13 +44,27 @@ func TestCreateOffer(t *testing.T) {
 }
 
 func TestSetLocalDescription(t *testing.T) {
+	success := make(chan RTCSignalingState, 1)	
+	pcA.OnSignalingStateChange = func(s RTCSignalingState) {
+		success <- s
+	}
 	err = pcA.SetLocalDescription(sdp)
 	if nil != err {
 		t.Fatal(err)
 	}
+
+	// Also test that the SignalingState callback fired. or fail with timeout.
+	select {
+	case state := <- success:
+		INFO.Println(state)
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
+
 	// Pretend pcA sends the SDP offer to pcB through some signalling channel.
 	fmt.Println("\n ~~ Signalling Happens here ~~ \n")
 }
+
 
 func TestSetRemoteDescription(t *testing.T) {
 	fmt.Println("\n == BOB's PeerConnection ==")

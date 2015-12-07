@@ -34,6 +34,11 @@ func main() {
   }
   fmt.Println("Alice and Bob created PeerConnections.\n")
 
+	// Prepare callback handlers.
+	alice.OnSignalingStateChange = func() {
+		fmt.Println("Alice signal changed:")
+	}
+
 	// Let Alice and Bob use go channels as the signaling channel.
 	// Must be bidirectional.
 	a2b := make(chan *webrtc.SDPHeader, 1)
