@@ -17,7 +17,7 @@ import (
 
 func main() {
 
-	webrtc.SetVerbosity(0)
+	webrtc.SetVerbosity(3)
 
 	config := webrtc.NewConfiguration(
 		/// There can be as many as you like.
