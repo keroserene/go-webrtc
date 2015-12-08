@@ -3,37 +3,37 @@
 
 using namespace webrtc;
 
-const int CGOIceTransportPolicyNone =
+const int CGO_IceTransportPolicyNone =
     PeerConnectionInterface::IceTransportsType::kNone;
-const int CGOIceTransportPolicyRelay =
+const int CGO_IceTransportPolicyRelay =
     PeerConnectionInterface::IceTransportsType::kRelay;
-const int CGOIceTransportPolicyNoHost =
+const int CGO_IceTransportPolicyNoHost =
     PeerConnectionInterface::IceTransportsType::kNoHost;
-const int CGOIceTransportPolicyAll =
+const int CGO_IceTransportPolicyAll =
     PeerConnectionInterface::IceTransportsType::kAll;
 
-const int CGOBundlePolicyBalanced =
+const int CGO_BundlePolicyBalanced =
     PeerConnectionInterface::BundlePolicy::kBundlePolicyBalanced;
-const int CGOBundlePolicyMaxBundle =
+const int CGO_BundlePolicyMaxBundle =
     PeerConnectionInterface::BundlePolicy::kBundlePolicyMaxBundle;
-const int CGOBundlePolicyMaxCompat =
+const int CGO_BundlePolicyMaxCompat =
     PeerConnectionInterface::BundlePolicy::kBundlePolicyMaxCompat;
 
 // TODO: [ED]
-// const int CGORtcpMuxPolicyNegotiate =
+// const int CGO_RtcpMuxPolicyNegotiate =
     // PeerConnectionInterface::RtcpMuxPolicy::kRtcpMuxPolicyNegotiate;
-// const int CGORtcpMuxPolicyRequire =
+// const int CGO_RtcpMuxPolicyRequire =
     // PeerConnectionInterface::RtcpMuxPolicy::kRtcpMuxPolicyRequire;
 
-const int CGOSignalingStateStable =
+const int CGO_SignalingStateStable =
     PeerConnectionInterface::SignalingState::kStable;
-const int CGOSignalingStateHaveLocalOffer =
+const int CGO_SignalingStateHaveLocalOffer =
     PeerConnectionInterface::SignalingState::kHaveLocalOffer;
-const int CGOSignalingStateHaveLocalPrAnswer =
+const int CGO_SignalingStateHaveLocalPrAnswer =
     PeerConnectionInterface::SignalingState::kHaveLocalPrAnswer;
-const int CGOSignalingStateHaveRemoteOffer =
+const int CGO_SignalingStateHaveRemoteOffer =
     PeerConnectionInterface::SignalingState::kHaveRemoteOffer;
-const int CGOSignalingStateHaveRemotePrAnswer =
+const int CGO_SignalingStateHaveRemotePrAnswer =
     PeerConnectionInterface::SignalingState::kHaveRemotePrAnswer;
-const int CGOSignalingStateClosed =
+const int CGO_SignalingStateClosed =
     PeerConnectionInterface::SignalingState::kClosed;

@@ -19,7 +19,7 @@ func main() {
 
 	webrtc.SetVerbosity(0)
 
-	config := webrtc.NewRTCConfiguration(
+	config := webrtc.NewConfiguration(
 		/// There can be as many as you like.
 		webrtc.OptionIceServer("stun:stun.l.google.com:19302, stun:another"),
 		webrtc.OptionIceServer("stun:another.server"),
@@ -37,7 +37,7 @@ func main() {
   fmt.Println("Alice and Bob created PeerConnections.\n")
 
 	// Prepare callback handlers.
-	alice.OnSignalingStateChange = func(state webrtc.RTCSignalingState) {
+	alice.OnSignalingStateChange = func(state webrtc.SignalingState) {
 		fmt.Println("Alice signal changed:", state)
 	}
 

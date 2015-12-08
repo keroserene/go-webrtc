@@ -11,6 +11,19 @@ The interface here is based mostly on: w3c.github.io/webrtc-pc
 There is also a complication in building the dependent static library for this
 to work. Furthermore it is possible that this will break on future versions
 of libwebrtc, because the interface with the native code is be fragile.
+/*
+Package webrtc is a golang wrapper on native code WebRTC.
+
+To provide an easier experience for users of this package, there are differences
+inherent in the interface written here and the original native code WebRTC. This
+allows users to use WebRTC in a more idiomatic golang way. For example, callback
+mechanism has a layer of indirection that allows goroutines instead.
+
+The interface here is based mostly on: w3c.github.io/webrtc-pc
+
+There is also a complication in building the dependent static library for this
+to work. Furthermore it is possible that this will break on future versions
+of libwebrtc, because the interface with the native code is be fragile.
 
 TODO(keroserene): More package documentation, and more documentation in general.
 */
@@ -25,7 +38,7 @@ package webrtc
 import "C"
 import (
 	"errors"
-	"fmt"
+	// "fmt"
 	"github.com/keroserene/go-webrtc/datachannel"
 	"unsafe"
 	// "io"
@@ -85,7 +98,7 @@ func init() {
 type SDPHeader struct {
 	// Keep track of both a pointer to the C++ SessionDescription object,
 	// and the serialized string version (which native code generates)
-	cgoSdp      C.CGOsdp
+	cgoSdp      C.CGO_sdp
 	description string
 }
 
@@ -99,36 +112,35 @@ type PeerConnection struct {
 	// pendingRemoteDescription
 
 	// addIceCandidate func()
-	// signalingState  RTCSignalingState
+	// signalingState  SignalingState
 	// iceGatheringState  RTCIceGatheringState
 	// iceConnectionState  RTCIceConnectionState
 	canTrickleIceCandidates bool
 	// getConfiguration
 	// setConfiguration
 	// close
-	OnIceCandidate func(string)
 
 	// Event handlers:
+	OnIceCandidate func(string)
 	// onnegotiationneeded
-	// OnIceCandidate
 	// onicecandidateerror
-	OnSignalingStateChange func(RTCSignalingState) 
+	OnSignalingStateChange func(SignalingState)
 	// onicegatheringstatechange
 	// oniceconnectionstatechange
 
-	cgoPeer C.CGOPeer // Native code internals
+	cgoPeer C.CGO_Peer // Native code internals
 }
 
 // PeerConnection constructor.
-func NewPeerConnection(config *RTCConfiguration) (*PeerConnection, error) {
+func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	pc := new(PeerConnection)
 	INFO.Println("PC at ", unsafe.Pointer(pc))
-	pc.cgoPeer = C.CGOInitializePeer(unsafe.Pointer(pc))  // internal CGO Peer.
+	pc.cgoPeer = C.CGO_InitializePeer(unsafe.Pointer(pc)) // internal CGO_ Peer.
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
-	cConfig := config.CGO() // Convert for CGO
-	if 0 != C.CGOCreatePeerConnection(pc.cgoPeer, &cConfig) {
+	cConfig := config._CGO() // Convert for CGO_
+	if 0 != C.CGO_CreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
 	}
 	INFO.Println("Created PeerConnection: ", pc, pc.cgoPeer)
@@ -138,18 +150,18 @@ func NewPeerConnection(config *RTCConfiguration) (*PeerConnection, error) {
 // CreateOffer prepares an SDP "offer" message, which should be sent to the target
 // peer over a signalling channel.
 func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
-	sdp := C.CGOCreateOffer(pc.cgoPeer)
+	sdp := C.CGO_CreateOffer(pc.cgoPeer)
 	if nil == sdp {
 		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
 	}
 	offer := new(SDPHeader)
 	offer.cgoSdp = sdp
-	offer.description = C.GoString(C.CGOSerializeSDP(sdp))
+	offer.description = C.GoString(C.CGO_SerializeSDP(sdp))
 	return offer, nil
 }
 
 func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
-	r := C.CGOSetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
+	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
 		return errors.New("SetLocalDescription failed.")
 	}
@@ -163,7 +175,7 @@ func (pc *PeerConnection) LocalDescription() (sdp *SDPHeader) {
 }
 
 func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
-	r := C.CGOSetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
+	r := C.CGO_SetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
 		return errors.New("SetRemoteDescription failed.")
 	}
@@ -179,13 +191,13 @@ func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
 // CreateAnswer prepares an SDP "answer" message, which should be sent in
 // response to a peer that has sent an offer, over the signalling channel.
 func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
-	sdp := C.CGOCreateAnswer(pc.cgoPeer)
+	sdp := C.CGO_CreateAnswer(pc.cgoPeer)
 	if nil == sdp {
 		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
 	}
 	answer := new(SDPHeader)
 	answer.cgoSdp = sdp
-	answer.description = C.GoString(C.CGOSerializeSDP(sdp))
+	answer.description = C.GoString(C.CGO_SerializeSDP(sdp))
 	return answer, nil
 }
 
@@ -195,7 +207,7 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 
 func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init) (
 	*datachannel.DataChannel, error) {
-	cDC := C.CGOCreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
+	cDC := C.CGO_CreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
 	if nil == cDC {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
@@ -203,12 +215,11 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init)
 	return dc, nil
 }
 
-
 // Intermediate hooks for firing Go funcs as C callbacks.
 //export cgoOnSignalingStateChange
-func cgoOnSignalingStateChange(p unsafe.Pointer, s RTCSignalingState) {
+func cgoOnSignalingStateChange(p unsafe.Pointer, s SignalingState) {
 	INFO.Println("fired OnSignalingStateChange: ", p,
-		s, RTCSignalingStateString[s])
+		s, SignalingStateString[s])
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnSignalingStateChange {
 		pc.OnSignalingStateChange(s)
@@ -216,8 +227,8 @@ func cgoOnSignalingStateChange(p unsafe.Pointer, s RTCSignalingState) {
 }
 
 //export cgoOnIceCandidate
-func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGOsdpString) {
-	c := C.GoString(candidate)	
+func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGO_sdpString) {
+	c := C.GoString(candidate)
 	INFO.Println("fired OnIceCandidate: ", p, c)
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnIceCandidate {
@@ -225,11 +236,6 @@ func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGOsdpString) {
 	}
 }
 
-
 // Install a handler for receiving ICE Candidates.
 // func OnIceCandidate(pc PeerConnection) {
 // }
-
-func unused() {
-	fmt.Println("nothing yet")
-}

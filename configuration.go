@@ -10,36 +10,36 @@ import (
 	// "encoding/json"
 )
 
-// Working draft spec: http://www.w3.org/TR/webrtc/#idl-def-RTCConfiguration
+// Working draft spec: http://www.w3.org/TR/webrtc/#idl-def-Configuration
 // There are quite a few differences in the latest Editor's draft, but
 // for now they are omitted from this Go interface, or commented out with
 // an [ED] above.)
-// See https://w3c.github.io/webrtc-pc/#idl-def-RTCConfiguration
+// See https://w3c.github.io/webrtc-pc/#idl-def-Configuration
 
 type (
-	RTCBundlePolicy       int
-	RTCIceTransportPolicy int
-	RTCRtcpMuxPolicy      int
-	RTCIceCredentialType  int
-	RTCSignalingState     int
+	BundlePolicy       int
+	IceTransportPolicy int
+	RtcpMuxPolicy      int
+	IceCredentialType  int
+	SignalingState     int
 )
 
-type RTCConfiguration struct {
+type Configuration struct {
 	// TODO: Implement, and provide as argument to CreatePeerConnection
-	IceServers         []RTCIceServer
-	IceTransportPolicy RTCIceTransportPolicy
-	BundlePolicy       RTCBundlePolicy
-	// [ED] RtcpMuxPolicy        RTCRtcpMuxPolicy
+	IceServers []IceServer
+	IceTransportPolicy
+	BundlePolicy
+	// [ED] RtcpMuxPolicy        RtcpMuxPolicy
 	PeerIdentity string // Target peer identity
 
 	// This would allow key continuity.
 	// [ED] Certificates         []string
 	// [ED] IceCandidatePoolSize int
 
-	cgoConfig *C.CGORTCConfiguration // Native code internals
+	cgoConfig *C.CGO_Configuration // Native code internals
 }
 
-// TODO: Provide a true Go interface for IceCandidates.
+// TODO: Provide a Go interface for IceCandidates.
 // For now, since it seems that in most use cases the user just needs to send
 // a serialized version of this, and the native code already provides that
 // functionality, the OnIceCandidate callback will just give the string.
@@ -49,13 +49,13 @@ type RTCConfiguration struct {
 // There doesn't seem to be a way to have a named container for enums
 // in go, and the idiomatic way seems to be just prefixes.
 const (
-	BundlePolicyBalanced RTCBundlePolicy = iota
+	BundlePolicyBalanced BundlePolicy = iota
 	BundlePolicyMaxBundle
 	BundlePolicyMaxCompat
 )
 
 const (
-	IceTransportPolicyNone RTCIceTransportPolicy = iota
+	IceTransportPolicyNone IceTransportPolicy = iota
 	IceTransportPolicyRelay
 	// TODO: Look into why nohost is not exposed in w3c spec, but is available
 	// in native code? If it does need to be exposed, capitalize the i.
@@ -65,7 +65,7 @@ const (
 )
 
 const (
-	SignalingStateStable RTCSignalingState = iota
+	SignalingStateStable SignalingState = iota
 	SignalingStateHaveLocalOffer
 	SignalingStateHaveLocalPrAnswer
 	SignalingStateHaveRemoteOffer
@@ -73,28 +73,28 @@ const (
 	SignalingStateClosed
 )
 
-var RTCSignalingStateString = []string{"Stable",
+var SignalingStateString = []string{"Stable",
 	"HaveLocalOffer", "HaveLocalPrAnswer",
 	"HaveRemoteOffer", "HaveRemotePrAnswer",
-	"Closed" }
+	"Closed"}
 
 // TODO: [ED]
 /* const (
-	RtcpMuxPolicyNegotiate RTCRtcpMuxPolicy = iota
+	RtcpMuxPolicyNegotiate RtcpMuxPolicy = iota
 	RtcpMuxPolicyRequire
 ) */
 
 // TODO: [ED]
 /* const (
-	IceCredentialTypePassword RTCIceCredentialType = iota
+	IceCredentialTypePassword IceCredentialType = iota
 	IceCredentialTypeToken
 ) */
 
-type RTCIceServer struct {
+type IceServer struct {
 	Urls       []string // The only "required" element.
 	Username   string
 	Credential string
-	// [ED] CredentialType RTCIceCredentialType
+	// [ED] CredentialType IceCredentialType
 }
 
 // Create a new IceServer object.
@@ -103,7 +103,7 @@ type RTCIceServer struct {
 // - username
 // - credential
 // TODO: For the ED version, may need to support CredentialType.
-func NewIceServer(params ...string) (*RTCIceServer, error) {
+func NewIceServer(params ...string) (*IceServer, error) {
 	if len(params) < 1 {
 		return nil, errors.New("IceServer: missing first comma-separated Urls string.")
 	}
@@ -134,18 +134,18 @@ func NewIceServer(params ...string) (*RTCIceServer, error) {
 	if len(params) > 2 {
 		credential = params[2]
 	}
-	return &RTCIceServer{
+	return &IceServer{
 		Urls:       urls,
 		Username:   username,
 		Credential: credential,
 	}, nil
 }
 
-// Create a new RTCConfiguration with default values according to spec.
-// Accepts any number of |RTCIceServer|s.
+// Create a new Configuration with default values according to spec.
+// Accepts any number of |IceServer|s.
 // Returns nil if there's an error.
-func NewRTCConfiguration(options ...RTCConfigurationOption) *RTCConfiguration {
-	c := new(RTCConfiguration)
+func NewConfiguration(options ...ConfigurationOption) *Configuration {
+	c := new(Configuration)
 	c.IceTransportPolicy = IceTransportPolicyAll
 	c.BundlePolicy = BundlePolicyBalanced
 	for _, op := range options {
@@ -156,7 +156,7 @@ func NewRTCConfiguration(options ...RTCConfigurationOption) *RTCConfiguration {
 	}
 	// [ED] c.RtcpMuxPolicy = RtcpMuxPolicyRequire
 	// [ED] c.Certificates = make([]string, 0)
-	INFO.Println("Created RTCConfiguration at ", c)
+	INFO.Println("Created Configuration at ", c)
 	INFO.Println("# IceServers: ", len(c.IceServers))
 	// TODO: Determine whether the below is true.
 	// if 0 == len(c.IceServers) {
@@ -166,30 +166,30 @@ func NewRTCConfiguration(options ...RTCConfigurationOption) *RTCConfiguration {
 	return c
 }
 
-// Used in RTCConfiguration's variadic functional constructor
-type RTCConfigurationOption func(c *RTCConfiguration) error
+// Used in Configuration's variadic functional constructor
+type ConfigurationOption func(c *Configuration) error
 
-func OptionIceServer(params ...string) RTCConfigurationOption {
-	return func(config *RTCConfiguration) error {
+func OptionIceServer(params ...string) ConfigurationOption {
+	return func(config *Configuration) error {
 		return config.AddIceServer(params...)
 	}
 }
 
-func OptionIceTransportPolicy(policy RTCIceTransportPolicy) RTCConfigurationOption {
-	return func(config *RTCConfiguration) error {
+func OptionIceTransportPolicy(policy IceTransportPolicy) ConfigurationOption {
+	return func(config *Configuration) error {
 		config.IceTransportPolicy = policy
 		return nil
 	}
 }
 
-func OptionBundlePolicy(policy RTCBundlePolicy) RTCConfigurationOption {
-	return func(config *RTCConfiguration) error {
+func OptionBundlePolicy(policy BundlePolicy) ConfigurationOption {
+	return func(config *Configuration) error {
 		config.BundlePolicy = policy
 		return nil
 	}
 }
 
-func (config *RTCConfiguration) AddIceServer(params ...string) error {
+func (config *Configuration) AddIceServer(params ...string) error {
 	server, err := NewIceServer(params...)
 	if nil != err {
 		return err
@@ -198,9 +198,9 @@ func (config *RTCConfiguration) AddIceServer(params ...string) error {
 	return nil
 }
 
-// Helpers which prepare Go-side of cast to eventual C++ RTCConfiguration struct.
-func (server *RTCIceServer) CGO() C.CGOIceServer {
-	cServer := new(C.CGOIceServer)
+// Helpers which prepare Go-side of cast to eventual C++ Configuration struct.
+func (server *IceServer) _CGO() C.CGO_IceServer {
+	cServer := new(C.CGO_IceServer)
 	cServer.numUrls = C.int(len(server.Urls))
 	total := C.int(len(server.Urls))
 	// TODO: Make this conversion nicer.
@@ -216,23 +216,23 @@ func (server *RTCIceServer) CGO() C.CGOIceServer {
 }
 
 // The C side of things will still need to allocate memory, due to the slices.
-// Assumes RTCConfiguration is valid.
-func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
+// Assumes Configuration is valid.
+func (config *Configuration) _CGO() C.CGO_Configuration {
 	INFO.Println("Converting Config: ", config)
-	c := new(C.CGORTCConfiguration)
+	c := new(C.CGO_Configuration)
 
 	// Need to convert each IceServer struct individually.
 	total := len(config.IceServers)
 	if total > 0 {
-		cServers := make([]C.CGOIceServer, total)
+		cServers := make([]C.CGO_IceServer, total)
 		for i, server := range config.IceServers {
-			cServers[i] = server.CGO()
+			cServers[i] = server._CGO()
 		}
 		c.iceServers = &cServers[0]
 	}
 	c.numIceServers = C.int(total)
 
-	// c.iceServers = (*C.CGOIceServer)(unsafe.Pointer(&config.IceServers))
+	// c.iceServers = (*C.CGO_IceServer)(unsafe.Pointer(&config.IceServers))
 	c.iceTransportPolicy = C.int(config.IceTransportPolicy)
 	c.bundlePolicy = C.int(config.BundlePolicy)
 	// [ED] c.RtcpMuxPolicy = C.int(config.RtcpMuxPolicy)
@@ -245,7 +245,7 @@ func (config *RTCConfiguration) CGO() C.CGORTCConfiguration {
 
 /*
 const {
-  stable RTCSignallingState = iota
+  stable SignallingState = iota
   have-local-offer
   have-remote-offer
   have-local-pranswer
@@ -260,23 +260,22 @@ const {
 // They unfortunately cannot be directly applied to the consts above.
 //
 
-var _cgoIceTransportPolicyNone = int(C.CGOIceTransportPolicyNone)
-var _cgoIceTransportPolicyRelay = int(C.CGOIceTransportPolicyRelay)
-var _cgoIceTransportPolicyNoHost = int(C.CGOIceTransportPolicyNoHost)
-var _cgoIceTransportPolicyAll = int(C.CGOIceTransportPolicyAll)
+var _cgoIceTransportPolicyNone = int(C.CGO_IceTransportPolicyNone)
+var _cgoIceTransportPolicyRelay = int(C.CGO_IceTransportPolicyRelay)
+var _cgoIceTransportPolicyNoHost = int(C.CGO_IceTransportPolicyNoHost)
+var _cgoIceTransportPolicyAll = int(C.CGO_IceTransportPolicyAll)
 
-var _cgoBundlePolicyBalanced = int(C.CGOBundlePolicyBalanced)
-var _cgoBundlePolicyMaxCompat = int(C.CGOBundlePolicyMaxCompat)
-var _cgoBundlePolicyMaxBundle = int(C.CGOBundlePolicyMaxBundle)
+var _cgoBundlePolicyBalanced = int(C.CGO_BundlePolicyBalanced)
+var _cgoBundlePolicyMaxCompat = int(C.CGO_BundlePolicyMaxCompat)
+var _cgoBundlePolicyMaxBundle = int(C.CGO_BundlePolicyMaxBundle)
 
 // [ED]
-// var _cgoRtcpMuxPolicyNegotiate = int(C.CGORtcpMuxPolicyNegotiate)
-// var _cgoRtcpMuxPolicyRequire = int(C.CGORtcpMuxPolicyRequire)
+// var _cgoRtcpMuxPolicyNegotiate = int(C.CGO_RtcpMuxPolicyNegotiate)
+// var _cgoRtcpMuxPolicyRequire = int(C.CGO_RtcpMuxPolicyRequire)
 
-var _cgoSignalingStateStable = int(C.CGOSignalingStateStable)
-var _cgoSignalingStateHaveLocalOffer = int(C.CGOSignalingStateHaveLocalOffer)
-var _cgoSignalingStateHaveLocalPrAnswer = int(C.CGOSignalingStateHaveLocalPrAnswer)
-var _cgoSignalingStateHaveRemoteOffer = int(C.CGOSignalingStateHaveRemoteOffer)
-var _cgoSignalingStateHaveRemotePrAnswer = int(C.CGOSignalingStateHaveRemotePrAnswer)
-var _cgoSignalingStateClosed = int(C.CGOSignalingStateClosed)
-
+var _cgoSignalingStateStable = int(C.CGO_SignalingStateStable)
+var _cgoSignalingStateHaveLocalOffer = int(C.CGO_SignalingStateHaveLocalOffer)
+var _cgoSignalingStateHaveLocalPrAnswer = int(C.CGO_SignalingStateHaveLocalPrAnswer)
+var _cgoSignalingStateHaveRemoteOffer = int(C.CGO_SignalingStateHaveRemoteOffer)
+var _cgoSignalingStateHaveRemotePrAnswer = int(C.CGO_SignalingStateHaveRemotePrAnswer)
+var _cgoSignalingStateClosed = int(C.CGO_SignalingStateClosed)

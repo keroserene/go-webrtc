@@ -11,7 +11,7 @@ type DataChannel struct {
 	Protocol                   string
 	Negotiated                 bool
 	ID                         uint
-	ReadyState                 string // RTCDataChannelState
+	ReadyState                 string  // RTCDataChannelState
 	BufferedAmount             int
 	BufferedAmountLowThreshold int
 	// TODO: Close() and Send()
@@ -20,7 +20,7 @@ type DataChannel struct {
 
 	// TODO: Think about visibility and the implications of having
 	// multiple packages like this...
-	cgoDataChannel C.CGODataChannel // Internal PeerConnection functionality.
+	cgoDataChannel C.CGO_DataChannel // Internal PeerConnection functionality.
 }
 
 type Init struct {
@@ -33,8 +33,8 @@ type Init struct {
 	ID                uint
 }
 
-// func (dc *DataChannel) CGO() C.CGODataChannel {
-  // return (C.CGODataChannel)
+// func (dc *DataChannel) CGO_() C.CGO_DataChannel {
+  // return (C.CGO_DataChannel)
 // }
 
 func New() *DataChannel {

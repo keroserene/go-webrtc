@@ -9,25 +9,25 @@ extern "C" {
 
   // See talk/app/webrtc/peerconnectioninterface.h
 
-  extern const int CGOIceTransportPolicyNone;
-  extern const int CGOIceTransportPolicyRelay;
-  extern const int CGOIceTransportPolicyNoHost;
-  extern const int CGOIceTransportPolicyAll;
+  extern const int CGO_IceTransportPolicyNone;
+  extern const int CGO_IceTransportPolicyRelay;
+  extern const int CGO_IceTransportPolicyNoHost;
+  extern const int CGO_IceTransportPolicyAll;
 
-  extern const int CGOBundlePolicyBalanced;
-  extern const int CGOBundlePolicyMaxBundle;
-  extern const int CGOBundlePolicyMaxCompat;
+  extern const int CGO_BundlePolicyBalanced;
+  extern const int CGO_BundlePolicyMaxBundle;
+  extern const int CGO_BundlePolicyMaxCompat;
 
   // TODO: [ED]
-  // extern const int CGORtcpMuxPolicyNegotiate;
-  // extern const int CGORtcpMuxPolicyRequire;
+  // extern const int CGO_RtcpMuxPolicyNegotiate;
+  // extern const int CGO_RtcpMuxPolicyRequire;
 
-  extern const int CGOSignalingStateStable;
-  extern const int CGOSignalingStateHaveLocalOffer;
-  extern const int CGOSignalingStateHaveLocalPrAnswer;
-  extern const int CGOSignalingStateHaveRemoteOffer;
-  extern const int CGOSignalingStateHaveRemotePrAnswer;
-  extern const int CGOSignalingStateClosed;
+  extern const int CGO_SignalingStateStable;
+  extern const int CGO_SignalingStateHaveLocalOffer;
+  extern const int CGO_SignalingStateHaveLocalPrAnswer;
+  extern const int CGO_SignalingStateHaveRemoteOffer;
+  extern const int CGO_SignalingStateHaveRemotePrAnswer;
+  extern const int CGO_SignalingStateClosed;
 
 #ifdef __cplusplus
 }

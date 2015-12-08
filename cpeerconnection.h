@@ -11,12 +11,12 @@ extern "C" {
   // can directly reference header files from libwebrtc / C++ world. All the
   // casting must be hidden in the .cc file.
 
-  typedef void* CGOArray;
+  typedef void* CGO_Array;
 
-  typedef void* CGOPeer;
-  typedef void* CGOsdp;  // Pointer to SessionDescriptionInterface*
-  typedef void* CGODataChannel;
-  typedef const char* CGOsdpString;
+  typedef void* CGO_Peer;
+  typedef void* CGO_sdp;  // Pointer to SessionDescriptionInterface*
+  typedef void* CGO_DataChannel;
+  typedef const char* CGO_sdpString;
 
   typedef struct {
     char **urls;
@@ -24,36 +24,36 @@ extern "C" {
 
     char  *username;
     char  *credential;
-  } CGOIceServer;
+  } CGO_IceServer;
 
   typedef struct {
-    CGOIceServer  *iceServers;
+    CGO_IceServer  *iceServers;
     int            numIceServers;
 
     int            iceTransportPolicy;
     int            bundlePolicy;
     // [BD] int      RtcpMuxPolicy;
     char           *peerIdentity;
-    // [BD] CGOArray Certificates;
+    // [BD] CGO_Array Certificates;
     // [BD] int      IceCandidatePoolSize;
-  } CGORTCConfiguration;
+  } CGO_Configuration;
 
-  CGOPeer CGOInitializePeer(void *pc);
+  CGO_Peer CGO_InitializePeer(void *pc);
 
   // Below are "C methods" for the Peer class, which must be hidden from cgo.
 
-  int CGOCreatePeerConnection(CGOPeer, CGORTCConfiguration*);
+  int CGO_CreatePeerConnection(CGO_Peer, CGO_Configuration*);
   // PeerConnectionInterface::IceServers
-  // void* GetIceServers(CGOPeePeerConnection pc);
+  // void* GetIceServers(CGO_PeePeerConnection pc);
 
-  CGOsdp CGOCreateOffer(CGOPeer);
-  CGOsdp CGOCreateAnswer(CGOPeer);
+  CGO_sdp CGO_CreateOffer(CGO_Peer);
+  CGO_sdp CGO_CreateAnswer(CGO_Peer);
 
-  CGOsdpString CGOSerializeSDP(CGOsdp);
-  int CGOSetLocalDescription(CGOPeer, CGOsdp);
-  int CGOSetRemoteDescription(CGOPeer, CGOsdp);
+  CGO_sdpString CGO_SerializeSDP(CGO_sdp);
+  int CGO_SetLocalDescription(CGO_Peer, CGO_sdp);
+  int CGO_SetRemoteDescription(CGO_Peer, CGO_sdp);
 
-  CGODataChannel CGOCreateDataChannel(CGOPeer, char*, void*);
+  CGO_DataChannel CGO_CreateDataChannel(CGO_Peer, char*, void*);
 
 #ifdef __cplusplus
 }

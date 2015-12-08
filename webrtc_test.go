@@ -15,12 +15,12 @@ var pcA *PeerConnection
 var pcB *PeerConnection
 var err error
 var sdp *SDPHeader
-var config *RTCConfiguration
+var config *Configuration
 
 func TestCreatePeerConnection(t *testing.T) {
-	config = NewRTCConfiguration()
+	config = NewConfiguration()
 	if nil == config {
-		t.Fatal("Unable to create RTCConfiguration")
+		t.Fatal("Unable to create Configuration")
 	}
 	pcA, err = NewPeerConnection(config)
 	if nil != err {
@@ -44,14 +44,14 @@ func TestCreateOffer(t *testing.T) {
 	fmt.Println("SDP Offer:\n", sdp.description)
 }
 
-func TestOnSignalingStateChangeCallback(t *testing.T) {	
-	success := make(chan RTCSignalingState, 1)	
-	pcA.OnSignalingStateChange = func(s RTCSignalingState) {
+func TestOnSignalingStateChangeCallback(t *testing.T) {
+	success := make(chan SignalingState, 1)
+	pcA.OnSignalingStateChange = func(s SignalingState) {
 		success <- s
 	}
-	cgoOnSignalingStateChange(unsafe.Pointer(pcA), SignalingStateStable);
+	cgoOnSignalingStateChange(unsafe.Pointer(pcA), SignalingStateStable)
 	select {
-	case state := <- success:
+	case state := <-success:
 		if SignalingStateStable != state {
 			t.Error("Unexpected SignalingState:", state)
 		}
@@ -60,15 +60,15 @@ func TestOnSignalingStateChangeCallback(t *testing.T) {
 	}
 }
 
-func TestOnIceCandidateCallback(t *testing.T) {	
-	success := make(chan string, 1)	
+func TestOnIceCandidateCallback(t *testing.T) {
+	success := make(chan string, 1)
 	pcA.OnIceCandidate = func(c string) {
 		success <- c
 	}
 	// candidate := "not a real ICE candidate";
 	cgoOnIceCandidate(unsafe.Pointer(pcA), nil)
 	select {
-	case <- success:
+	case <-success:
 	case <-time.After(time.Second * 1):
 		t.Fatal("Timed out.")
 	}

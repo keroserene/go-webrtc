@@ -28,7 +28,7 @@ typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
 // However, it's not directly accessible from the Go side, which can only
 // see what's exposed in the more pure extern "C" header file.
 //
-// The Go side may access this class through C.CGOPeer.
+// The Go side may access this class through C.CGO_Peer.
 //
 // This class also stubs libwebrtc's callback interface to be blocking,
 // which allows the usage of goroutines, which is more idiomatic and easier
@@ -125,7 +125,7 @@ class Peer
     candidate->ToString(s);
     cgoOnIceCandidate(
         goPeerConnection,
-        (CGOsdpString)s->c_str());
+        (CGO_sdpString)s->c_str());
   }
 
   void OnDataChannel(DataChannelInterface* data_channel) {
@@ -190,7 +190,7 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
 
 // Create and return the Peer object, which provides initial native code
 // glue for the PeerConnection constructor.
-CGOPeer CGOInitializePeer(void *goPc) {
+CGO_Peer CGO_InitializePeer(void *goPc) {
   rtc::scoped_refptr<Peer> localPeer = new rtc::RefCountedObject<Peer>();
   localPeer->Initialize();
   localPeers.push_back(localPeer);
@@ -200,11 +200,11 @@ CGOPeer CGOInitializePeer(void *goPc) {
 
 // This helper converts RTCConfiguration struct from GO to C++.
 PeerConnectionInterface::RTCConfiguration *castConfig_(
-    CGORTCConfiguration *cgoConfig) {
+    CGO_Configuration *cgoConfig) {
   PeerConnectionInterface::RTCConfiguration* c =
       new PeerConnectionInterface::RTCConfiguration();
 
-  vector<CGOIceServer> servers( cgoConfig->iceServers,
+  vector<CGO_IceServer> servers( cgoConfig->iceServers,
       cgoConfig->iceServers + cgoConfig->numIceServers);
   // Pass in all IceServer structs for PeerConnectionInterface.
   for (auto s : servers) {
@@ -232,7 +232,7 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
 
 // |Peer| method: create a native code PeerConnection object.
 // Returns 0 on Success.
-int CGOCreatePeerConnection(CGOPeer cgoPeer, CGORTCConfiguration *cgoConfig) {
+int CGO_CreatePeerConnection(CGO_Peer cgoPeer, CGO_Configuration *cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
   peer->config = castConfig_(cgoConfig);
   // cout << "RTCConfiguration: " << peer->config << endl;
@@ -262,7 +262,7 @@ bool SDPtimeout(future<SDP> *f, int seconds) {
 // PeerConnection::CreateOffer
 // Blocks until libwebrtc succeeds in generating the SDP offer,
 // @returns SDP (pointer), or NULL on timeeout.
-CGOsdp CGOCreateOffer(CGOPeer cgoPeer) {
+CGO_sdp CGO_CreateOffer(CGO_Peer cgoPeer) {
   // TODO: Provide an actual RTCOfferOptions as an argument.
   Peer* peer = (Peer*)cgoPeer;
   auto r = peer->promiseSDP.get_future();
@@ -274,14 +274,14 @@ CGOsdp CGOCreateOffer(CGOPeer cgoPeer) {
   }
   SDP sdp = r.get();  // blocking
   peer->resetPromise();
-  return (CGOsdp)sdp;
+  return (CGO_sdp)sdp;
 }
 
 
 // PeerConnection::CreateAnswer
 // Blocks until libwebrtc succeeds in generating the SDP answer.
 // @returns SDP, or NULL on timeout.
-CGOsdp CGOCreateAnswer(CGOPeer cgoPeer) {
+CGO_sdp CGO_CreateAnswer(CGO_Peer cgoPeer) {
   Peer *peer = (Peer*)cgoPeer;
   cout << "[C] CreateAnswer" << peer << endl;
   auto r = peer->promiseSDP.get_future();
@@ -293,19 +293,19 @@ CGOsdp CGOCreateAnswer(CGOPeer cgoPeer) {
   }
   SDP sdp = r.get();  // blocking
   peer->resetPromise();
-  return (CGOsdp)sdp;
+  return (CGO_sdp)sdp;
 }
 
 
 // Serialize SDP message to a string Go can use.
-CGOsdpString CGOSerializeSDP(CGOsdp sdp) {
+CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
   auto s = new string();
   SDP cSDP = (SDP)sdp;
   cSDP->ToString(s);
-  return (CGOsdpString)s->c_str();
+  return (CGO_sdpString)s->c_str();
 }
 
-int CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp) {
+int CGO_SetLocalDescription(CGO_Peer pc, CGO_sdp sdp) {
   PC cPC = ((Peer*)pc)->pc_;
   auto obs = PeerSDPObserver::Create();
   auto r = obs->promiseSet.get_future();
@@ -313,7 +313,7 @@ int CGOSetLocalDescription(CGOPeer pc, CGOsdp sdp) {
   return r.get();
 }
 
-int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
+int CGO_SetRemoteDescription(CGO_Peer pc, CGO_sdp sdp) {
   PC cPC = ((Peer*)pc)->pc_;
   auto obs = PeerSDPObserver::Create();
   auto r = obs->promiseSet.get_future();
@@ -322,7 +322,7 @@ int CGOSetRemoteDescription(CGOPeer pc, CGOsdp sdp) {
 }
 
 
-CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict) {
+CGO_DataChannel CGO_CreateDataChannel(CGO_Peer pc, char *label, void *dict) {
   PC cPC = ((Peer*)pc)->pc_;
   DataChannelInit *r = (DataChannelInit*)dict;
   // TODO: a real config struct, with correct fields
@@ -330,6 +330,6 @@ CGODataChannel CGOCreateDataChannel(CGOPeer pc, char *label, void *dict) {
   string *l = new string(label);
   auto channel = cPC->CreateDataChannel(*l, &config);
   cout << "Created data channel: " << channel << endl;
-  return (CGODataChannel)channel;
+  return (CGO_DataChannel)channel;
 }
 

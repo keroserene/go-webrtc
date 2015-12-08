@@ -98,29 +98,29 @@ func TestIceServer(t *testing.T) {
 }
 
 func TestNewConfiguration(t *testing.T) {
-	config := NewRTCConfiguration()
+	config := NewConfiguration()
 	if nil == config {
-		t.Error("NewRTCConfiguration could not generate basic config.")
+		t.Error("NewConfiguration could not generate basic config.")
 	}
-	config = NewRTCConfiguration(OptionIceServer("stun:a"))
+	config = NewConfiguration(OptionIceServer("stun:a"))
 	if len(config.IceServers) != 1 {
-		t.Error("NewRTCConfiguration should have 1 ICE server.")
+		t.Error("NewConfiguration should have 1 ICE server.")
 	}
-	config = NewRTCConfiguration(
+	config = NewConfiguration(
 		OptionIceServer("stun:a"),
 		OptionIceServer("stun:b, turn:c"))
 	if len(config.IceServers) != 2 {
-		t.Error("NewRTCConfiguration should have 2 ICE servers.")
+		t.Error("NewConfiguration should have 2 ICE servers.")
 	}
 
-	config = NewRTCConfiguration(
+	config = NewConfiguration(
 		OptionIceServer("stun:d"),
 		OptionIceTransportPolicy(IceTransportPolicyAll))
 	if IceTransportPolicyAll != config.IceTransportPolicy {
 		t.Error("OptionIceTransportPolicy failed, was ", config.IceTransportPolicy)
 	}
 
-	config = NewRTCConfiguration(
+	config = NewConfiguration(
 		OptionIceServer("stun:d"),
 		OptionBundlePolicy(BundlePolicyMaxCompat))
 	if BundlePolicyMaxCompat != config.BundlePolicy {
