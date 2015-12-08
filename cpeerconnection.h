@@ -53,6 +53,10 @@ extern "C" {
   int CGO_SetLocalDescription(CGO_Peer, CGO_sdp);
   int CGO_SetRemoteDescription(CGO_Peer, CGO_sdp);
 
+  int CGO_GetSignalingState(CGO_Peer);
+  // int CGO_GetConfiguration(CGO_Peer);
+  int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration*);
+
   CGO_DataChannel CGO_CreateDataChannel(CGO_Peer, char*, void*);
 
 #ifdef __cplusplus

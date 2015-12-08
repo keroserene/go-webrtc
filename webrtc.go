@@ -112,7 +112,6 @@ type PeerConnection struct {
 	// pendingRemoteDescription
 
 	// addIceCandidate func()
-	// signalingState  SignalingState
 	// iceGatheringState  RTCIceGatheringState
 	// iceConnectionState  RTCIceConnectionState
 	canTrickleIceCandidates bool
@@ -128,6 +127,8 @@ type PeerConnection struct {
 	// onicegatheringstatechange
 	// oniceconnectionstatechange
 
+	config *Configuration
+
 	cgoPeer C.CGO_Peer // Native code internals
 }
 
@@ -139,6 +140,7 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
+	pc.config = config
 	cConfig := config._CGO() // Convert for CGO_
 	if 0 != C.CGO_CreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
@@ -186,6 +188,26 @@ func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
 // readonly remoteDescription
 func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
 	return pc.remoteDescription
+}
+
+// readonly
+func (pc *PeerConnection) SignalingState() SignalingState {
+	return (SignalingState)(C.CGO_GetSignalingState(pc.cgoPeer))
+}
+
+func (pc *PeerConnection) GetConfiguration() Configuration {
+	// There does not appear to be a native code version of GetConfiguration -
+	// so we'll keep track of it purely from Go.
+	return *pc.config
+	// return (Configuration)(C.CGO_GetConfiguration(pc.cgoPeer))
+}
+
+func (pc *PeerConnection) SetConfiguration(config Configuration) error {
+	cConfig := config._CGO()
+	if 0 != C.CGO_SetConfiguration(pc.cgoPeer, &cConfig) {
+		return errors.New("PeerConnection: could not set configuration.")
+	}
+	return nil
 }
 
 // CreateAnswer prepares an SDP "answer" message, which should be sent in

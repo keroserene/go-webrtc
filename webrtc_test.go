@@ -92,6 +92,25 @@ func TestSetRemoteDescription(t *testing.T) {
 	}
 }
 
+func TestGetSignalingState(t *testing.T) {
+	state := pcB.SignalingState()
+	if SignalingStateHaveRemoteOffer != state {
+		t.Error("Unexected signaling state:", state)
+	}
+	fmt.Println(SignalingStateString[state])
+}
+
+func TestSetAndGetConfiguration(t *testing.T) {
+	config := NewConfiguration(
+		OptionIceServer("stun:something.else"),
+		OptionIceTransportPolicy(IceTransportPolicyRelay))
+	pcA.SetConfiguration(*config)
+	got := pcA.GetConfiguration()
+	if got.IceTransportPolicy != IceTransportPolicyRelay {
+		t.Error("Unexpected Configuration.")
+	}
+}
+
 // TODO: Uncomment once SetRemoteDescription is implemented.
 func TestCreateAnswer(t *testing.T) {
 	sdp, err := pcB.CreateAnswer()

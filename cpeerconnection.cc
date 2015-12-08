@@ -235,7 +235,6 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
 int CGO_CreatePeerConnection(CGO_Peer cgoPeer, CGO_Configuration *cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
   peer->config = castConfig_(cgoConfig);
-  // cout << "RTCConfiguration: " << peer->config << endl;
 
   // Prepare a native PeerConnection object.
   peer->pc_ = peer->pc_factory->CreatePeerConnection(
@@ -321,6 +320,21 @@ int CGO_SetRemoteDescription(CGO_Peer pc, CGO_sdp sdp) {
   return r.get();
 }
 
+int CGO_GetSignalingState(CGO_Peer pc) {
+  PC cPC = ((Peer*)pc)->pc_;
+  return cPC->signaling_state();
+}
+
+int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration* cgoConfig) {
+  Peer *peer = (Peer*)pc;
+  auto cConfig = castConfig_(cgoConfig);
+  bool success = peer->pc_->SetConfiguration(*cConfig);
+  if (success) {
+    peer->config = cConfig;
+    return SUCCESS;
+  }
+  return FAILURE;
+}
 
 CGO_DataChannel CGO_CreateDataChannel(CGO_Peer pc, char *label, void *dict) {
   PC cPC = ((Peer*)pc)->pc_;
