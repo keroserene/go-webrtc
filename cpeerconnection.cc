@@ -39,8 +39,8 @@ typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
 // TODO(keroserene): More documentation...
 // TODO: Better logging
 class Peer
-  : public CreateSessionDescriptionObserver,
-    public PeerConnectionObserver {
+  : public PeerConnectionObserver,
+    public CreateSessionDescriptionObserver {
  public:
 
   bool Initialize() {
@@ -100,9 +100,10 @@ class Peer
     cgoOnSignalingStateChange(goPeerConnection, state);
   }
 
-  void OnStateChange(PeerConnectionObserver::StateType state) {
-    cout << "[C] OnStateChange: " << state << endl;
-  }
+  // TODO: This seems on the way to being deprecated in native code.
+  // void OnStateChange(PeerConnectionObserver::StateType state) {
+    // cout << "[C] OnStateChange: " << state << endl;
+  // }
 
   void OnAddStream(webrtc::MediaStreamInterface* stream) {
     cout << "[C] OnAddStream: " << stream << endl;
@@ -118,6 +119,13 @@ class Peer
 
   void OnIceCandidate(const IceCandidateInterface* candidate) {
     cout << "[C] OnIceCandidate" << candidate << endl;
+    // TODO: Once a real Go IceCandidate interface exists, change this to
+    // conversion to the Go interface, rather than immediately serializing.
+    auto s = new string();
+    candidate->ToString(s);
+    cgoOnIceCandidate(
+        goPeerConnection,
+        (CGOsdpString)s->c_str());
   }
 
   void OnDataChannel(DataChannelInterface* data_channel) {

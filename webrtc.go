@@ -106,7 +106,7 @@ type PeerConnection struct {
 	// getConfiguration
 	// setConfiguration
 	// close
-	OnIceCandidate func()
+	OnIceCandidate func(string)
 
 	// Event handlers:
 	// onnegotiationneeded
@@ -214,6 +214,17 @@ func cgoOnSignalingStateChange(p unsafe.Pointer, s RTCSignalingState) {
 		pc.OnSignalingStateChange(s)
 	}
 }
+
+//export cgoOnIceCandidate
+func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGOsdpString) {
+	c := C.GoString(candidate)	
+	INFO.Println("fired OnIceCandidate: ", p, c)
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnIceCandidate {
+		pc.OnIceCandidate(c)
+	}
+}
+
 
 // Install a handler for receiving ICE Candidates.
 // func OnIceCandidate(pc PeerConnection) {

@@ -17,6 +17,8 @@ import (
 
 func main() {
 
+	webrtc.SetVerbosity(0)
+
 	config := webrtc.NewRTCConfiguration(
 		/// There can be as many as you like.
 		webrtc.OptionIceServer("stun:stun.l.google.com:19302, stun:another"),
@@ -35,8 +37,8 @@ func main() {
   fmt.Println("Alice and Bob created PeerConnections.\n")
 
 	// Prepare callback handlers.
-	alice.OnSignalingStateChange = func() {
-		fmt.Println("Alice signal changed:")
+	alice.OnSignalingStateChange = func(state webrtc.RTCSignalingState) {
+		fmt.Println("Alice signal changed:", state)
 	}
 
 	// Let Alice and Bob use go channels as the signaling channel.

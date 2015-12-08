@@ -44,7 +44,6 @@ func TestCreateOffer(t *testing.T) {
 	fmt.Println("SDP Offer:\n", sdp.description)
 }
 
-// Also test that the SignalingState callback fired. or fail with timeout.
 func TestOnSignalingStateChangeCallback(t *testing.T) {	
 	success := make(chan RTCSignalingState, 1)	
 	pcA.OnSignalingStateChange = func(s RTCSignalingState) {
@@ -56,6 +55,20 @@ func TestOnSignalingStateChangeCallback(t *testing.T) {
 		if SignalingStateStable != state {
 			t.Error("Unexpected SignalingState:", state)
 		}
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
+}
+
+func TestOnIceCandidateCallback(t *testing.T) {	
+	success := make(chan string, 1)	
+	pcA.OnIceCandidate = func(c string) {
+		success <- c
+	}
+	// candidate := "not a real ICE candidate";
+	cgoOnIceCandidate(unsafe.Pointer(pcA), nil)
+	select {
+	case <- success:
 	case <-time.After(time.Second * 1):
 		t.Fatal("Timed out.")
 	}
