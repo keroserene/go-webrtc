@@ -320,6 +320,26 @@ int CGO_SetRemoteDescription(CGO_Peer pc, CGO_sdp sdp) {
   return r.get();
 }
 
+int CGO_AddIceCandidate(CGO_Peer pc, CGO_sdpString candidate) {
+  PC cPC = ((Peer*)pc)->pc_;
+  SdpParseError error;
+  // TODO: There are probably issues below.
+  string sdp = (string)candidate;
+  int sdp_mline_index = 0;
+  auto sdp_mid = "";
+  auto cCandidate = CreateIceCandidate(
+    sdp_mid, sdp_mline_index, sdp, &error);
+  if (!cCandidate) {
+    cout << "[C] SDP parse error." << endl;
+    return FAILURE;
+  }
+  if (!cPC->AddIceCandidate(cCandidate)) {
+    cout << "[C] problem adding ICE candidate." << endl;
+    return FAILURE;
+  }
+  return SUCCESS;
+}
+
 int CGO_GetSignalingState(CGO_Peer pc) {
   PC cPC = ((Peer*)pc)->pc_;
   return cPC->signaling_state();

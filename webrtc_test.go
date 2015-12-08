@@ -92,6 +92,13 @@ func TestSetRemoteDescription(t *testing.T) {
 	}
 }
 
+func TestAddIceCandidate(t *testing.T) {
+	err := pcB.AddIceCandidate("not real")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestGetSignalingState(t *testing.T) {
 	state := pcB.SignalingState()
 	if SignalingStateHaveRemoteOffer != state {

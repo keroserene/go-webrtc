@@ -52,6 +52,7 @@ extern "C" {
   CGO_sdpString CGO_SerializeSDP(CGO_sdp);
   int CGO_SetLocalDescription(CGO_Peer, CGO_sdp);
   int CGO_SetRemoteDescription(CGO_Peer, CGO_sdp);
+  int CGO_AddIceCandidate(CGO_Peer pc, CGO_sdpString candidate);
 
   int CGO_GetSignalingState(CGO_Peer);
   // int CGO_GetConfiguration(CGO_Peer);

@@ -185,6 +185,15 @@ func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
 	return nil
 }
 
+// TODO: change candidate into a real IceCandidate type.
+func (pc *PeerConnection) AddIceCandidate(candidate string) error {
+	r := C.CGO_AddIceCandidate(pc.cgoPeer, C.CString(candidate))
+	if 0 != r {
+		return errors.New("AddIceCandidate failed.")
+	}
+	return nil
+}
+
 // readonly remoteDescription
 func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
 	return pc.remoteDescription
