@@ -9,4 +9,5 @@ dependencies:
 
 test:
   override:
+    - set -o pipefail
     - go test -v -race | tee /dev/tty | go-junit-report > $CIRCLE_TEST_REPORTS/tests.xml
