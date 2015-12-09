@@ -39,7 +39,7 @@ import "C"
 import (
 	"errors"
 	// "fmt"
-	"github.com/keroserene/go-webrtc/datachannel"
+	"github.com/keroserene/go-webrtc/data"
 	"unsafe"
 	// "io"
 	"io/ioutil"
@@ -123,7 +123,7 @@ type PeerConnection struct {
 	OnSignalingStateChange func(SignalingState)
 	// onicegatheringstatechange
 	// oniceconnectionstatechange
-	OnDataChannel func(*datachannel.DataChannel)
+	OnDataChannel func(*data.Channel)
 
 	config Configuration
 
@@ -245,14 +245,14 @@ func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 // actually be a callback version, so the user doesn't have to make their own
 // goroutine.
 
-func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init) (
-	*datachannel.DataChannel, error) {
+func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
+	*data.Channel, error) {
 	cDC := C.CGO_CreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
 	if nil == cDC {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
 	// Convert cDC and put it in Go DC
-	dc := datachannel.New()
+	dc := data.NewChannel()
 	return dc, nil
 }
 
@@ -294,7 +294,7 @@ func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_DataChannel) {
 	INFO.Println("fired OnDataChannel: ", p, cDC)
 	pc := (*PeerConnection)(p)
 	// TODO: Convert DataChannel to Go for real.
-	dc := datachannel.New()
+	dc := data.NewChannel()
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)
 	}

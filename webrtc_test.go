@@ -2,7 +2,7 @@ package webrtc
 
 import (
 	"fmt"
-	"github.com/keroserene/go-webrtc/datachannel"
+	"github.com/keroserene/go-webrtc/data"
 	"testing"
 	"time"
 	"unsafe"
@@ -145,7 +145,7 @@ func TestOnNegotiationNeededCallback(t *testing.T) {
 
 // TODO: real datachannel tests
 func TestCreateDataChannel(t *testing.T) {
-	channel, err := pcA.CreateDataChannel("test", datachannel.Init{})
+	channel, err := pcA.CreateDataChannel("test", data.Init{})
 	if nil != err {
 		t.Fatal(err)
 	}
@@ -154,11 +154,11 @@ func TestCreateDataChannel(t *testing.T) {
 
 
 func TestOnDataChannelCallback(t *testing.T) {
-	success := make(chan *datachannel.DataChannel, 1)
-	pcA.OnDataChannel = func(dc *datachannel.DataChannel) {
+	success := make(chan *data.Channel, 1)
+	pcA.OnDataChannel = func(dc *data.Channel) {
 		success <- dc
 	}
-	cgoOnDataChannel(unsafe.Pointer(pcA), nil) //datachannel.DataChannel{})
+	cgoOnDataChannel(unsafe.Pointer(pcA), nil)
 	select {
 	case <-success:
 	case <-time.After(time.Second * 1):

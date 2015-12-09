@@ -1,13 +1,16 @@
 /*
-Package datachannel contains the go wrapper for the Peer-to-Peer Data API
+Package data
+
+This is the go wrapper for the Peer-to-Peer Data API
 portion of WebRTC spec.
 */
-package datachannel
+package data
 
 // #include "../cpeerconnection.h"
 import "C"
 
-type DataChannel struct {
+// data.Channel
+type Channel struct {
 	Label                      string
 	Ordered                    bool
 	MaxPacketLifeTime          uint
@@ -41,6 +44,6 @@ type Init struct {
   // return (C.CGO_DataChannel)
 // }
 
-func New() *DataChannel {
-  return new(DataChannel)
+func NewChannel() *Channel {
+  return new(Channel)
 }
