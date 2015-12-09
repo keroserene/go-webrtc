@@ -123,7 +123,7 @@ type PeerConnection struct {
 	OnSignalingStateChange func(SignalingState)
 	// onicegatheringstatechange
 	// oniceconnectionstatechange
-	OnDataChannel func()
+	OnDataChannel func(*datachannel.DataChannel)
 
 	config Configuration
 
@@ -251,6 +251,7 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init)
 	if nil == cDC {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
+	// Convert cDC and put it in Go DC
 	dc := datachannel.New()
 	return dc, nil
 }
@@ -285,5 +286,16 @@ func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGO_sdpString) {
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnIceCandidate {
 		pc.OnIceCandidate(c)
+	}
+}
+
+//export cgoOnDataChannel
+func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_DataChannel) {
+	INFO.Println("fired OnDataChannel: ", p, cDC)
+	pc := (*PeerConnection)(p)
+	// TODO: Convert DataChannel to Go for real.
+	dc := datachannel.New()
+	if nil != pc.OnDataChannel {
+		pc.OnDataChannel(dc)
 	}
 }

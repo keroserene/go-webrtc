@@ -152,12 +152,13 @@ func TestCreateDataChannel(t *testing.T) {
 	fmt.Println("Data channel: ", channel)
 }
 
+
 func TestOnDataChannelCallback(t *testing.T) {
-	success := make(chan string, 1)
-	pcA.OnDataChannel = func(channel string) {
-		success <- c
+	success := make(chan *datachannel.DataChannel, 1)
+	pcA.OnDataChannel = func(dc *datachannel.DataChannel) {
+		success <- dc
 	}
-	cgoOnDataChannel(unsafe.Pointer(pcA), "")
+	cgoOnDataChannel(unsafe.Pointer(pcA), nil) //datachannel.DataChannel{})
 	select {
 	case <-success:
 	case <-time.After(time.Second * 1):

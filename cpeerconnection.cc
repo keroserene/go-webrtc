@@ -100,15 +100,15 @@ class Peer
     cgoOnSignalingStateChange(goPeerConnection, state);
   }
 
-  // TODO: This seems on the way to being deprecated in native code.
-  // void OnStateChange(PeerConnectionObserver::StateType state) {
-    // cout << "[C] OnStateChange: " << state << endl;
-  // }
-
+  // TODO: The below seems on the way to being deprecated in native code.
+  /*
+  void OnStateChange(PeerConnectionObserver::StateType state) {
+    cout << "[C] OnStateChange: " << state << endl;
+  }
+  */
   void OnAddStream(webrtc::MediaStreamInterface* stream) {
     cout << "[C] OnAddStream: " << stream << endl;
   }
-
   void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
     cout << "[C] OnRemoveStream: " << stream << endl;
   }
@@ -131,6 +131,7 @@ class Peer
 
   void OnDataChannel(DataChannelInterface* data_channel) {
     cout << "[C] OnDataChannel: " << data_channel << endl;
+    cgoOnDataChannel(goPeerConnection, data_channel);
   }
 
   PeerConnectionInterface::RTCConfiguration *config;

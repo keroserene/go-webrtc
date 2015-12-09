@@ -1,3 +1,7 @@
+/*
+Package datachannel contains the go wrapper for the Peer-to-Peer Data API
+portion of WebRTC spec.
+*/
 package datachannel
 
 // #include "../cpeerconnection.h"
