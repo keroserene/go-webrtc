@@ -177,6 +177,10 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 	return answer, nil
 }
 
+// TODO: Above methods blocks until success or failure occurs. Maybe there should
+// actually be a callback version, so the user doesn't have to make their own
+// goroutine.
+
 func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
 	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
@@ -223,7 +227,6 @@ func (pc *PeerConnection) AddIceCandidate(candidate string) error {
 	return nil
 }
 
-
 func (pc *PeerConnection) GetConfiguration() Configuration {
 	// There does not appear to be a native code version of GetConfiguration -
 	// so we'll keep track of it purely from Go.
@@ -240,11 +243,6 @@ func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 	return nil
 }
 
-
-// TODO: Above methods blocks until success or failure occurs. Maybe there should
-// actually be a callback version, so the user doesn't have to make their own
-// goroutine.
-
 func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
 	*data.Channel, error) {
 	cDC := C.CGO_CreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
@@ -252,7 +250,7 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
 	// Convert cDC and put it in Go DC
-	dc := data.NewChannel()
+	dc := data.NewChannel(unsafe.Pointer(cDC))
 	return dc, nil
 }
 
@@ -289,12 +287,17 @@ func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGO_sdpString) {
 	}
 }
 
+// type CDC data.C.CGO_Channel
+type CDC C.CGO_Channel
+
 //export cgoOnDataChannel
-func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_DataChannel) {
+// func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
+func cgoOnDataChannel(p unsafe.Pointer, cDC CDC) {
 	INFO.Println("fired OnDataChannel: ", p, cDC)
 	pc := (*PeerConnection)(p)
 	// TODO: Convert DataChannel to Go for real.
-	dc := data.NewChannel()
+	dc := data.NewChannel(unsafe.Pointer(cDC))
+	// C.CGO_Channel)(cDC))
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)
 	}

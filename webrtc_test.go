@@ -150,6 +150,10 @@ func TestCreateDataChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("Data channel: ", channel)
+	label := channel.Label()
+	if label != "test" {
+		t.Error("Unexpected label:", label)
+	}
 }
 
 

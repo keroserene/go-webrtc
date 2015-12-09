@@ -161,7 +161,6 @@ func NewConfiguration(options ...ConfigurationOption) *Configuration {
 	// [ED] c.RtcpMuxPolicy = RtcpMuxPolicyRequire
 	// [ED] c.Certificates = make([]string, 0)
 	INFO.Println("Created Configuration at ", c)
-	INFO.Println("# IceServers: ", len(c.IceServers))
 	// TODO: Determine whether the below is true.
 	// if 0 == len(c.IceServers) {
 	// ERROR.Println("Need at least one ICE server.")

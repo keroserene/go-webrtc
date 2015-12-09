@@ -152,6 +152,8 @@ class Peer
   // TODO: prepare and expose IceServers for real.
   // PeerConnectionInterface::IceServers ice_servers;
 
+  DataChannel channel;
+
  protected:
   rtc::Thread *signaling_thread;
   rtc::Thread *worker_thread;
@@ -358,14 +360,16 @@ int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration* cgoConfig) {
   return FAILURE;
 }
 
-CGO_DataChannel CGO_CreateDataChannel(CGO_Peer pc, char *label, void *dict) {
-  PC cPC = ((Peer*)pc)->pc_;
+CGO_Channel CGO_CreateDataChannel(CGO_Peer pc, char *label, void *dict) {
+  auto cPeer = (Peer*)pc;
   DataChannelInit *r = (DataChannelInit*)dict;
   // TODO: a real config struct, with correct fields
   DataChannelInit config;
   string *l = new string(label);
-  auto channel = cPC->CreateDataChannel(*l, &config);
+  // This is a ref_ptr, and needs to be kept track of.
+  auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
+  // TODO: Keep track of a vector of these internally.
+  cPeer->channel = channel;
   cout << "Created data channel: " << channel << endl;
-  return (CGO_DataChannel)channel;
+  return (CGO_Channel)channel.get();
 }
-

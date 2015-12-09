@@ -3,6 +3,8 @@
 
 #define WEBRTC_POSIX 1
 
+#include "data/cdatachannel.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,7 +17,6 @@ extern "C" {
 
   typedef void* CGO_Peer;
   typedef void* CGO_sdp;  // Pointer to SessionDescriptionInterface*
-  typedef void* CGO_DataChannel;
   typedef const char* CGO_sdpString;
 
   typedef struct {
@@ -58,7 +59,7 @@ extern "C" {
   // int CGO_GetConfiguration(CGO_Peer);
   int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration*);
 
-  CGO_DataChannel CGO_CreateDataChannel(CGO_Peer, char*, void*);
+  CGO_Channel CGO_CreateDataChannel(CGO_Peer, char*, void*);
 
 #ifdef __cplusplus
 }
