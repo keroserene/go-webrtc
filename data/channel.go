@@ -16,19 +16,28 @@ package data
 import "C"
 import (
 	"unsafe"
-	"fmt"
+	// "fmt"
 )
+
+
+type DataState int
+
+const (
+	DataStateConnecting DataState = iota
+	DataStateOpen
+	DataStateClosing
+	DataStateClosed
+)
+
+var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
 
 // data.Channel
 type Channel struct {
-	// Label                      string
-	Ordered                    bool
 	MaxPacketLifeTime          uint
 	MaxRetransmits             uint
 	Protocol                   string
 	Negotiated                 bool
 	ID                         uint
-	ReadyState                 string   // RTCDataChannelState
 	BufferedAmount             int
 	BufferedAmountLowThreshold int
 	// TODO: Close() and Send()
@@ -42,11 +51,15 @@ type Channel struct {
 
 func (c *Channel) Label() string {
 	s := C.CGO_Channel_Label(c.cgoChannel)
-	fmt.Println("label: ", s)
 	return C.GoString(s)
-	// return C.CGO_Channel_Label((C.CGO_Channel)(c.cgoChannel))
-	// return c.cgoChannel.label()
-	// return "not implemented yet"
+}
+
+func (c *Channel) Ordered() bool {
+	return bool(C.CGO_Channel_Ordered(c.cgoChannel))
+}
+
+func (c *Channel) ReadyState() DataState {
+	return (DataState)(C.CGO_Channel_ReadyState(c.cgoChannel))
 }
 
 type Init struct {
@@ -73,3 +86,8 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 // func (channel *Channel) _CGO() C.CGO_Channel {
 	// return (C.CGO_Channel)(unsafePointer(channel))	
 // }
+
+var _cgoDataStateConnecting = int(C.CGO_DataStateConnecting)
+var _cgoDataStateOpen = int(C.CGO_DataStateOpen)
+var _cgoDataStateClosing = int(C.CGO_DataStateClosing)
+var _cgoDataStateClosed = int(C.CGO_DataStateClosed)
