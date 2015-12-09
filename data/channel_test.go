@@ -3,6 +3,8 @@ package data
 import (
 	"fmt"
 	"testing"
+	"unsafe"
+	"time"
 )
 
 var c *Channel
@@ -42,9 +44,25 @@ func TestChannelLabel(t *testing.T) {
 	fmt.Println(s)
 }
 
-func TestChannelOrdered(t *testing.T) {}
+func TestChannelOrdered(t *testing.T) {
+	// TODO
+}
 
 func TestChannelReadyState(t *testing.T) {
-	// state := c.ReadyState()
-	// fmt.Println(state)
+	// TODO
 }
+
+func TestOnMessageCallback(t *testing.T) {
+	success := make(chan []byte, 1)
+	c.OnMessage = func(msg []byte) {
+		success <- msg
+	}
+	cgoChannelOnMessage(unsafe.Pointer(c), []byte{123})
+	select {
+	case <-success:
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
+}
+
+

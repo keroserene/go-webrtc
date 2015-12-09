@@ -16,7 +16,7 @@ package data
 import "C"
 import (
 	"unsafe"
-	// "fmt"
+	"fmt"
 )
 
 
@@ -37,6 +37,12 @@ type Channel struct {
 	// TODO: Close() and Send()
 	// TODO: OnOpen, OnBufferedAmountLow, OnError, OnClose, OnMessage,
 	BinaryType string
+
+	// Event Handlers
+	OnOpen func()
+	OnError func()
+	OnClose func()
+	OnMessage func([]byte)  // byte slice.
 
 	// TODO: Think about visibility and the implications of having
 	// multiple packages like this...
@@ -90,20 +96,37 @@ type Init struct {
 	ID                uint
 }
 
-// func (dc *DataChannel) CGO_() C.CGO_Channel {
-  // return (C.CGO_Channel)
-// }
-
-// func NewChannel(cDC C.CGO_Channel) *Channel {
 func NewChannel(cDC unsafe.Pointer) *Channel {
   dc := new(Channel)
 	dc.cgoChannel = (C.CGO_Channel)(cDC)
 	return dc
 }
 
-// func (channel *Channel) _CGO() C.CGO_Channel {
-	// return (C.CGO_Channel)(unsafePointer(channel))	
-// }
+//
+// === cgo hooks for user-provided Go callbacks, and enums ===
+//
+
+//export cgoChannelOnMessage
+func cgoChannelOnMessage(c unsafe.Pointer, b []byte) {
+	fmt.Println("fired data.Channel.OnMessage: ", c, b)
+	dc := (*Channel)(c)
+	if nil != dc.OnMessage {
+		dc.OnMessage(b)
+	}
+}
+
+//export cgoChannelOnStateChange
+func cgoChannelOnStateChange(c unsafe.Pointer) {
+	// This event handler picks between different Go callbacks, depending
+	// on the state.
+	fmt.Println("fired data.Channel.OnStateChange:", c)
+	// dc := (*Channel)(c)
+	// TODO: look at state.
+	// if nil != dc.OnClosed {
+		// pc.OnClosed
+	// }
+}
+
 
 var _cgoDataStateConnecting = int(C.CGO_DataStateConnecting)
 var _cgoDataStateOpen = int(C.CGO_DataStateOpen)
