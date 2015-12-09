@@ -95,9 +95,11 @@ func TestSetRemoteDescription(t *testing.T) {
 func TestAddIceCandidate(t *testing.T) {
 	err := pcB.AddIceCandidate("not real")
 	// Expected to fail because the ICE candidate is fake.
-	// if err != nil {
-		// t.Fatal(err)
-	// }
+	if err == nil {
+		// TODO: Change this test once a non-stringified version of IceCandidates
+		// is implemented.
+		t.Error("AddIceCandidate was expecting to fail.")
+	}
 }
 
 func TestGetSignalingState(t *testing.T) {
@@ -115,17 +117,30 @@ func TestSetAndGetConfiguration(t *testing.T) {
 	pcA.SetConfiguration(*config)
 	got := pcA.GetConfiguration()
 	if got.IceTransportPolicy != IceTransportPolicyRelay {
-		t.Error("Unexpected Configuration.")
+		t.Error("Unexpected Configuration: ",
+			IceTransportPolicyString[got.IceTransportPolicy])
 	}
 }
 
-// TODO: Uncomment once SetRemoteDescription is implemented.
 func TestCreateAnswer(t *testing.T) {
 	sdp, err := pcB.CreateAnswer()
 	if nil != err {
 		t.Fatal(err)
 	}
 	fmt.Println("SDP Answer:\n", sdp.description)
+}
+
+func TestOnNegotiationNeededCallback(t *testing.T) {
+	success := make(chan int, 1)
+	pcA.OnNegotiationNeeded = func() {
+		success <- 0
+	}
+	cgoOnNegotiationNeeded(unsafe.Pointer(pcA))
+	select {
+	case <-success:
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
 }
 
 // TODO: real datachannel tests
@@ -135,6 +150,19 @@ func TestCreateDataChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("Data channel: ", channel)
+}
+
+func TestOnDataChannelCallback(t *testing.T) {
+	success := make(chan string, 1)
+	pcA.OnDataChannel = func(channel string) {
+		success <- c
+	}
+	cgoOnDataChannel(unsafe.Pointer(pcA), "")
+	select {
+	case <-success:
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
 }
 
 // TODO: tests for video / audio stream support.

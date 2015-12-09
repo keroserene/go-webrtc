@@ -54,6 +54,8 @@ const (
 	BundlePolicyMaxCompat
 )
 
+var BundlePolicyString = []string{"Balanced", "MaxBundle", "MaxCompat"}
+
 const (
 	IceTransportPolicyNone IceTransportPolicy = iota
 	IceTransportPolicyRelay
@@ -63,6 +65,8 @@ const (
 	iceTransportPolicyNoHost
 	IceTransportPolicyAll
 )
+
+var IceTransportPolicyString = []string{"None", "Relay", "NoHost", "All"}
 
 const (
 	SignalingStateStable SignalingState = iota
@@ -177,6 +181,8 @@ func OptionIceServer(params ...string) ConfigurationOption {
 
 func OptionIceTransportPolicy(policy IceTransportPolicy) ConfigurationOption {
 	return func(config *Configuration) error {
+		INFO.Println("OptionIceTransportPolicy: ", policy,
+			IceTransportPolicyString[policy])
 		config.IceTransportPolicy = policy
 		return nil
 	}

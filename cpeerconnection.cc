@@ -93,7 +93,7 @@ class Peer
 
   //
   // PeerConnectionObserver Implementation
-  // TODO: cgo hooks
+  // TODO: Finish the rest of the callbacks in go.
   //
   void OnSignalingChange(PeerConnectionInterface::SignalingState state) {
     // cout << "[C] OnSignalingChange: " << state << endl;
@@ -115,6 +115,7 @@ class Peer
 
   void OnRenegotiationNeeded() {
     cout << "[C] OnRenegotiationNeeded" << endl;
+    cgoOnNegotiationNeeded(goPeerConnection);
   }
 
   void OnIceCandidate(const IceCandidateInterface* candidate) {

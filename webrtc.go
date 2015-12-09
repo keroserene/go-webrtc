@@ -111,23 +111,21 @@ type PeerConnection struct {
 	// currentRemoteDescription
 	// pendingRemoteDescription
 
-	// addIceCandidate func()
 	// iceGatheringState  RTCIceGatheringState
 	// iceConnectionState  RTCIceConnectionState
 	canTrickleIceCandidates bool
-	// getConfiguration
-	// setConfiguration
 	// close
 
-	// Event handlers:
-	OnIceCandidate func(string)
-	// onnegotiationneeded
+	// Event handlers
+	OnIceCandidate      func(string)
+	OnNegotiationNeeded func()
 	// onicecandidateerror
 	OnSignalingStateChange func(SignalingState)
 	// onicegatheringstatechange
 	// oniceconnectionstatechange
+	OnDataChannel func()
 
-	config *Configuration
+	config Configuration
 
 	cgoPeer C.CGO_Peer // Native code internals
 }
@@ -140,7 +138,7 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
-	pc.config = config
+	pc.config = *config
 	cConfig := config._CGO() // Convert for CGO_
 	if 0 != C.CGO_CreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
@@ -148,6 +146,10 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	INFO.Println("Created PeerConnection: ", pc, pc.cgoPeer)
 	return pc, nil
 }
+
+//
+// === Session Description Protocol ===
+//
 
 // CreateOffer prepares an SDP "offer" message, which should be sent to the target
 // peer over a signalling channel.
@@ -160,6 +162,19 @@ func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
 	offer.cgoSdp = sdp
 	offer.description = C.GoString(C.CGO_SerializeSDP(sdp))
 	return offer, nil
+}
+
+// CreateAnswer prepares an SDP "answer" message, which should be sent in
+// response to a peer that has sent an offer, over the signalling channel.
+func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
+	sdp := C.CGO_CreateAnswer(pc.cgoPeer)
+	if nil == sdp {
+		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
+	}
+	answer := new(SDPHeader)
+	answer.cgoSdp = sdp
+	answer.description = C.GoString(C.CGO_SerializeSDP(sdp))
+	return answer, nil
 }
 
 func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
@@ -185,6 +200,20 @@ func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
 	return nil
 }
 
+// readonly remoteDescription
+func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
+	return pc.remoteDescription
+}
+
+// readonly signalingState
+func (pc *PeerConnection) SignalingState() SignalingState {
+	return (SignalingState)(C.CGO_GetSignalingState(pc.cgoPeer))
+}
+
+//
+// === ICE ===
+//
+
 // TODO: change candidate into a real IceCandidate type.
 func (pc *PeerConnection) AddIceCandidate(candidate string) error {
 	r := C.CGO_AddIceCandidate(pc.cgoPeer, C.CString(candidate))
@@ -194,20 +223,11 @@ func (pc *PeerConnection) AddIceCandidate(candidate string) error {
 	return nil
 }
 
-// readonly remoteDescription
-func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
-	return pc.remoteDescription
-}
-
-// readonly
-func (pc *PeerConnection) SignalingState() SignalingState {
-	return (SignalingState)(C.CGO_GetSignalingState(pc.cgoPeer))
-}
 
 func (pc *PeerConnection) GetConfiguration() Configuration {
 	// There does not appear to be a native code version of GetConfiguration -
 	// so we'll keep track of it purely from Go.
-	return *pc.config
+	return pc.config
 	// return (Configuration)(C.CGO_GetConfiguration(pc.cgoPeer))
 }
 
@@ -216,21 +236,10 @@ func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 	if 0 != C.CGO_SetConfiguration(pc.cgoPeer, &cConfig) {
 		return errors.New("PeerConnection: could not set configuration.")
 	}
+	pc.config = config
 	return nil
 }
 
-// CreateAnswer prepares an SDP "answer" message, which should be sent in
-// response to a peer that has sent an offer, over the signalling channel.
-func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
-	sdp := C.CGO_CreateAnswer(pc.cgoPeer)
-	if nil == sdp {
-		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
-	}
-	answer := new(SDPHeader)
-	answer.cgoSdp = sdp
-	answer.description = C.GoString(C.CGO_SerializeSDP(sdp))
-	return answer, nil
-}
 
 // TODO: Above methods blocks until success or failure occurs. Maybe there should
 // actually be a callback version, so the user doesn't have to make their own
@@ -246,7 +255,10 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict datachannel.Init)
 	return dc, nil
 }
 
-// Intermediate hooks for firing Go funcs as C callbacks.
+//
+// === cgo hooks for user-provided Go funcs fired from C callbacks ===
+//
+
 //export cgoOnSignalingStateChange
 func cgoOnSignalingStateChange(p unsafe.Pointer, s SignalingState) {
 	INFO.Println("fired OnSignalingStateChange: ", p,
@@ -254,6 +266,15 @@ func cgoOnSignalingStateChange(p unsafe.Pointer, s SignalingState) {
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnSignalingStateChange {
 		pc.OnSignalingStateChange(s)
+	}
+}
+
+//export cgoOnNegotiationNeeded
+func cgoOnNegotiationNeeded(p unsafe.Pointer) {
+	INFO.Println("fired OnNegotiationNeeded: ", p)
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnNegotiationNeeded {
+		pc.OnNegotiationNeeded()
 	}
 }
 
@@ -266,7 +287,3 @@ func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGO_sdpString) {
 		pc.OnIceCandidate(c)
 	}
 }
-
-// Install a handler for receiving ICE Candidates.
-// func OnIceCandidate(pc PeerConnection) {
-// }
