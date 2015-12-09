@@ -21,9 +21,43 @@ const bool CGO_Channel_Ordered(CGO_Channel channel) {
   return dc->ordered();
 }
 
+int CGO_Channel_MaxRetransmitTime(CGO_Channel channel) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  return dc->maxRetransmitTime();
+}
+
+int CGO_Channel_MaxRetransmits(CGO_Channel channel) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  return dc->maxRetransmits();
+}
+
+const char *CGO_Channel_Protocol(CGO_Channel channel) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  // assert(NULL != dc);
+  if (NULL == dc) {
+    return "No internal CGO_Channel.";
+  }
+  return dc->protocol().c_str();
+}
+
+const bool CGO_Channel_Negotiated(CGO_Channel channel) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  return dc->negotiated();
+}
+
+int CGO_Channel_ID(CGO_Channel channel) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  return dc->id();
+}
+
 int CGO_Channel_ReadyState(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   return dc->state();
+}
+
+int CGO_Channel_BufferedAmount(CGO_Channel channel) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  return dc->buffered_amount();
 }
 
 const int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting;

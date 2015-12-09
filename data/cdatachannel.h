@@ -17,7 +17,13 @@ extern "C" {
 
   const char *CGO_Channel_Label(CGO_Channel);
   const bool CGO_Channel_Ordered(CGO_Channel);
+  int CGO_Channel_MaxRetransmitTime(CGO_Channel channel);
+  int CGO_Channel_MaxRetransmits(CGO_Channel channel);
+  const char *CGO_Channel_Protocol(CGO_Channel);
+  const bool CGO_Channel_Negotiated(CGO_Channel channel);
+  int CGO_Channel_ID(CGO_Channel channel);
   int CGO_Channel_ReadyState(CGO_Channel);
+  int CGO_Channel_BufferedAmount(CGO_Channel channel);
 
   extern const int CGO_DataStateConnecting;
   extern const int CGO_DataStateOpen;

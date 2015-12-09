@@ -33,12 +33,6 @@ var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
 
 // data.Channel
 type Channel struct {
-	MaxPacketLifeTime          uint
-	MaxRetransmits             uint
-	Protocol                   string
-	Negotiated                 bool
-	ID                         uint
-	BufferedAmount             int
 	BufferedAmountLowThreshold int
 	// TODO: Close() and Send()
 	// TODO: OnOpen, OnBufferedAmountLow, OnError, OnClose, OnMessage,
@@ -58,8 +52,32 @@ func (c *Channel) Ordered() bool {
 	return bool(C.CGO_Channel_Ordered(c.cgoChannel))
 }
 
+func (c *Channel) Protocol() string {
+	return C.GoString(C.CGO_Channel_Protocol(c.cgoChannel))
+}
+
+func (c *Channel) MaxPacketLifeTime() uint {
+	return uint(C.CGO_Channel_MaxRetransmitTime(c.cgoChannel))
+}
+
+func (c *Channel) MaxRetransmits() uint {
+	return uint(C.CGO_Channel_MaxRetransmits(c.cgoChannel))
+}
+
+func (c *Channel) Negotiated() bool {
+	return bool(C.CGO_Channel_Negotiated(c.cgoChannel))
+}
+
+func (c *Channel) ID() int {
+	return int(C.CGO_Channel_ID(c.cgoChannel))
+}
+
 func (c *Channel) ReadyState() DataState {
 	return (DataState)(C.CGO_Channel_ReadyState(c.cgoChannel))
+}
+
+func (c *Channel) BufferedAmount() int {
+	return int(C.CGO_Channel_BufferedAmount(c.cgoChannel))
 }
 
 type Init struct {
