@@ -97,9 +97,19 @@ type Init struct {
 	ID                uint
 }
 
+// Create a Go Channel struct, and prepare internal CGO references / observers.
+// Expects cDC to be a pointer to a CGO_Channel object, which ultimately points
+// to a DataChannelInterface*.
+// The most reasonable place for this to be created is from PeerConnection,
+// which is not available in the subpackage.
 func NewChannel(cDC unsafe.Pointer) *Channel {
+	if nil == cDC {
+		return nil
+	}
   dc := new(Channel)
 	dc.cgoChannel = (C.CGO_Channel)(cDC)
+	// Observer is required for attaching callbacks correctly.
+	C.CGO_Channel_RegisterObserver(dc.cgoChannel)
 	return dc
 }
 
@@ -128,6 +138,9 @@ func cgoChannelOnStateChange(c unsafe.Pointer) {
 	// }
 }
 
+func cgoFakeDataChannel() unsafe.Pointer {
+	return unsafe.Pointer(C.CGO_getFakeDataChannel());
+}
 
 var _cgoDataStateConnecting = int(C.CGO_DataStateConnecting)
 var _cgoDataStateOpen = int(C.CGO_DataStateOpen)

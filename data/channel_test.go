@@ -1,7 +1,7 @@
 package data
 
 import (
-	"fmt"
+	// "fmt"
 	"testing"
 	"unsafe"
 	"time"
@@ -29,7 +29,7 @@ func TestDataStateEnums(t *testing.T) {
 }
 
 func TestNewChannel(t *testing.T) {
-	c = NewChannel(nil)
+	c = NewChannel(cgoFakeDataChannel())
 	if nil == c {
 		t.Fatal("Could not create NewChannel")
 	}
@@ -40,16 +40,21 @@ func TestNewChannel(t *testing.T) {
 // the outer package, making these tests pretty useless. To fix.
 
 func TestChannelLabel(t *testing.T) {
-	s := c.Label()
-	fmt.Println(s)
+	if "fake" != c.Label() {
+		t.Error()
+	}
 }
 
 func TestChannelOrdered(t *testing.T) {
-	// TODO
+	if false != c.Ordered() {
+		t.Error()
+	}
 }
 
 func TestChannelReadyState(t *testing.T) {
-	// TODO
+	if DataStateClosed != c.ReadyState() {
+		t.Error()
+	}
 }
 
 func TestOnMessageCallback(t *testing.T) {

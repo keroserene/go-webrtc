@@ -15,6 +15,8 @@ extern "C" {
 
   typedef void* CGO_Channel;
 
+  const char *CGO_Channel_RegisterObserver(CGO_Channel channel);
+
   const char *CGO_Channel_Label(CGO_Channel);
   const bool CGO_Channel_Ordered(CGO_Channel);
   int CGO_Channel_MaxRetransmitTime(CGO_Channel channel);
@@ -29,6 +31,8 @@ extern "C" {
   extern const int CGO_DataStateOpen;
   extern const int CGO_DataStateClosing;
   extern const int CGO_DataStateClosed;
+
+  CGO_Channel CGO_getFakeDataChannel();
 
 #ifdef __cplusplus
 }
