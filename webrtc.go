@@ -215,7 +215,7 @@ func (pc *PeerConnection) SignalingState() SignalingState {
 }
 
 //
-// === ICE ===
+// === ICE / Configuration ===
 //
 
 // TODO: change candidate into a real IceCandidate type.
@@ -252,6 +252,11 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
 	// Convert cDC and put it in Go DC
 	dc := data.NewChannel(unsafe.Pointer(cDC))
 	return dc, nil
+}
+
+func (pc *PeerConnection) Close() error {
+	C.CGO_Close(pc.cgoPeer)
+	return nil
 }
 
 //

@@ -198,6 +198,8 @@ CGO_Peer CGO_InitializePeer(void *goPc) {
   rtc::scoped_refptr<Peer> localPeer = new rtc::RefCountedObject<Peer>();
   localPeer->Initialize();
   localPeers.push_back(localPeer);
+  // Reference to external Go PeerConnection struct is required for firing
+  // callbacks correctly.
   localPeer->goPeerConnection = goPc;
   return localPeer;
 }
@@ -308,24 +310,24 @@ CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
   return (CGO_sdpString)s->c_str();
 }
 
-int CGO_SetLocalDescription(CGO_Peer pc, CGO_sdp sdp) {
-  PC cPC = ((Peer*)pc)->pc_;
+int CGO_SetLocalDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
   auto obs = PeerSDPObserver::Create();
   auto r = obs->promiseSet.get_future();
   cPC->SetLocalDescription(obs, (SDP)sdp);
   return r.get();
 }
 
-int CGO_SetRemoteDescription(CGO_Peer pc, CGO_sdp sdp) {
-  PC cPC = ((Peer*)pc)->pc_;
+int CGO_SetRemoteDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
   auto obs = PeerSDPObserver::Create();
   auto r = obs->promiseSet.get_future();
   cPC->SetRemoteDescription(obs, (SDP)sdp);
   return r.get();
 }
 
-int CGO_AddIceCandidate(CGO_Peer pc, CGO_sdpString candidate) {
-  PC cPC = ((Peer*)pc)->pc_;
+int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_sdpString candidate) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
   SdpParseError error;
   // TODO: There are probably issues below.
   string sdp = (string)candidate;
@@ -349,8 +351,8 @@ int CGO_GetSignalingState(CGO_Peer pc) {
   return cPC->signaling_state();
 }
 
-int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration* cgoConfig) {
-  Peer *peer = (Peer*)pc;
+int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
+  Peer *peer = (Peer*)cgoPeer;
   auto cConfig = castConfig_(cgoConfig);
   bool success = peer->pc_->SetConfiguration(*cConfig);
   if (success) {
@@ -360,8 +362,8 @@ int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration* cgoConfig) {
   return FAILURE;
 }
 
-CGO_Channel CGO_CreateDataChannel(CGO_Peer pc, char *label, void *dict) {
-  auto cPeer = (Peer*)pc;
+CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
+  auto cPeer = (Peer*)cgoPeer;
   DataChannelInit *r = (DataChannelInit*)dict;
   // TODO: a real config struct, with correct fields
   DataChannelInit config;
@@ -372,4 +374,10 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer pc, char *label, void *dict) {
   cPeer->channel = channel;
   cout << "Created data channel: " << channel << endl;
   return (CGO_Channel)channel.get();
+}
+
+void CGO_Close(CGO_Peer peer) {
+  auto cPeer = (Peer*)peer;
+  cPeer->pc_->Close();
+  cout << "Closed PeerConnection." << endl;
 }

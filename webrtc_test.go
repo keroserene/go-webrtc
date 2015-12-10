@@ -156,7 +156,6 @@ func TestCreateDataChannel(t *testing.T) {
 	}
 }
 
-
 func TestOnDataChannelCallback(t *testing.T) {
 	success := make(chan *data.Channel, 1)
 	pcA.OnDataChannel = func(dc *data.Channel) {
@@ -167,6 +166,21 @@ func TestOnDataChannelCallback(t *testing.T) {
 	case <-success:
 	case <-time.After(time.Second * 1):
 		t.Fatal("Timed out.")
+	}
+}
+
+func TestClose(t *testing.T) {
+	success := make(chan int, 1)
+	go func() {
+  	pcA.Close()
+  	pcB.Close()
+		success <- 1
+	}()
+	// TODO: Check the signaling state.
+	select {
+	case <-success:
+	case <-time.After(time.Second * 2):
+		WARN.Println("Timed out... something's probably amiss.")
 	}
 }
 

@@ -61,6 +61,8 @@ extern "C" {
 
   CGO_Channel CGO_CreateDataChannel(CGO_Peer, char*, void*);
 
+  void CGO_Close(CGO_Peer cgoPeer);
+
 #ifdef __cplusplus
 }
 #endif
