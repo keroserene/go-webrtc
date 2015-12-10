@@ -7,7 +7,8 @@ package data
 /*
 #cgo CXXFLAGS: -std=c++0x
 #cgo CXXFLAGS: -I../include
-#cgo linux,amd64 pkg-config: ../webrtc-linux-amd64.pc
+#cgo LDFLAGS: -L../lib
+#cgo linux,amd64 pkg-config: webrtc-data-linux-amd64.pc
 
 #include "../cpeerconnection.h"
 #include "cdatachannel.h"

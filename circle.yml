@@ -17,4 +17,5 @@ test:
     - g++ --version
   override:
     - set -o pipefail
-    - go test -v -race ./... | tee /dev/tty | go-junit-report > $CIRCLE_TEST_REPORTS/tests.xml
+    - go test -v -race ./data | tee /dev/tty | go-junit-report > $CIRCLE_TEST_REPORTS/webrtc-data.xml
+    - go test -v -race . | tee /dev/tty | go-junit-report > $CIRCLE_TEST_REPORTS/webrtc.xml
