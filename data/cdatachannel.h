@@ -32,8 +32,10 @@ extern "C" {
   extern const int CGO_DataStateClosing;
   extern const int CGO_DataStateClosed;
 
+  // Testing helpers:
   CGO_Channel CGO_getFakeDataChannel();
   void CGO_fakeMessage(CGO_Channel channel, void *data, int size);
+  void CGO_fakeStateChange(CGO_Channel channel, int state);
 
 #ifdef __cplusplus
 }

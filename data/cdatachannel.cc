@@ -23,10 +23,6 @@ class CGoDataChannelObserver : public DataChannelObserver {
 
   void OnMessage(const DataBuffer& buffer) {
     auto data = (uint8_t*)buffer.data.data();
-    // auto data = &buffer;
-    // for (int i = 0 ; i < buffer.size() ; ++i) {
-      // cout << data[i] << " ";
-    // }
     cout << "[C] OnMessage: " << data << endl;
     cgoChannelOnMessage(goChannel, (void *)data, buffer.size());
   }
@@ -116,6 +112,7 @@ int CGO_Channel_BufferedAmount(CGO_Channel channel) {
 // subpackage. However, we can still need fake DataChannelInterface for testing.
 
 class FakeDataChannel : public DataChannelInterface {
+ public:
   virtual void RegisterObserver(DataChannelObserver* observer) {
     obs_ = observer;
   };
@@ -134,7 +131,7 @@ class FakeDataChannel : public DataChannelInterface {
   };
 
   virtual DataState state() const {
-    return DataState::kClosed;
+    return state_;
   };
 
   virtual uint64_t buffered_amount() const {
@@ -150,11 +147,14 @@ class FakeDataChannel : public DataChannelInterface {
 
   virtual void Close() {};
 
-  void FakeOnMessage(rtc::Buffer data) {
+  void SetState(DataChannelInterface::DataState state) {
+    state_ = state;
+    obs_->OnStateChange();
   }
 
  protected:
   DataChannelObserver* obs_;
+  DataState state_ = DataState::kClosed;
 };
 rtc::scoped_refptr<FakeDataChannel> test_dc;
 
@@ -168,6 +168,13 @@ void CGO_fakeMessage(CGO_Channel channel, void *data, int size) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   auto buffer = DataBuffer(*bytes, true);
   dc->Send(buffer);
+}
+
+void CGO_fakeStateChange(CGO_Channel channel, int state) {
+  // auto dc = (FakeDataChannel)(webrtc::DataChannelInterface*)channel;
+  // auto dc = (webrtc::DataChannelInterface*)channel;
+  // auto fdc = (rtc::scoped_refptr<FakeDataChannel>)dc;
+  test_dc->SetState((DataChannelInterface::DataState)state);
 }
 
 const int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting;

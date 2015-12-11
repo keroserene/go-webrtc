@@ -38,7 +38,7 @@ type Channel struct {
 
 	// Event Handlers
 	OnOpen func()
-	OnError func()
+	// OnError func()
 	OnClose func()
 	OnMessage func([]byte)  // byte slice.
 
@@ -130,10 +130,20 @@ func cgoChannelOnStateChange(c unsafe.Pointer) {
 	dc := (*Channel)(c)
 	// This event handler picks between different Go callbacks, depending
 	// on the state.
-	fmt.Println("fired data.Channel.OnStateChange:", c)
 	// TODO: look at state.
-	if nil != dc.OnClose {
-		dc.OnClose()
+	switch dc.ReadyState() {
+		case DataStateOpen:
+			fmt.Println("fired data.Channel.OnOpen", c)
+    	if nil != dc.OnOpen {
+    		dc.OnOpen()
+    	}
+		case DataStateClosed:
+			fmt.Println("fired data.Channel.OnClose", c)
+    	if nil != dc.OnClose {
+    		dc.OnClose()
+    	}
+		default:
+			fmt.Println("fired an un-implemented data.Channel StateChange.", c)
 	}
 }
 
@@ -153,3 +163,6 @@ func cgoFakeMessage(c *Channel, b []byte, size int) {
 		unsafe.Pointer(&b[0]), C.int(size));
 }
 
+func cgoFakeStateChange(c *Channel, s DataState) {
+	C.CGO_fakeStateChange((C.CGO_Channel)(c.cgoChannel), (C.int)(s))
+}

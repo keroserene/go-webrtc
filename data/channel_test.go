@@ -75,4 +75,33 @@ func TestOnMessageCallback(t *testing.T) {
 	}
 }
 
+func TestStateChangeCallbacks(t *testing.T) {
+	opened := make(chan int, 1)
+	closed := make(chan int, 1)
+	c.OnOpen = func() {
+		opened <- 1
+	}
+	c.OnClose = func() {
+		closed <- 1
+	}
 
+	cgoFakeStateChange(c, DataStateOpen)
+	select {
+	case <-opened:
+		if DataStateOpen != c.ReadyState() {
+			t.Error("Unexpected state: ", c.ReadyState())
+		}
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out when waiting for Open.")
+	}
+
+	cgoFakeStateChange(c, DataStateClosed)
+	select {
+	case <-closed:
+		if DataStateClosed != c.ReadyState() {
+			t.Error("Unexpected state: ", c.ReadyState())
+		}
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out when waiting for Closed.")
+	}
+}
