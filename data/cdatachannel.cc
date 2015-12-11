@@ -17,13 +17,12 @@ class CGoDataChannelObserver : public DataChannelObserver {
   }
 
   void OnStateChange() {
-    cout << "[C] OnStateChange" << endl;
+    // cout << "[C] OnStateChange" << endl;
     cgoChannelOnStateChange(goChannel);
   }
 
   void OnMessage(const DataBuffer& buffer) {
     auto data = (uint8_t*)buffer.data.data();
-    cout << "[C] OnMessage: " << data << endl;
     cgoChannelOnMessage(goChannel, (void *)data, buffer.size());
   }
 
@@ -46,6 +45,13 @@ void CGO_Channel_RegisterObserver(CGO_Channel channel, void *goChannel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   auto obs = new CGoDataChannelObserver(goChannel);
   dc->RegisterObserver(obs);
+}
+
+void CGO_Channel_Send(CGO_Channel channel, void *data, int size) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  auto bytes = new rtc::Buffer((uint8_t*)data, size);
+  auto buffer = DataBuffer(*bytes, true);
+  dc->Send(buffer);
 }
 
 void CGO_Channel_Close(CGO_Channel channel) {

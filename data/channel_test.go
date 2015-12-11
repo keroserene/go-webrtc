@@ -108,6 +108,22 @@ func TestStateChangeCallbacks(t *testing.T) {
 	cgoFakeStateChange(c, DataStateOpen)
 }
 
+func TestSend(t *testing.T) {
+	messages := make(chan []byte, 1)
+	data := []byte("some data to send")
+	c.OnMessage = func(msg []byte) {
+		messages <- msg
+	}
+	c.Send(data)	
+	select {
+	case recv := <-messages:
+		if !reflect.DeepEqual(recv, data) {
+			t.Error("Unexpected bytes: ", recv)
+		}
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
+}
 
 func TestCloseChannel(t *testing.T) {
 	closed := make(chan int, 1)

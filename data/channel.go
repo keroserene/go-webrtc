@@ -32,8 +32,6 @@ var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
 // data.Channel
 type Channel struct {
 	BufferedAmountLowThreshold int
-	// TODO: Close() and Send()
-	// TODO: OnOpen, OnBufferedAmountLow, OnError, OnClose, OnMessage,
 	BinaryType string
 
 	// Event Handlers
@@ -41,9 +39,8 @@ type Channel struct {
 	// OnError func()
 	OnClose func()
 	OnMessage func([]byte)  // byte slice.
+	// OnBufferedAmountLow
 
-	// TODO: Think about visibility and the implications of having
-	// multiple packages like this...
 	cgoChannel C.CGO_Channel // Internal DataChannel functionality.
 }
 
@@ -62,6 +59,14 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 	// Observer is required for attaching callbacks correctly.
 	C.CGO_Channel_RegisterObserver(dc.cgoChannel, unsafe.Pointer(dc))
 	return dc
+}
+
+func (c *Channel) Send(data []byte) error {
+	if nil == data {
+		return nil
+	}
+	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)));
+	return nil
 }
 
 func (c *Channel) Close() error {
