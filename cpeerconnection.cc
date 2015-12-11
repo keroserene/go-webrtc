@@ -119,15 +119,13 @@ class Peer
     cgoOnNegotiationNeeded(goPeerConnection);
   }
 
-  void OnIceCandidate(const IceCandidateInterface* candidate) {
-    cout << "[C] OnIceCandidate" << candidate << endl;
-    // TODO: Once a real Go IceCandidate interface exists, change this to
-    // conversion to the Go interface, rather than immediately serializing.
-    auto s = new string();
-    candidate->ToString(s);
-    cgoOnIceCandidate(
-        goPeerConnection,
-        (CGO_sdpString)s->c_str());
+  void OnIceCandidate(const IceCandidateInterface* ic) {
+    cout << "[C] OnIceCandidate" << ic << endl;
+    std::string candidate;
+    ic->ToString(&candidate);
+    cgoOnIceCandidate(goPeerConnection, const_cast<char*>(candidate.c_str()),
+                      const_cast<char*>(ic->sdp_mid().c_str()),
+                      ic->sdp_mline_index());
   }
 
   void OnDataChannel(DataChannelInterface* data_channel) {
@@ -336,21 +334,17 @@ int CGO_SetRemoteDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   return r.get();
 }
 
-int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_sdpString candidate) {
+int CGO_AddIceCandidate(CGO_Peer cgoPeer, const char *candidate,
+                        const char *sdp_mid, int sdp_mline_index) {
   PC cPC = ((Peer*)cgoPeer)->pc_;
-  SdpParseError error;
-  // TODO: There are probably issues below.
-  // Take a closer look at jsepicecandidate.h.
-  string sdp = (string)candidate;
-  int sdp_mline_index = 0;
-  string sdp_mid = "";  // This needs to become something real.
-  IceCandidateInterface *cCandidate = webrtc::CreateIceCandidate(
-      sdp_mid, sdp_mline_index, sdp, &error);
-  if (!cCandidate) {
+  SdpParseError *error = nullptr;
+  IceCandidateInterface *ic = webrtc::CreateIceCandidate(
+    string(sdp_mid), sdp_mline_index, string(candidate), error);
+  if (error || !ic) {
     cout << "[C] SDP parse error." << endl;
     return FAILURE;
   }
-  if (!cPC->AddIceCandidate(cCandidate)) {
+  if (!cPC->AddIceCandidate(ic)) {
     cout << "[C] problem adding ICE candidate." << endl;
     return FAILURE;
   }

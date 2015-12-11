@@ -39,12 +39,6 @@ type Configuration struct {
 	cgoConfig *C.CGO_Configuration // Native code internals
 }
 
-// TODO: Provide a Go interface for IceCandidates.
-// For now, since it seems that in most use cases the user just needs to send
-// a serialized version of this, and the native code already provides that
-// functionality, the OnIceCandidate callback will just give the string.
-// type IceCandidate struct {	}
-
 // These "Enum" consts must match order in: peerconnectioninterface.h
 // There doesn't seem to be a way to have a named container for enums
 // in go, and the idiomatic way seems to be just prefixes.
