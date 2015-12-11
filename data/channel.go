@@ -12,10 +12,9 @@ package data
 */
 import "C"
 import (
-	"unsafe"
 	"fmt"
+	"unsafe"
 )
-
 
 type DataState int
 
@@ -31,13 +30,13 @@ var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
 // data.Channel
 type Channel struct {
 	BufferedAmountLowThreshold int
-	BinaryType string
+	BinaryType                 string
 
 	// Event Handlers
 	OnOpen func()
 	// OnError func()
-	OnClose func()
-	OnMessage func([]byte)  // byte slice.
+	OnClose   func()
+	OnMessage func([]byte) // byte slice.
 	// OnBufferedAmountLow
 
 	cgoChannel C.CGO_Channel // Internal DataChannel functionality.
@@ -52,7 +51,7 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 	if nil == cDC {
 		return nil
 	}
-  dc := new(Channel)
+	dc := new(Channel)
 	fmt.Println("Go channel at: ", unsafe.Pointer(dc))
 	dc.cgoChannel = (C.CGO_Channel)(cDC)
 	// Observer is required for attaching callbacks correctly.
@@ -64,7 +63,7 @@ func (c *Channel) Send(data []byte) error {
 	if nil == data {
 		return nil
 	}
-	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)));
+	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)))
 	return nil
 }
 
@@ -110,7 +109,6 @@ func (c *Channel) BufferedAmount() int {
 	return int(C.CGO_Channel_BufferedAmount(c.cgoChannel))
 }
 
-
 type Init struct {
 	// TODO: defaults
 	Ordered           bool
@@ -120,7 +118,6 @@ type Init struct {
 	Negotiated        bool
 	ID                uint
 }
-
 
 //
 // === cgo hooks for user-provided Go callbacks, and enums ===
@@ -143,18 +140,18 @@ func cgoChannelOnStateChange(c unsafe.Pointer) {
 	// on the state.
 	// TODO: look at state.
 	switch dc.ReadyState() {
-		case DataStateOpen:
-			fmt.Println("fired data.Channel.OnOpen", c)
-    	if nil != dc.OnOpen {
-    		dc.OnOpen()
-    	}
-		case DataStateClosed:
-			fmt.Println("fired data.Channel.OnClose", c)
-    	if nil != dc.OnClose {
-    		dc.OnClose()
-    	}
-		default:
-			fmt.Println("fired an un-implemented data.Channel StateChange.", c)
+	case DataStateOpen:
+		fmt.Println("fired data.Channel.OnOpen", c)
+		if nil != dc.OnOpen {
+			dc.OnOpen()
+		}
+	case DataStateClosed:
+		fmt.Println("fired data.Channel.OnClose", c)
+		if nil != dc.OnClose {
+			dc.OnClose()
+		}
+	default:
+		fmt.Println("fired an un-implemented data.Channel StateChange.", c)
 	}
 }
 
@@ -163,15 +160,15 @@ var _cgoDataStateOpen = int(C.CGO_DataStateOpen)
 var _cgoDataStateClosing = int(C.CGO_DataStateClosing)
 var _cgoDataStateClosed = int(C.CGO_DataStateClosed)
 
-// Testing helpers 
+// Testing helpers
 
 func cgoFakeDataChannel() unsafe.Pointer {
-	return unsafe.Pointer(C.CGO_getFakeDataChannel());
+	return unsafe.Pointer(C.CGO_getFakeDataChannel())
 }
 
 func cgoFakeMessage(c *Channel, b []byte, size int) {
 	C.CGO_fakeMessage((C.CGO_Channel)(c.cgoChannel),
-		unsafe.Pointer(&b[0]), C.int(size));
+		unsafe.Pointer(&b[0]), C.int(size))
 }
 
 func cgoFakeStateChange(c *Channel, s DataState) {

@@ -2,9 +2,9 @@ package data
 
 import (
 	// "fmt"
+	"reflect"
 	"testing"
 	"time"
-	"reflect"
 )
 
 var c *Channel
@@ -114,7 +114,7 @@ func TestSend(t *testing.T) {
 	c.OnMessage = func(msg []byte) {
 		messages <- msg
 	}
-	c.Send(data)	
+	c.Send(data)
 	select {
 	case recv := <-messages:
 		if !reflect.DeepEqual(recv, data) {

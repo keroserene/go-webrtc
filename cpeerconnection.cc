@@ -8,7 +8,6 @@
 #include <iostream>
 #include <unistd.h>
 #include <future>
-#include <string>
 #include "_cgo_export.h"
 
 #define DTLS_SRTP "true"
@@ -64,7 +63,7 @@ class Peer
     }
     // PortAllocatorFactoryInterface *allocator;
 
-    // TODO: Make actual media constraints, with an exposed Go interface.
+    // TODO: Make actual media constraints, decide whether to expose in Go.
     auto c = new FakeConstraints();
     c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, DTLS_SRTP);
     c->SetMandatoryReceiveAudio(false);
@@ -255,7 +254,6 @@ int CGO_CreatePeerConnection(CGO_Peer cgoPeer, CGO_Configuration *cgoConfig) {
     cout << "ERROR: Could not create PeerConnection." << endl;
     return FAILURE;
   }
-  // cout << "[C] Made PeerConnection: " << peer->pc_ << endl;
   return SUCCESS;
 }
 
@@ -330,11 +328,12 @@ int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_sdpString candidate) {
   PC cPC = ((Peer*)cgoPeer)->pc_;
   SdpParseError error;
   // TODO: There are probably issues below.
+  // Take a closer look at jsepicecandidate.h.
   string sdp = (string)candidate;
   int sdp_mline_index = 0;
-  auto sdp_mid = "";
-  auto cCandidate = CreateIceCandidate(
-    sdp_mid, sdp_mline_index, sdp, &error);
+  string sdp_mid = "";  // This needs to become something real.
+  IceCandidateInterface *cCandidate = webrtc::CreateIceCandidate(
+      sdp_mid, sdp_mline_index, sdp, &error);
   if (!cCandidate) {
     cout << "[C] SDP parse error." << endl;
     return FAILURE;

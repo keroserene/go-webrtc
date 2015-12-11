@@ -23,18 +23,18 @@ func main() {
 		/// There can be as many as you like.
 		webrtc.OptionIceServer("stun:stun.l.google.com:19302, stun:another"),
 		webrtc.OptionIceServer("stun:another.server"),
-		)
+	)
 
 	// You can also add IceServers at a different point.
 	config.AddIceServer("turn:and.another.server")
 
 	alice, err1 := webrtc.NewPeerConnection(config)
 	bob, err2 := webrtc.NewPeerConnection(config)
-  if nil != err1 || nil != err2 {
-    fmt.Println("Failed to create PeerConnections for both Alice and Bob.")
-    return
-  }
-  fmt.Println("Alice and Bob created PeerConnections.\n")
+	if nil != err1 || nil != err2 {
+		fmt.Println("Failed to create PeerConnections for both Alice and Bob.")
+		return
+	}
+	fmt.Println("Alice and Bob created PeerConnections.\n")
 
 	// Prepare callback handlers.
 	alice.OnSignalingStateChange = func(state webrtc.SignalingState) {
@@ -43,14 +43,14 @@ func main() {
 
 	// Let Alice and Bob use go channels as the signaling channel.
 	// Must be bidirectional.
-	a2b := make(chan *webrtc.SDPHeader, 1)
-	b2a := make(chan *webrtc.SDPHeader, 1)
+	a2b := make(chan *webrtc.SessionDescription, 1)
+	b2a := make(chan *webrtc.SessionDescription, 1)
 
 	wait := make(chan int, 1)
 
 	// Start separate goroutines for Alice and Bob.
-  // TODO: This will probably change, as the go webrtc interface will also
-  // change.
+	// TODO: This will probably change, as the go webrtc interface will also
+	// change.
 	go func() {
 		// Alice initiates the offer.
 		offer, _ := alice.CreateOffer()

@@ -14,7 +14,7 @@ import (
 var pcA *PeerConnection
 var pcB *PeerConnection
 var err error
-var sdp *SDPHeader
+var sdp *SessionDescription
 var config *Configuration
 
 func TestCreatePeerConnection(t *testing.T) {
@@ -41,7 +41,7 @@ func TestCreateOffer(t *testing.T) {
 	if nil != err {
 		t.Fatal(err)
 	}
-	fmt.Println("SDP Offer:\n", sdp.description)
+	fmt.Println("SDP Offer:\n", sdp.Description)
 }
 
 func TestOnSignalingStateChangeCallback(t *testing.T) {
@@ -127,7 +127,7 @@ func TestCreateAnswer(t *testing.T) {
 	if nil != err {
 		t.Fatal(err)
 	}
-	fmt.Println("SDP Answer:\n", sdp.description)
+	fmt.Println("SDP Answer:\n", sdp.Description)
 }
 
 func TestOnNegotiationNeededCallback(t *testing.T) {
@@ -154,6 +154,7 @@ func TestCreateDataChannel(t *testing.T) {
 	if label != "test" {
 		t.Error("Unexpected label:", label)
 	}
+	channel.Close()
 }
 
 func TestOnDataChannelCallback(t *testing.T) {
@@ -172,7 +173,7 @@ func TestOnDataChannelCallback(t *testing.T) {
 func TestClose(t *testing.T) {
 	success := make(chan int, 1)
 	go func() {
-		// pcA.Close()
+		pcA.Close()
 		pcB.Close()
 		success <- 1
 	}()

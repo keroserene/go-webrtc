@@ -67,4 +67,4 @@ extern "C" {
 }
 #endif
 
-#endif
+#endif  // _C_PEERCONNECTION_H_

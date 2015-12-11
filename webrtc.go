@@ -95,28 +95,31 @@ func init() {
 	SetVerbosity(3)
 }
 
-type SDPHeader struct {
+type SessionDescription struct {
 	// Keep track of both a pointer to the C++ SessionDescription object,
 	// and the serialized string version (which native code generates)
 	cgoSdp      C.CGO_sdp
-	description string
+	Description string
+}
+
+func SerializeSDP(msg string) SessionDescription {
+	return SessionDescription{nil, "not implemented"}
 }
 
 type PeerConnection struct {
-	localDescription *SDPHeader
+	localDescription *SessionDescription
 	// currentLocalDescription
 	// pendingLocalDescription
 
-	remoteDescription *SDPHeader
+	remoteDescription *SessionDescription
 	// currentRemoteDescription
 	// pendingRemoteDescription
 
 	// iceGatheringState  RTCIceGatheringState
 	// iceConnectionState  RTCIceConnectionState
 	canTrickleIceCandidates bool
-	// close
 
-	// Event handlers
+	// Event handlers TODO: The remainder of the callbacks.
 	OnIceCandidate      func(string)
 	OnNegotiationNeeded func()
 	// onicecandidateerror
@@ -153,27 +156,27 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 
 // CreateOffer prepares an SDP "offer" message, which should be sent to the target
 // peer over a signalling channel.
-func (pc *PeerConnection) CreateOffer() (*SDPHeader, error) {
+func (pc *PeerConnection) CreateOffer() (*SessionDescription, error) {
 	sdp := C.CGO_CreateOffer(pc.cgoPeer)
 	if nil == sdp {
 		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
 	}
-	offer := new(SDPHeader)
+	offer := new(SessionDescription)
 	offer.cgoSdp = sdp
-	offer.description = C.GoString(C.CGO_SerializeSDP(sdp))
+	offer.Description = C.GoString(C.CGO_SerializeSDP(sdp))
 	return offer, nil
 }
 
 // CreateAnswer prepares an SDP "answer" message, which should be sent in
 // response to a peer that has sent an offer, over the signalling channel.
-func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
+func (pc *PeerConnection) CreateAnswer() (*SessionDescription, error) {
 	sdp := C.CGO_CreateAnswer(pc.cgoPeer)
 	if nil == sdp {
 		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
 	}
-	answer := new(SDPHeader)
+	answer := new(SessionDescription)
 	answer.cgoSdp = sdp
-	answer.description = C.GoString(C.CGO_SerializeSDP(sdp))
+	answer.Description = C.GoString(C.CGO_SerializeSDP(sdp))
 	return answer, nil
 }
 
@@ -181,7 +184,7 @@ func (pc *PeerConnection) CreateAnswer() (*SDPHeader, error) {
 // actually be a callback version, so the user doesn't have to make their own
 // goroutine.
 
-func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
+func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
 	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
 		return errors.New("SetLocalDescription failed.")
@@ -191,11 +194,11 @@ func (pc *PeerConnection) SetLocalDescription(sdp *SDPHeader) error {
 }
 
 // readonly localDescription
-func (pc *PeerConnection) LocalDescription() (sdp *SDPHeader) {
+func (pc *PeerConnection) LocalDescription() (sdp *SessionDescription) {
 	return pc.localDescription
 }
 
-func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
+func (pc *PeerConnection) SetRemoteDescription(sdp *SessionDescription) error {
 	r := C.CGO_SetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
 		return errors.New("SetRemoteDescription failed.")
@@ -205,7 +208,7 @@ func (pc *PeerConnection) SetRemoteDescription(sdp *SDPHeader) error {
 }
 
 // readonly remoteDescription
-func (pc *PeerConnection) RemoteDescription() (sdp *SDPHeader) {
+func (pc *PeerConnection) RemoteDescription() (sdp *SessionDescription) {
 	return pc.remoteDescription
 }
 
@@ -292,7 +295,6 @@ func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGO_sdpString) {
 	}
 }
 
-// type CDC data.C.CGO_Channel
 type CDC C.CGO_Channel
 
 // func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
