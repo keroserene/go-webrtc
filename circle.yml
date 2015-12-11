@@ -4,20 +4,22 @@ machine:
     # - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
 
 dependencies:
-  cache_directories:
-    - "~/.local"
+  # cache_directories:
+    # - "~/.local"
   pre:
-    - >-
-      if [[ ! -d "$HOME/.local/debs" ]]; then \
-        mkdir -p "$HOME/.local/debs"; cd "$HOME/.local/debs" \
-        && curl -Ls http://ftp.us.debian.org/debian/pool/main/g/gcc-5-cross/gcc-5-aarch64-linux-gnu_5.3.1-2cross1_amd64.deb -o gcc-5.3.deb \
-      ; fi
-    - sudo dpkg -i $HOME/.local/debs/gcc-5.3.deb
+    # TODO: Figure out how to cache apt-get later.
+    # - >-
+      # if [[ ! -d "$HOME/.local/debs" ]]; then \
+        # mkdir -p "$HOME/.local/debs"; cd "$HOME/.local/debs" \
+        # && curl -Ls http://ftp.us.debian.org/debian/pool/main/g/gcc-5-cross/gcc-5-aarch64-linux-gnu_5.3.1-2cross1_amd64.deb -o gcc-5.3.deb \
+      # ; fi
+    # - sudo dpkg -i $HOME/.local/debs/gcc-5.3.deb
+    - sudo apt-get update; sudo apt-get install gcc-5; sudo apt-get install g++-5
     - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 100
     - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 100
-    # - sudo apt-get update; sudo apt-get install gcc-5; sudo apt-get install g++-5
     - gcc --version
     - g++ --version
+    - pkg-config --version
   post:
     - go get -u github.com/jstemmer/go-junit-report
 
