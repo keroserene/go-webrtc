@@ -51,6 +51,8 @@ extern "C" {
   CGO_sdp CGO_CreateAnswer(CGO_Peer);
 
   CGO_sdpString CGO_SerializeSDP(CGO_sdp);
+  CGO_sdp CGO_DeserializeSDP(char *msg);
+
   int CGO_SetLocalDescription(CGO_Peer, CGO_sdp);
   int CGO_SetRemoteDescription(CGO_Peer, CGO_sdp);
   int CGO_AddIceCandidate(CGO_Peer pc, CGO_sdpString candidate);

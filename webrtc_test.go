@@ -84,6 +84,13 @@ func TestSetLocalDescription(t *testing.T) {
 	fmt.Println("\n ~~ Signalling Happens here ~~ \n")
 }
 
+func TestSDPSerializing(t *testing.T) {
+	check := NewSessionDescription(sdp.Description)
+	if check.Description != sdp.Description {
+		t.Error("Failed to deserialize")
+	}
+}
+
 func TestSetRemoteDescription(t *testing.T) {
 	fmt.Println("\n == BOB's PeerConnection ==")
 	err = pcB.SetRemoteDescription(sdp)
@@ -173,7 +180,7 @@ func TestOnDataChannelCallback(t *testing.T) {
 func TestClose(t *testing.T) {
 	success := make(chan int, 1)
 	go func() {
-		pcA.Close()
+		// pcA.Close()
 		pcB.Close()
 		success <- 1
 	}()

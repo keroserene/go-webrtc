@@ -102,8 +102,17 @@ type SessionDescription struct {
 	Description string
 }
 
-func SerializeSDP(msg string) SessionDescription {
-	return SessionDescription{nil, "not implemented"}
+// Construct a SessionDescription object from a valid msg.
+func NewSessionDescription(msg string) *SessionDescription {
+	cSdp := C.CGO_DeserializeSDP(C.CString(msg))
+	if nil == cSdp {
+		ERROR.Println("Invalid SDP string.")
+		return nil
+	}
+	sdp := new(SessionDescription)
+	sdp.cgoSdp = cSdp
+	sdp.Description = msg
+	return sdp
 }
 
 type PeerConnection struct {

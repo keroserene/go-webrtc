@@ -5,6 +5,8 @@
 #include "webrtc/base/common.h"
 #include "talk/app/webrtc/peerconnectioninterface.h"
 #include "talk/app/webrtc/test/fakeconstraints.h"
+#include "talk/app/webrtc/jsepsessiondescription.h"
+#include "talk/app/webrtc/webrtcsdp.h"
 #include <iostream>
 #include <unistd.h>
 #include <future>
@@ -306,6 +308,16 @@ CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
   SDP cSDP = (SDP)sdp;
   cSDP->ToString(s);
   return (CGO_sdpString)s->c_str();
+}
+
+// Given a fully serialized SDP string |msg|, return a CGO sdp object.
+CGO_sdp CGO_DeserializeSDP(char *msg) {
+  // TODO: Look into type.
+  auto jsep_sdp = new JsepSessionDescription("offer");
+  SdpParseError err;
+  auto msg_str = new string(msg);
+  SdpDeserialize(*msg_str, jsep_sdp, &err);
+  return (CGO_sdp)jsep_sdp;
 }
 
 int CGO_SetLocalDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
