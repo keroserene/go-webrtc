@@ -47,6 +47,28 @@ type Channel struct {
 	cgoChannel C.CGO_Channel // Internal DataChannel functionality.
 }
 
+// Create a Go Channel struct, and prepare internal CGO references / observers.
+// Expects cDC to be a pointer to a CGO_Channel object, which ultimately points
+// to a DataChannelInterface*.
+// The most reasonable place for this to be created is from PeerConnection,
+// which is not available in the subpackage.
+func NewChannel(cDC unsafe.Pointer) *Channel {
+	if nil == cDC {
+		return nil
+	}
+  dc := new(Channel)
+	fmt.Println("Go channel at: ", unsafe.Pointer(dc))
+	dc.cgoChannel = (C.CGO_Channel)(cDC)
+	// Observer is required for attaching callbacks correctly.
+	C.CGO_Channel_RegisterObserver(dc.cgoChannel, unsafe.Pointer(dc))
+	return dc
+}
+
+func (c *Channel) Close() error {
+	C.CGO_Channel_Close(c.cgoChannel)
+	return nil
+}
+
 func (c *Channel) Label() string {
 	s := C.CGO_Channel_Label(c.cgoChannel)
 	return C.GoString(s)
@@ -84,6 +106,7 @@ func (c *Channel) BufferedAmount() int {
 	return int(C.CGO_Channel_BufferedAmount(c.cgoChannel))
 }
 
+
 type Init struct {
 	// TODO: defaults
 	Ordered           bool
@@ -94,22 +117,6 @@ type Init struct {
 	ID                uint
 }
 
-// Create a Go Channel struct, and prepare internal CGO references / observers.
-// Expects cDC to be a pointer to a CGO_Channel object, which ultimately points
-// to a DataChannelInterface*.
-// The most reasonable place for this to be created is from PeerConnection,
-// which is not available in the subpackage.
-func NewChannel(cDC unsafe.Pointer) *Channel {
-	if nil == cDC {
-		return nil
-	}
-  dc := new(Channel)
-	fmt.Println("Go channel at: ", unsafe.Pointer(dc))
-	dc.cgoChannel = (C.CGO_Channel)(cDC)
-	// Observer is required for attaching callbacks correctly.
-	C.CGO_Channel_RegisterObserver(dc.cgoChannel, unsafe.Pointer(dc))
-	return dc
-}
 
 //
 // === cgo hooks for user-provided Go callbacks, and enums ===

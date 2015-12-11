@@ -104,4 +104,23 @@ func TestStateChangeCallbacks(t *testing.T) {
 	case <-time.After(time.Second * 1):
 		t.Fatal("Timed out when waiting for Closed.")
 	}
+	// Set to open for the next tests.
+	cgoFakeStateChange(c, DataStateOpen)
+}
+
+
+func TestCloseChannel(t *testing.T) {
+	closed := make(chan int, 1)
+	c.OnClose = func() {
+		closed <- 1
+	}
+	c.Close()
+	select {
+	case <-closed:
+		if DataStateClosed != c.ReadyState() {
+			t.Error("Unexpected state: ", c.ReadyState())
+		}
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out during close..")
+	}
 }

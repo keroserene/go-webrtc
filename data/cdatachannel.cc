@@ -48,6 +48,12 @@ void CGO_Channel_RegisterObserver(CGO_Channel channel, void *goChannel) {
   dc->RegisterObserver(obs);
 }
 
+void CGO_Channel_Close(CGO_Channel channel) {
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  assert(NULL != dc);
+  return dc->Close();
+}
+
 const char *CGO_Channel_Label(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
@@ -139,13 +145,15 @@ class FakeDataChannel : public DataChannelInterface {
   };
 
   // Sends data to self.
-  virtual bool Send(const DataBuffer& buffer) {
+  bool Send(const DataBuffer& buffer) {
     // auto b = DataBuffer(data, true);
     obs_->OnMessage(buffer);
     return false;
   };
 
-  virtual void Close() {};
+  void Close() {
+    SetState(DataState::kClosed);
+  };
 
   void SetState(DataChannelInterface::DataState state) {
     state_ = state;
