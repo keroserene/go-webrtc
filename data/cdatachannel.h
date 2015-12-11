@@ -15,7 +15,7 @@ extern "C" {
 
   typedef void* CGO_Channel;
 
-  const char *CGO_Channel_RegisterObserver(CGO_Channel channel);
+  void CGO_Channel_RegisterObserver(CGO_Channel channel, void *goChannel);
 
   const char *CGO_Channel_Label(CGO_Channel);
   const bool CGO_Channel_Ordered(CGO_Channel);
@@ -33,6 +33,7 @@ extern "C" {
   extern const int CGO_DataStateClosed;
 
   CGO_Channel CGO_getFakeDataChannel();
+  void CGO_fakeMessage(CGO_Channel channel, void *data, int size);
 
 #ifdef __cplusplus
 }

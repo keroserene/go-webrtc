@@ -172,8 +172,8 @@ func TestOnDataChannelCallback(t *testing.T) {
 func TestClose(t *testing.T) {
 	success := make(chan int, 1)
 	go func() {
-  	// pcA.Close()
-  	pcB.Close()
+		// pcA.Close()
+		pcB.Close()
 		success <- 1
 	}()
 	// TODO: Check the signaling state.

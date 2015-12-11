@@ -9,10 +9,7 @@ package data
 #cgo CXXFLAGS: -I../include
 #cgo LDFLAGS: -L../lib
 #cgo linux,amd64 pkg-config: webrtc-data-linux-amd64.pc
-
-#include "../cpeerconnection.h"
 #include "cdatachannel.h"
-// #cgo LDFLAGS: -l../include
 */
 import "C"
 import (
@@ -107,9 +104,10 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 		return nil
 	}
   dc := new(Channel)
+	fmt.Println("Go channel at: ", unsafe.Pointer(dc))
 	dc.cgoChannel = (C.CGO_Channel)(cDC)
 	// Observer is required for attaching callbacks correctly.
-	C.CGO_Channel_RegisterObserver(dc.cgoChannel)
+	C.CGO_Channel_RegisterObserver(dc.cgoChannel, unsafe.Pointer(dc))
 	return dc
 }
 
@@ -118,31 +116,40 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 //
 
 //export cgoChannelOnMessage
-func cgoChannelOnMessage(c unsafe.Pointer, b []byte) {
-	fmt.Println("fired data.Channel.OnMessage: ", c, b)
-	dc := (*Channel)(c)
+func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size int) {
+	bytes := C.GoBytes(cBytes, C.int(size))
+	fmt.Println("fired data.Channel.OnMessage: ", goChannel, bytes, size)
+	dc := (*Channel)(goChannel)
 	if nil != dc.OnMessage {
-		dc.OnMessage(b)
+		dc.OnMessage(bytes)
 	}
 }
 
 //export cgoChannelOnStateChange
 func cgoChannelOnStateChange(c unsafe.Pointer) {
+	dc := (*Channel)(c)
 	// This event handler picks between different Go callbacks, depending
 	// on the state.
 	fmt.Println("fired data.Channel.OnStateChange:", c)
-	// dc := (*Channel)(c)
 	// TODO: look at state.
-	// if nil != dc.OnClosed {
-		// pc.OnClosed
-	// }
-}
-
-func cgoFakeDataChannel() unsafe.Pointer {
-	return unsafe.Pointer(C.CGO_getFakeDataChannel());
+	if nil != dc.OnClose {
+		dc.OnClose()
+	}
 }
 
 var _cgoDataStateConnecting = int(C.CGO_DataStateConnecting)
 var _cgoDataStateOpen = int(C.CGO_DataStateOpen)
 var _cgoDataStateClosing = int(C.CGO_DataStateClosing)
 var _cgoDataStateClosed = int(C.CGO_DataStateClosed)
+
+// Testing helpers 
+
+func cgoFakeDataChannel() unsafe.Pointer {
+	return unsafe.Pointer(C.CGO_getFakeDataChannel());
+}
+
+func cgoFakeMessage(c *Channel, b []byte, size int) {
+	C.CGO_fakeMessage((C.CGO_Channel)(c.cgoChannel),
+		unsafe.Pointer(&b[0]), C.int(size));
+}
+

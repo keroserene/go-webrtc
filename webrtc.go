@@ -295,8 +295,8 @@ func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGO_sdpString) {
 // type CDC data.C.CGO_Channel
 type CDC C.CGO_Channel
 
-//export cgoOnDataChannel
 // func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
+//export cgoOnDataChannel
 func cgoOnDataChannel(p unsafe.Pointer, cDC CDC) {
 	INFO.Println("fired OnDataChannel: ", p, cDC)
 	pc := (*PeerConnection)(p)

@@ -3,8 +3,8 @@ package data
 import (
 	// "fmt"
 	"testing"
-	"unsafe"
 	"time"
+	"reflect"
 )
 
 var c *Channel
@@ -62,9 +62,14 @@ func TestOnMessageCallback(t *testing.T) {
 	c.OnMessage = func(msg []byte) {
 		success <- msg
 	}
-	cgoChannelOnMessage(unsafe.Pointer(c), []byte{123})
+	bytes := []byte("somenumberofbytesinhere")
+	size := len(bytes)
+	cgoFakeMessage(c, bytes, size)
 	select {
-	case <-success:
+	case data := <-success:
+		if !reflect.DeepEqual(data, bytes) {
+			t.Error("Unexpected bytes: ", data)
+		}
 	case <-time.After(time.Second * 1):
 		t.Fatal("Timed out.")
 	}

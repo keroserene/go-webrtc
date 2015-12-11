@@ -5,19 +5,30 @@
 #include "webrtc/base/common.h"
 #include <iostream>
 #include <stdbool.h>
+#include "_cgo_export.h"
 
 using namespace std;
 using namespace webrtc;
 
 class CGoDataChannelObserver : public DataChannelObserver {
  public:
+  CGoDataChannelObserver(void *goPtr) : goChannel(goPtr) {
+    assert(NULL != goChannel);
+  }
 
   void OnStateChange() {
     cout << "[C] OnStateChange" << endl;
+    cgoChannelOnStateChange(goChannel);
   }
 
   void OnMessage(const DataBuffer& buffer) {
-    cout << "[C] OnMessage" << endl;
+    auto data = (uint8_t*)buffer.data.data();
+    // auto data = &buffer;
+    // for (int i = 0 ; i < buffer.size() ; ++i) {
+      // cout << data[i] << " ";
+    // }
+    cout << "[C] OnMessage: " << data << endl;
+    cgoChannelOnMessage(goChannel, (void *)data, buffer.size());
   }
 
   void OnBufferedAmountChange(uint64_t previous_amount) {
@@ -25,15 +36,19 @@ class CGoDataChannelObserver : public DataChannelObserver {
   }
 
  protected:
+
+  // Reference to external Go data.Channel required for callbacks.
+  void *goChannel;
+
   ~CGoDataChannelObserver() {
-    cout << "[C] Destructing DataChannelObserver" << endl;
+    cout << "[C] CgoDataChannelObserver destructing." << endl;
   }
 };  // class DoDataChannelObserver
 
 // Create and register a new DataChannelObserver.
-const char *CGO_Channel_RegisterObserver(CGO_Channel channel) {
+void CGO_Channel_RegisterObserver(CGO_Channel channel, void *goChannel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
-  auto obs = new CGoDataChannelObserver();
+  auto obs = new CGoDataChannelObserver(goChannel);
   dc->RegisterObserver(obs);
 }
 
@@ -101,7 +116,9 @@ int CGO_Channel_BufferedAmount(CGO_Channel channel) {
 // subpackage. However, we can still need fake DataChannelInterface for testing.
 
 class FakeDataChannel : public DataChannelInterface {
-  virtual void RegisterObserver(DataChannelObserver* observer) {};
+  virtual void RegisterObserver(DataChannelObserver* observer) {
+    obs_ = observer;
+  };
   virtual void UnregisterObserver() {};
 
   virtual std::string label() const {
@@ -124,17 +141,33 @@ class FakeDataChannel : public DataChannelInterface {
     return 0;
   };
 
+  // Sends data to self.
   virtual bool Send(const DataBuffer& buffer) {
+    // auto b = DataBuffer(data, true);
+    obs_->OnMessage(buffer);
     return false;
   };
 
   virtual void Close() {};
+
+  void FakeOnMessage(rtc::Buffer data) {
+  }
+
+ protected:
+  DataChannelObserver* obs_;
 };
 rtc::scoped_refptr<FakeDataChannel> test_dc;
 
 CGO_Channel CGO_getFakeDataChannel() {
   test_dc = new rtc::RefCountedObject<FakeDataChannel>();
   return (void *)test_dc;
+}
+
+void CGO_fakeMessage(CGO_Channel channel, void *data, int size) {
+  auto bytes = new rtc::Buffer((char*)data, size);
+  auto dc = (webrtc::DataChannelInterface*)channel;
+  auto buffer = DataBuffer(*bytes, true);
+  dc->Send(buffer);
 }
 
 const int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting;
