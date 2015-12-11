@@ -1,5 +1,6 @@
 *.swp
 *.swo
 *.swn
+*.test
 .DS_Store
 third_party/
