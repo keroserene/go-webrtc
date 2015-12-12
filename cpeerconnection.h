@@ -55,7 +55,8 @@ extern "C" {
 
   int CGO_SetLocalDescription(CGO_Peer, CGO_sdp);
   int CGO_SetRemoteDescription(CGO_Peer, CGO_sdp);
-  int CGO_AddIceCandidate(CGO_Peer pc, CGO_sdpString candidate);
+  int CGO_AddIceCandidate(CGO_Peer cgoPeer, const char *candidate,
+                          const char *sdp_mid, int sdp_mline_index);
 
   int CGO_GetSignalingState(CGO_Peer);
   // int CGO_GetConfiguration(CGO_Peer);

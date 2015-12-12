@@ -34,6 +34,7 @@ package webrtc
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include "cpeerconnection.h"
+#include <stdlib.h>
 */
 import "C"
 import (
@@ -129,7 +130,7 @@ type PeerConnection struct {
 	canTrickleIceCandidates bool
 
 	// Event handlers TODO: The remainder of the callbacks.
-	OnIceCandidate      func(string)
+	OnIceCandidate      func(IceCandidate)
 	OnNegotiationNeeded func()
 	// onicecandidateerror
 	OnSignalingStateChange func(SignalingState)
@@ -230,9 +231,57 @@ func (pc *PeerConnection) SignalingState() SignalingState {
 // === ICE / Configuration ===
 //
 
-// TODO: change candidate into a real IceCandidate type.
-func (pc *PeerConnection) AddIceCandidate(candidate string) error {
-	r := C.CGO_AddIceCandidate(pc.cgoPeer, C.CString(candidate))
+type (
+	IceProtocol         int
+	IceCandidateType    int
+	IceTcpCandidateType int
+)
+
+const (
+	IceProtocolUPD IceProtocol = iota
+	IceProtocolTCP
+)
+
+var IceProtocolString = []string{"udp", "tcp"}
+
+const (
+	IceCandidateTypeHost IceCandidateType = iota
+	IceCandidateTypeSrflx
+	IceCandidateTypePrflx
+	IceCandidateTypeRelay
+)
+
+var IceCandidateTypeString = []string{"host", "srflx", "prflx", "relay"}
+
+const (
+	IceTcpCandidateTypeActive IceTcpCandidateType = iota
+	IceTcpCandidateTypePassive
+	IceTcpCandidateTypeSo
+)
+
+var IceTcpCandidateTypeString = []string{"active", "passive", "so"}
+
+type IceCandidate struct {
+	Candidate     string
+	SdpMid        string
+	SdpMLineIndex int
+	// Foundation     string
+	// Priority       C.ulong
+	// IP             net.IP
+	// Protocol       IceProtocol
+	// Port           C.ushort
+	// Type           IceCandidateType
+	// TcpType        IceTcpCandidateType
+	// RelatedAddress string
+	// RelatedPort    C.ushort
+}
+
+func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
+	candidate := C.CString(ic.Candidate)
+	defer C.free(unsafe.Pointer(candidate))
+	sdpMid := C.CString(ic.SdpMid)
+	defer C.free(unsafe.Pointer(sdpMid))
+	r := C.CGO_AddIceCandidate(pc.cgoPeer, candidate, sdpMid, C.int(ic.SdpMLineIndex))
 	if 0 != r {
 		return errors.New("AddIceCandidate failed.")
 	}
@@ -295,12 +344,16 @@ func cgoOnNegotiationNeeded(p unsafe.Pointer) {
 }
 
 //export cgoOnIceCandidate
-func cgoOnIceCandidate(p unsafe.Pointer, candidate C.CGO_sdpString) {
-	c := C.GoString(candidate)
-	INFO.Println("fired OnIceCandidate: ", p, c)
+func cgoOnIceCandidate(p unsafe.Pointer, candidate *C.char, sdpMid *C.char, sdpMLineIndex int) {
+	ic := IceCandidate{
+		C.GoString(candidate),
+		C.GoString(sdpMid),
+		sdpMLineIndex,
+	}
+	INFO.Println("fired OnIceCandidate: ", p, ic.Candidate)
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnIceCandidate {
-		pc.OnIceCandidate(c)
+		pc.OnIceCandidate(ic)
 	}
 }
 
