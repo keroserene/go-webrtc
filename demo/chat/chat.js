@@ -2,9 +2,7 @@
 // to try connecting with go-webrtc/demo/chat.go.
 
 // DOM elements
-var $chatlog;
-var $input;
-var $send;
+var $chatlog, $input, $send, $name;
 
 // WebRTC objects
 var config = {
@@ -12,10 +10,16 @@ var config = {
     { urls: ["stun:stun.l.google.com:19302"] }
   ]
 }
+var cast = [
+  "Alice", "Bob", "Carol", "Dave", "Eve",
+  "Faythe", "Mallory", "Oscar", "Peggy",
+  "Sybil", "Trent", "Wendy"
+]
 var PeerConnection = webkitRTCPeerConnection;
 var pc;  // PeerConnection
 var offer;
-var user = "Alice";
+// Let's randomize initial username from the cast of characters, why not.
+var username = cast[Math.floor(cast.length * Math.random())];
 var channel;
 
 // Janky state machine
@@ -30,15 +34,13 @@ var currentMode = MODE.INIT;
 // Signalling channel - just tells user to copy paste to the peer.
 var Signalling = {
   send: function(msg) {
-    log("\nPlease copy to the peer:\n");
+    log("---- Please copy the below to peer ----\n");
     log(JSON.stringify(msg));
     log("\n");
   },
   receive: function(msg) {
     if (!pc)
       start(false);
-
-    // log("signal received: " + msg);
     var recv;
     try {
       recv = JSON.parse(msg);
@@ -69,17 +71,15 @@ function start(initiator) {
     var candidate = evt.candidate;
     if (!candidate)
       return;
-    // log("Ice Candidate found.");
     Signalling.send(candidate);
   }
   pc.onnegotiationneeded = function() {
-    // log("Negotiation needed...");
     sendOffer();
   }
   pc.ondatachannel = function(dc) {
     console.log(dc);
     channel = dc.channel;
-    log("Data Channel established! ");
+    log("Data Channel established... ");
     prepareDataChannel(channel);
   }
 
@@ -105,7 +105,7 @@ function acceptInput(is) {
       Signalling.receive(msg);
       break;
     case MODE.CHAT:
-      var data = user + ": " + msg;
+      var data = username + ": " + msg;
       log(data);
       channel.send(data);
       break;
@@ -120,7 +120,7 @@ function sendOffer() {
   pc.createOffer(function(sdp) {
     offer = sdp;
     pc.setLocalDescription(sdp);
-    log("webrtc: Created Offer.");
+    log("webrtc: Created Offer");
     Signalling.send({desc: sdp});
     waitForSignals();
   });
@@ -129,7 +129,7 @@ function sendOffer() {
 function sendAnswer() {
   pc.createAnswer(function (sdp) {
     pc.setLocalDescription(sdp)
-    log("webrtc: Created Answer.");
+    log("webrtc: Created Answer");
     Signalling.send({desc: sdp});
   });
 }
@@ -142,8 +142,7 @@ function receiveDescription(desc) {
     log("Invalid SDP message.");
     return false;
   }
-  // log("SDP set as remote description.\n\n");
-  log("SDP " + sdp.type + " successfully received.");  // + JSON.stringify(desc));
+  log("SDP " + sdp.type + " successfully received.");
   if ("offer" == sdp.type) {
     sendAnswer();
   }
@@ -155,24 +154,27 @@ function receiveICE(ice) {
   try {
     pc.addIceCandidate(candidate);
   } catch (e) {
-    log("Invalid ICE candidate.");
+    log("Could not add ICE candidate.");
+    return;
   }
-  console.log("ICE candidate received: ", ice);
+  log("ICE candidate successfully received: " + ice.candidate);
+  // console.log("ICE candidate received: ", ice);
 }
 
 function waitForSignals() {
-  log("Please input SDP messages from peer.");
   currentMode = MODE.ACK;
 }
 
 function prepareDataChannel(channel) {
   channel.onopen = function() {
     log("Data channel opened!");
-    currentMode = MODE.CHAT;
+    startChat();
   }
   channel.onclose = function() {
     log("Data channel closed.");
     currentMode = MODE.INIT;
+    $chatlog.className = "";
+    log("------- chat disabled -------");
   }
   channel.onerror = function() {
     log("Data channel error!!");
@@ -183,6 +185,13 @@ function prepareDataChannel(channel) {
   }
 }
 
+function startChat() {
+  currentMode = MODE.CHAT;
+  $chatlog.className = "active";
+  log("------- chat enabled! -------");
+}
+
+// Get DOM elements and setup interactions.
 function init() {
   console.log("loaded");
   // Setup chatwindow.
@@ -191,6 +200,12 @@ function init() {
 
   $send = document.getElementById('send');
   $send.onclick = acceptInput
+
+  $name = document.getElementById('username');
+  $name.value = username;  // initial
+  $name.onkeydown = function (e) {
+    username = $name.value;
+  }
 
   $input = document.getElementById('input');
   $input.focus();

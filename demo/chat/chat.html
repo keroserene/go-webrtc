@@ -3,7 +3,7 @@
   <script src="chat.js"></script>
   <style>
   body {
-    background-color: #000;
+    background-color: #424;
     color: #fff;
     text-align: center;
     font-size: 24px;
@@ -15,13 +15,11 @@
     resize: none;
   }
   .chatarea {
-    position: relative;
-    border: 1px solid #888;
-    padding: 0.5em;
-    width: 50%;
-    min-width: 40em;
-    margin: auto;
+    position: relative; border: none;
+    width: 50%; min-width: 40em;
+    padding: 0.5em; margin: auto;
   }
+  .active { background-color: #252; }
   #chatlog {
     display: block;
     width: 100%;
@@ -43,6 +41,15 @@
     background-color: #ccc;
     border: 1px solid #999;
   }
+  #username {
+    font-size: 120%;
+    padding: 8px 2em; margin: 30px auto;
+    text-align: center;
+    display: block;
+    background-color: #000;
+    color: #999;
+    border: none;
+  }
   #send {
     display: inline-block; position: absolute;
     right: 0; top: 0;  height: 100%;
@@ -51,14 +58,14 @@
     font-size: 150%;
     padding: 0 30px;
   }
-  #copy {
-    width: 100%;
-    color: #888;
-  }
+  #send:hover { background-color: #636; }
   </style>
 </head>
 <body>
   <h1>go-webrtc chat demo</h1>
+
+  username:
+  <input type="text" id="username" value="">
 
   <div class="chatarea">
     <textarea id="chatlog" readonly>
@@ -69,9 +76,5 @@
     </div>
   </div>
 
-  <h2>"Signal Channel"</h2>
-  <textarea id="copy" readonly>
-    Copy text from here to peer.
-  </textarea>
 </body>
 </html> 
