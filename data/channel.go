@@ -126,7 +126,7 @@ type Init struct {
 //export cgoChannelOnMessage
 func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size int) {
 	bytes := C.GoBytes(cBytes, C.int(size))
-	fmt.Println("fired data.Channel.OnMessage: ", goChannel, bytes, size)
+	// fmt.Println("fired data.Channel.OnMessage: ", goChannel, bytes, size)
 	dc := (*Channel)(goChannel)
 	if nil != dc.OnMessage {
 		dc.OnMessage(bytes)

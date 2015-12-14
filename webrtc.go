@@ -104,8 +104,8 @@ type SessionDescription struct {
 }
 
 // Construct a SessionDescription object from a valid msg.
-func NewSessionDescription(msg string) *SessionDescription {
-	cSdp := C.CGO_DeserializeSDP(C.CString(msg))
+func NewSessionDescription(sdpType string, msg string) *SessionDescription {
+	cSdp := C.CGO_DeserializeSDP(C.CString(sdpType), C.CString(msg))
 	if nil == cSdp {
 		ERROR.Println("Invalid SDP string.")
 		return nil
@@ -262,9 +262,9 @@ const (
 var IceTcpCandidateTypeString = []string{"active", "passive", "so"}
 
 type IceCandidate struct {
-	Candidate     string
-	SdpMid        string
-	SdpMLineIndex int
+	Candidate     string `json:"candidate"`
+	SdpMid        string `json:"sdpMid"`
+	SdpMLineIndex int    `json:"sdpMLineIndex"`
 	// Foundation     string
 	// Priority       C.ulong
 	// IP             net.IP

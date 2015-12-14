@@ -1,0 +1,80 @@
+<html>
+<head>
+  <script src="chat.js"></script>
+  <style>
+  body {
+    background-color: #424;
+    color: #fff;
+    text-align: center;
+    font-size: 24px;
+    font-family: monospace;
+  }
+  textarea {
+    background-color: #333;
+    color: #fff;
+    resize: none;
+  }
+  .chatarea {
+    position: relative; border: none;
+    width: 50%; min-width: 40em;
+    padding: 0.5em; margin: auto;
+  }
+  .active { background-color: #252; }
+  #chatlog {
+    display: block;
+    width: 100%;
+    height: 50%;
+    margin-bottom: 1em;
+    padding: 8px;
+  }
+  .inputarea {
+    position: relative;
+    width: 100%;
+    height: 3em;
+    display: block;
+  }
+  #input {
+    display: inline-block;
+    width: 100%; height: 100%;
+    padding: 8px 30px;
+    font-size: 80%;
+    background-color: #ccc;
+    border: 1px solid #999;
+  }
+  #username {
+    font-size: 120%;
+    padding: 8px 2em; margin: 30px auto;
+    text-align: center;
+    display: block;
+    background-color: #000;
+    color: #999;
+    border: none;
+  }
+  #send {
+    display: inline-block; position: absolute;
+    right: 0; top: 0;  height: 100%;
+    background-color: #000; color: #f8f;
+    font-variant: small-caps;
+    font-size: 150%;
+    padding: 0 30px;
+  }
+  #send:hover { background-color: #636; }
+  </style>
+</head>
+<body>
+  <h1>go-webrtc chat demo</h1>
+
+  username:
+  <input type="text" id="username" value="">
+
+  <div class="chatarea">
+    <textarea id="chatlog" readonly>
+    </textarea>
+    <div class="inputarea">
+      <input type="text" id="input">
+      <input type="submit" id="send" value="Send">
+    </div>
+  </div>
+
+</body>
+</html> 
