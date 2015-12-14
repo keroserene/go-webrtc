@@ -105,7 +105,11 @@ type SessionDescription struct {
 
 // Construct a SessionDescription object from a valid msg.
 func NewSessionDescription(sdpType string, msg string) *SessionDescription {
-	cSdp := C.CGO_DeserializeSDP(C.CString(sdpType), C.CString(msg))
+	s := C.CString(sdpType)
+	defer C.free(unsafe.Pointer(s))
+	m := C.CString(msg)
+	defer C.free(unsafe.Pointer(m))
+	cSdp := C.CGO_DeserializeSDP(s, m)
 	if nil == cSdp {
 		ERROR.Println("Invalid SDP string.")
 		return nil
@@ -306,7 +310,9 @@ func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 
 func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
 	*data.Channel, error) {
-	cDC := C.CGO_CreateDataChannel(pc.cgoPeer, C.CString(label), unsafe.Pointer(&dict))
+	l := C.CString(label)
+	defer C.free(unsafe.Pointer(l))
+	cDC := C.CGO_CreateDataChannel(pc.cgoPeer, l, unsafe.Pointer(&dict))
 	if nil == cDC {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
