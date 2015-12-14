@@ -85,7 +85,7 @@ func TestSetLocalDescription(t *testing.T) {
 }
 
 func TestSDPSerializing(t *testing.T) {
-	check := NewSessionDescription(sdp.Description)
+	check := NewSessionDescription("offer", sdp.Description)
 	if check.Description != sdp.Description {
 		t.Error("Failed to deserialize")
 	}
