@@ -262,9 +262,9 @@ const (
 var IceTcpCandidateTypeString = []string{"active", "passive", "so"}
 
 type IceCandidate struct {
-	Candidate     string  `json:"candidate"`
-	SdpMid        string  `json:"sdpMid"`
-	SdpMLineIndex int     `json:"sdpMLineIndex"`
+	Candidate     string `json:"candidate"`
+	SdpMid        string `json:"sdpMid"`
+	SdpMLineIndex int    `json:"sdpMLineIndex"`
 	// Foundation     string
 	// Priority       C.ulong
 	// IP             net.IP

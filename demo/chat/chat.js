@@ -39,14 +39,15 @@ var Signalling = {
     log("\n");
   },
   receive: function(msg) {
-    if (!pc)
-      start(false);
     var recv;
     try {
       recv = JSON.parse(msg);
     } catch(e) {
       log("Invalid JSON.");
       return;
+    }
+    if (!pc) {
+      start(false);
     }
     var desc = recv['desc']
     var ice = recv['candidate']
@@ -137,7 +138,7 @@ function sendAnswer() {
 function receiveDescription(desc) {
   var sdp = new RTCSessionDescription(desc);
   try {
-    pc.setRemoteDescription(sdp);
+    err = pc.setRemoteDescription(sdp);
   } catch (e) {
     log("Invalid SDP message.");
     return false;
