@@ -31,7 +31,7 @@ var pc *webrtc.PeerConnection
 var dc *data.Channel
 var mode Mode
 var err error
-var username = "Alice"
+var username = "go-Alice"
 
 // Signaling channel can be copy paste.
 func signalSend(msg string) {
@@ -39,25 +39,46 @@ func signalSend(msg string) {
 	fmt.Println(msg + "\n")
 }
 
-func signalRecieve(msg string) {
-	fmt.Println("Received: ", msg)
-	// recv := msg
-	var v interface{}
-	json.Unmarshal([]byte(msg), v)
+type (
+	// TODO: Put json stuff into go-webrtc.
+	Description struct {
+		Type string `json:"type"`
+		Sdp  string `json:"sdp"`
+	}
+	Message struct {
+		Desc Description `json:"desc"`
+	}
+)
 
-	// Only do this once it's a valid SDP.
+func signalReceive(msg string) {
+	var parsed map[string]interface{}
+	err = json.Unmarshal([]byte(msg), &parsed)
+	if nil != err {
+		fmt.Println(err, ", try again.")
+		return;
+	}
+	if nil != parsed["desc"] {
+		data := parsed["desc"].(map[string]interface{})
+		receiveDescription(Description{
+			data["type"].(string),
+			data["sdp"].(string),
+		})
+	}
+	if nil != parsed["candidate"] {
+		ice := webrtc.IceCandidate{
+			parsed["candidate"].(string),
+			parsed["sdpMid"].(string),
+			int(parsed["sdpMLineIndex"].(float64)),
+		}
+		pc.AddIceCandidate(ice)
+		fmt.Println("ICE candidate successfully received.")
+	}
+
+	// TODO: Only do this once it's a valid SDP.
 	if nil == pc {
 		start(false)
 	}
 }
-
-
-type (
-  Description struct {
-		Type string `json:"type"`
-		Sdp string  `json:"sdp"`
-	}
-)
 
 func sendOffer() {
 	offer, err := pc.CreateOffer()
@@ -67,30 +88,55 @@ func sendOffer() {
 	}
 	pc.SetLocalDescription(offer)
 	data := Description{
-			"offer",
-			offer.Description,
-		}
+		"offer",
+		offer.Description,
+		// "",
+	}
 	bytes, err := json.Marshal(data)
 	message := fmt.Sprintf(`{"desc":%s}`, string(bytes))
 	signalSend(message)
 }
 
-func receiveDescription(desc string) {
-	pc.SetRemoteDescription(desc)
+func sendAnswer() {
+	answer, err := pc.CreateAnswer()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	pc.SetLocalDescription(answer)
+	data := Description{
+		"answer",
+		answer.Description,
+		// "",
+	}
+	bytes, err := json.Marshal(data)
+	message := fmt.Sprintf(`{"desc":%s}`, string(bytes))
+	signalSend(message)
 }
 
-// func	startAnswer := func(offer string) {
-// sdp := webrtc.NewSessionDescription(offer)
-// pc.SetRemoteDescription(sdp)
-// answer, _ := pc.CreateAnswer()
-// signalSend(answer.Description)
-// }
+func receiveDescription(desc Description) {
+	sdp := webrtc.NewSessionDescription(desc.Type, desc.Sdp)
+	if nil == sdp {
+		fmt.Println("Invalid SDP.")
+		return;
+	}
+	pc.SetRemoteDescription(sdp)
+	fmt.Println("SDP " + desc.Type + " successfully received.")
+	if "offer" == desc.Type {
+		fmt.Println("Replying with answer.")
+		go sendAnswer()
+	}
+}
+
 func prepareDataChannel(channel *data.Channel) {
 	channel.OnOpen = func() {
 		fmt.Println("Data Channel opened!")
+		mode = ModeChat
+		fmt.Println("------- chat enabled! -------")
 	}
 	channel.OnClose = func() {
 		fmt.Println("Data Channel closed.")
+		fmt.Println("------- chat disabled -------")
 	}
 	channel.OnMessage = func(msg []byte) {
 		fmt.Println(string(msg))
@@ -114,16 +160,13 @@ func start(instigator bool) {
 		return
 	}
 
+	// The below three callbacks are the minimum required.
 	pc.OnNegotiationNeeded = func() {
-		// Initial SDP offer / answer exchange.
 		go sendOffer()
 	}
-	pc.OnSignalingStateChange = func(state webrtc.SignalingState) {
-		fmt.Println("signal changed:", state)
-	}
 	pc.OnIceCandidate = func(candidate webrtc.IceCandidate) {
-		// TODO: use the serializing.
-		signalSend(candidate.Candidate)
+		bytes, _ := json.Marshal(candidate)
+		signalSend(string(bytes))
 	}
 	pc.OnDataChannel = func(channel *data.Channel) {
 		fmt.Println("Datachannel established...", channel)
@@ -136,20 +179,25 @@ func start(instigator bool) {
 		dc, err = pc.CreateDataChannel("init", data.Init{})
 		if nil != err {
 			fmt.Println("Unexpected failure creating data.Channel.")
-			return;
+			return
 		}
 		prepareDataChannel(dc)
 	}
 }
 
 func main() {
-	webrtc.SetVerbosity(3)
+	webrtc.SetVerbosity(1)
+	reader := bufio.NewReader(os.Stdin)
 
 	mode = ModeInit
 	wait := make(chan int, 1)
-	fmt.Println("To initiate PeerConnection, type \"start\".")
-	fmt.Println("Alternatively, input SDP messages from peer.")
-	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("=== go-webrtc chat demo ===")
+	fmt.Println("What is your username?")
+	username, _ = reader.ReadString('\n')
+	username = strings.TrimSpace(username)
+	fmt.Println("Welcome, " + username + "!")
+	fmt.Println("To initiate a WebRTC PeerConnection, type \"start\".")
+	fmt.Println("(Alternatively, immediately input SDP messages from the peer.)")
 
 	// Input loop.
 	for true {
@@ -159,13 +207,13 @@ func main() {
 			if strings.HasPrefix(text, "start") {
 				start(true)
 			} else {
-				signalRecieve(text)
+				signalReceive(text)
 			}
 		case ModeConnect:
-			signalRecieve(text)
+			signalReceive(text)
 		case ModeChat:
 			sendChat(text)
-			break;	
+			break
 		}
 		text = ""
 	}

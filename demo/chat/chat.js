@@ -180,8 +180,17 @@ function prepareDataChannel(channel) {
     log("Data channel error!!");
   }
   channel.onmessage = function(msg) {
-    log(msg.data);
+    var recv = msg.data;
     console.log(msg);
+    // Go sends only raw bytes.
+    if ("[object ArrayBuffer]" == recv.toString()) {
+      var bytes = new Uint8Array(recv);
+      line = String.fromCharCode.apply(null, bytes);
+    } else {
+      line = recv;
+    }
+    line = line.trim();
+    log(line);
   }
 }
 
