@@ -1,15 +1,14 @@
-pc=${pcfiledir}
+pc=${pcfiledir}/..
 
 Name: webrtc/data
 Description: webrtc/data
 Version: 1
 
 Cflags: \
-	-I${pc}/../include \
+	-I${pc}/include \
 	-DPOSIX
 
 Libs: \
-	-L${pc}/../lib \
 	-lwebrtc-darwin-amd64-magic \
 	-framework AppKit \
 	-framework CoreAudio \

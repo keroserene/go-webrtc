@@ -7,7 +7,6 @@
  */
 package main
 
-// #cgo LDFLAGS: -L../lib
 import "C"
 import (
 	"bufio"
@@ -119,10 +118,10 @@ func receiveDescription(desc Description) {
 		return
 	}
 	err = pc.SetRemoteDescription(sdp)
-  if nil != err {
-    fmt.Println("ERROR", err)
-    return
-  }
+	if nil != err {
+		fmt.Println("ERROR", err)
+		return
+	}
 	fmt.Println("SDP " + desc.Type + " successfully received.")
 	if "offer" == desc.Type {
 		fmt.Println("Replying with answer.")
