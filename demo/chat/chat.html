@@ -1,11 +1,20 @@
+<!doctype html>
 <html>
 <head>
   <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
   <script src="chat.js"></script>
   <style>
+  * {
+    box-sizing: border-box;
+    -webkit-transition: all 0.3s;
+    -moz-transition: all 0.3s;
+    transition: all 0.3s;
+  }
   body {
+    position: absolute;
+    width: 100%; height: 100%; top: 0; margin: 0 auto;
     background-color: #424;
-    color: #fff;
+    color: #ccc;
     text-align: center;
     font-size: 24px;
     font-family: monospace;
@@ -24,7 +33,7 @@
   #chatlog {
     display: block;
     width: 100%;
-    height: 50%;
+    min-height: 40em;
     margin-bottom: 1em;
     padding: 8px;
   }
@@ -36,46 +45,45 @@
   }
   #input {
     display: inline-block;
-    width: 100%; height: 100%;
+    position: absolute; left: 0;
+    width: 89%; height: 100%;
     padding: 8px 30px;
     font-size: 80%;
     background-color: #ccc;
     border: 1px solid #999;
   }
+  #send {
+    display: inline-block; position: absolute;
+    right: 0; top: 0;  height: 100%; width: 10%;
+    background-color: #202; color: #f8f;
+    font-variant: small-caps; font-size: 100%;
+    border: none; // box-shadow: 0 2px 5px #000;
+  }
+  #send:hover { background-color: #636; }
   #username {
-    font-size: 120%;
-    padding: 8px 2em; margin: 30px auto;
+    padding: 8px 2em; margin: 10px auto;
     text-align: center;
     display: block;
     background-color: #000;
     color: #999;
     border: none;
   }
-  #send {
-    display: inline-block; position: absolute;
-    right: 0; top: 0;  height: 100%;
-    background-color: #000; color: #f8f;
-    font-variant: small-caps;
-    font-size: 150%;
-    padding: 0 30px;
-  }
-  #send:hover { background-color: #636; }
   </style>
 </head>
 <body>
   <h1>go-webrtc chat demo</h1>
-
-  username:
-  <input type="text" id="username" value="">
 
   <div class="chatarea">
     <textarea id="chatlog" readonly>
     </textarea>
     <div class="inputarea">
       <input type="text" id="input">
-      <input type="submit" id="send" value="Send">
+      <input type="submit" id="send" value="send">
     </div>
   </div>
+
+  <input type="text" id="username" value="">
+  username
 
 </body>
 </html>
