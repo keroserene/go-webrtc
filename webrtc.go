@@ -315,12 +315,17 @@ type IceCandidate struct {
 }
 
 func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
-	candidate := C.CString(ic.Candidate)
-	defer C.free(unsafe.Pointer(candidate))
 	sdpMid := C.CString(ic.SdpMid)
 	defer C.free(unsafe.Pointer(sdpMid))
-	r := C.CGO_AddIceCandidate(pc.cgoPeer,
-		candidate, sdpMid, C.int(ic.SdpMLineIndex))
+	sdp := C.CString(ic.Candidate)
+	defer C.free(unsafe.Pointer(sdp))
+
+	cIC := new(C.CGO_IceCandidate)
+	cIC.sdp_mid = sdpMid
+	cIC.sdp_mline_index = C.int(ic.SdpMLineIndex)
+	cIC.sdp = sdp
+
+	r := C.CGO_AddIceCandidate(pc.cgoPeer, cIC)
 	if 0 != r {
 		return errors.New("AddIceCandidate failed.")
 	}
@@ -402,12 +407,11 @@ func cgoOnNegotiationNeeded(p unsafe.Pointer) {
 }
 
 //export cgoOnIceCandidate
-func cgoOnIceCandidate(
-	p unsafe.Pointer, candidate *C.char, sdpMid *C.char, sdpMLineIndex int) {
+func cgoOnIceCandidate(p unsafe.Pointer, cIC C.CGO_IceCandidate) {
 	ic := IceCandidate{
-		C.GoString(candidate),
-		C.GoString(sdpMid),
-		sdpMLineIndex,
+		C.GoString(cIC.sdp),
+		C.GoString(cIC.sdp_mid),
+		int(cIC.sdp_mline_index),
 	}
 	INFO.Println("fired OnIceCandidate: ", p, ic.Candidate)
 	pc := (*PeerConnection)(p)

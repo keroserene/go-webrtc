@@ -119,11 +119,14 @@ class Peer
 
   void OnIceCandidate(const IceCandidateInterface* ic) {
     // cout << "[C] OnIceCandidate" << ic << endl;
-    std::string candidate;
-    ic->ToString(&candidate);
-    cgoOnIceCandidate(goPeerConnection, const_cast<char*>(candidate.c_str()),
-                      const_cast<char*>(ic->sdp_mid().c_str()),
-                      ic->sdp_mline_index());
+    std::string sdp;
+    ic->ToString(&sdp);
+    CGO_IceCandidate cgoIC = {
+      const_cast<char*>(ic->sdp_mid().c_str()),
+      ic->sdp_mline_index(),
+      const_cast<char*>(sdp.c_str())
+    };
+    cgoOnIceCandidate(goPeerConnection, cgoIC);
   }
 
   void OnDataChannel(DataChannelInterface* data_channel) {
@@ -332,12 +335,11 @@ int CGO_SetRemoteDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   return r.get();
 }
 
-int CGO_AddIceCandidate(CGO_Peer cgoPeer, const char *candidate,
-                        const char *sdp_mid, int sdp_mline_index) {
+int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_IceCandidate *cgoIC) {
   PC cPC = ((Peer*)cgoPeer)->pc_;
   SdpParseError *error = nullptr;
   IceCandidateInterface *ic = webrtc::CreateIceCandidate(
-    string(sdp_mid), sdp_mline_index, string(candidate), error);
+    string(cgoIC->sdp_mid), cgoIC->sdp_mline_index, string(cgoIC->sdp), error);
   if (error || !ic) {
     cout << "[C] SDP parse error." << endl;
     return FAILURE;
