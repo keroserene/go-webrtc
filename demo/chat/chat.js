@@ -15,14 +15,24 @@ var cast = [
   "Faythe", "Mallory", "Oscar", "Peggy",
   "Sybil", "Trent", "Wendy"
 ]
-// var PeerConnection
-// var PeerConnection = mozRTCPeerConnection;
-// if (webkitRTCPeerConnection) {
-var  PeerConnection = webkitRTCPeerConnection;
-// }
-  // || RTCPeerConnection;
+
+// Chrome / Firefox compatibility
+window.PeerConnection = window.RTCPeerConnection ||
+                        window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+window.RTCIceCandidate = window.RTCIceCandidate || window.mozRTCIceCandidate;
+window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription;
+// TODO: Firefox appears to require the offering peer to send both the
+// offer + candidate(s) to the answerer, before having the answer applied.
+// Chrome seems to be more forgiving of mixing the ordering.
+// I have successfully gotten Firefox and Chrome to create a data channel using
+// this code, (either can start). I've also gotten both Firefox and Chrome to
+// successfully connect to the Go client, but chat messages from the Go client so
+// far do not appear for Firefox, while they do for Chrome.
+// The signaling semantics should probably be combined in any case, for ease
+// of use, but all the data channel interoperability needs more investigation.
+
 var pc;  // PeerConnection
-var offer;
+var offer, answer;
 // Let's randomize initial username from the cast of characters, why not.
 var username = cast[Math.floor(cast.length * Math.random())];
 var channel;
@@ -121,22 +131,47 @@ function acceptInput(is) {
   $input.focus();
 }
 
+// Chrome uses callbacks while Firefox uses promises.
+// Need to support both - same for createAnswer below.
 function sendOffer() {
-  pc.createOffer(function(sdp) {
-    offer = sdp;
-    pc.setLocalDescription(sdp);
-    log("webrtc: Created Offer");
-    Signalling.send({desc: sdp});
+  var signalSDP = function() {
+    Signalling.send({desc: offer});
     waitForSignals();
-  });
+  }
+  var next = function(sdp) {
+    log("webrtc: Created Offer");
+    offer = sdp;
+    var promise = pc.setLocalDescription(sdp);
+    if (promise) {
+      promise.then(signalSDP);
+    } else {
+      signalSDP();
+    }
+  }
+  var promise = pc.createOffer(next);
+  if (promise) {
+    promise.then(next);
+  }
 }
 
 function sendAnswer() {
-  pc.createAnswer(function (sdp) {
-    pc.setLocalDescription(sdp)
+  var signalSDP = function() {
+    Signalling.send({desc: answer});
+  }
+  var next = function (sdp) {
     log("webrtc: Created Answer");
-    Signalling.send({desc: sdp});
-  });
+    answer = sdp;
+    var promise = pc.setLocalDescription(sdp)
+    if (promise) {
+      promise.then(signalSDP);
+    } else {
+      signalSDP();
+    }
+  }
+  var promise = pc.createAnswer(next);
+  if (promise) {
+    promise.then(next);
+  }
 }
 
 function receiveDescription(desc) {
