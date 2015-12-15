@@ -1,51 +1,53 @@
 /*
 Package webrtc is a golang wrapper on native code WebRTC.
 
-To provide an easier experience for users of this package, there are differences
-inherent in the interface written here and the original native code WebRTC. This
-allows users to use WebRTC in a more idiomatic golang way. For example, callback
-mechanism has a layer of indirection that allows goroutines instead.
+For consistency with the browser-based WebRTCs, the interface here is based
+loosely on: w3c.github.io/webrtc-pc
 
-The interface here is based mostly on: w3c.github.io/webrtc-pc
+The main goal of this project is to present a golang WebRTC package in the most
+idiomatic and simple-to-use way.
 
-There is also a complication in building the dependent static library for this
-to work. Furthermore it is possible that this will break on future versions
-of libwebrtc, because the interface with the native code is be fragile.
-/*
-Package webrtc is a golang wrapper on native code WebRTC.
+However, to provide a better experience for users of this package, there are
+differences inherent in the interface written here and the original native code
+WebRTC - from the golang requirement of Capitalized identifiers for public
+interfaces, to the replacement of certain callbacks with goroutines.
 
-To provide an easier experience for users of this package, there are differences
-inherent in the interface written here and the original native code WebRTC. This
-allows users to use WebRTC in a more idiomatic golang way. For example, callback
-mechanism has a layer of indirection that allows goroutines instead.
+Note that building the necessary libwebrtc static library is excessively
+complicated, which is why the necessary platform-specific archives will be
+provided in lib/. This also mitigates the possibility that future commits on
+native libwebrtc will break go-webrtc, because the interface with the native
+code, through the intermediate CGO layer, is relatively fragile.
 
-The interface here is based mostly on: w3c.github.io/webrtc-pc
+Due to other external goals of the developers, this package will only be
+focused on DataChannels. However, extending this package to allow video/audio
+media streams and related functionality, to be a "complete" WebRTC suite,
+is entirely possible and will likely happen in the long term. (Issue #7)
+This will however have implications for the archives that need to be built
+and linked.
 
-There is also a complication in building the dependent static library for this
-to work. Furthermore it is possible that this will break on future versions
-of libwebrtc, because the interface with the native code is be fragile.
+Please share any improvements or concerns as issues or pull requests on github.
 
-TODO(keroserene): More package documentation, and more documentation in general.
+TODO(keroserene): More / better documentation everywhere.
 */
 package webrtc
 
 /*
 #cgo CXXFLAGS: -std=c++0x
+// rpath to allow deploying same-directory corrected libstd++ in certain distros
+#cgo CFLAGS: -Wl,rpath,$ORIGIN
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
+#include <stdlib.h>  // Needed for C.free
 #include "cpeerconnection.h"
-#include <stdlib.h>
 */
 import "C"
 import (
 	"errors"
-	// "fmt"
 	"github.com/keroserene/go-webrtc/data"
-	"unsafe"
-	// "io"
 	"io/ioutil"
 	"log"
 	"os"
+	"unsafe"
 )
 
 var (
@@ -93,7 +95,7 @@ func SetVerbosity(level int) {
 }
 
 func init() {
-	SetVerbosity(3)
+	SetVerbosity(3) // Default verbosity.
 }
 
 type SessionDescription struct {
@@ -120,6 +122,13 @@ func NewSessionDescription(sdpType string, msg string) *SessionDescription {
 	return sdp
 }
 
+/* WebRTC PeerConnection
+
+This is the main container of WebRTC functionality - from handling the ICE
+negotiation to setting up Data Channels.
+
+See: https://w3c.github.io/webrtc-pc/#idl-def-RTCPeerConnection
+*/
 type PeerConnection struct {
 	localDescription *SessionDescription
 	// currentLocalDescription
@@ -133,7 +142,8 @@ type PeerConnection struct {
 	// iceConnectionState  RTCIceConnectionState
 	canTrickleIceCandidates bool
 
-	// Event handlers TODO: The remainder of the callbacks.
+	// Event handlers
+	// TODO: Implement remainder of callbacks.
 	OnIceCandidate      func(IceCandidate)
 	OnNegotiationNeeded func()
 	// onicecandidateerror
@@ -147,16 +157,21 @@ type PeerConnection struct {
 	cgoPeer C.CGO_Peer // Native code internals
 }
 
-// PeerConnection constructor.
+/* Construct a WebRTC PeerConnection.
+
+For a successful connection, provide at least one ICE server (stun or turn)
+in the |Configuration| struct.
+*/
 func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	pc := new(PeerConnection)
 	INFO.Println("PC at ", unsafe.Pointer(pc))
-	pc.cgoPeer = C.CGO_InitializePeer(unsafe.Pointer(pc)) // internal CGO_ Peer.
+	// Internal CGO Peer wraps the native webrtc::PeerConnectionInterface.
+	pc.cgoPeer = C.CGO_InitializePeer(unsafe.Pointer(pc))
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
 	pc.config = *config
-	cConfig := config._CGO() // Convert for CGO_
+	cConfig := config._CGO()
 	if 0 != C.CGO_CreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
 	}
@@ -168,8 +183,13 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 // === Session Description Protocol ===
 //
 
-// CreateOffer prepares an SDP "offer" message, which should be sent to the target
-// peer over a signalling channel.
+/*
+CreateOffer prepares an SDP "offer" message, which should be set as the local
+description, then sent to the remote peer over a signalling channel. This
+should only be called by the peer initiating the connection.
+
+This method is blocking, and should occur within a separate goroutine.
+*/
 func (pc *PeerConnection) CreateOffer() (*SessionDescription, error) {
 	sdp := C.CGO_CreateOffer(pc.cgoPeer)
 	if nil == sdp {
@@ -181,8 +201,14 @@ func (pc *PeerConnection) CreateOffer() (*SessionDescription, error) {
 	return offer, nil
 }
 
-// CreateAnswer prepares an SDP "answer" message, which should be sent in
-// response to a peer that has sent an offer, over the signalling channel.
+/*
+CreateAnswer prepares an SDP "answer" message. This should only happen in
+response to an offer received and set as the remote description. Once generated,
+this answer should then be set as the local description and sent back over the
+signaling channel to the remote peer.
+
+This method is blocking, and should occur within a separate goroutine.
+*/
 func (pc *PeerConnection) CreateAnswer() (*SessionDescription, error) {
 	sdp := C.CGO_CreateAnswer(pc.cgoPeer)
 	if nil == sdp {
@@ -194,10 +220,11 @@ func (pc *PeerConnection) CreateAnswer() (*SessionDescription, error) {
 	return answer, nil
 }
 
-// TODO: Above methods blocks until success or failure occurs. Maybe there should
-// actually be a callback version, so the user doesn't have to make their own
-// goroutine.
-
+/*
+Set a |SessionDescription| as the local description. The description should be
+generated from the local peer's CreateOffer or CreateAnswer, and not be a
+description received over the signaling channel.
+*/
 func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
 	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
@@ -212,6 +239,13 @@ func (pc *PeerConnection) LocalDescription() (sdp *SessionDescription) {
 	return pc.localDescription
 }
 
+/*
+Set a |SessionDescription| as the remote description. This description should
+be one generated by the remote peer's CreateOffer or CreateAnswer, received
+over the signaling channel, and not a description created locally.
+
+If the local peer is the answerer, this must be called before CreateAnswer.
+*/
 func (pc *PeerConnection) SetRemoteDescription(sdp *SessionDescription) error {
 	r := C.CGO_SetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
@@ -285,7 +319,8 @@ func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
 	defer C.free(unsafe.Pointer(candidate))
 	sdpMid := C.CString(ic.SdpMid)
 	defer C.free(unsafe.Pointer(sdpMid))
-	r := C.CGO_AddIceCandidate(pc.cgoPeer, candidate, sdpMid, C.int(ic.SdpMLineIndex))
+	r := C.CGO_AddIceCandidate(pc.cgoPeer,
+		candidate, sdpMid, C.int(ic.SdpMLineIndex))
 	if 0 != r {
 		return errors.New("AddIceCandidate failed.")
 	}
@@ -308,16 +343,33 @@ func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 	return nil
 }
 
+/*
+Create and return a DataChannel.
+
+This only needs to be called by one side, unless "negotiated" is true.
+
+If creating the first DataChannel, this actually triggers the local
+PeerConnection's .OnNegotiationNeeded callback, which should lead to a
+user-provided goroutine containing CreateOffer, SetLocalDescription, and the
+rest of the signalling exchange.
+
+Once the connection succeeds, .OnDataChannel should trigger on the remote peer's
+|PeerConnection|, while .OnOpen should trigger on the local DataChannel returned
+by this method. Both DataChannel references should then be open and ready to
+exchange data.
+
+TODO: Implement the "negotiated" flag?
+*/
 func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
 	*data.Channel, error) {
 	l := C.CString(label)
 	defer C.free(unsafe.Pointer(l))
-	cDC := C.CGO_CreateDataChannel(pc.cgoPeer, l, unsafe.Pointer(&dict))
-	if nil == cDC {
+	cDataChannel := C.CGO_CreateDataChannel(pc.cgoPeer, l, unsafe.Pointer(&dict))
+	if nil == cDataChannel {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
-	// Convert cDC and put it in Go DC
-	dc := data.NewChannel(unsafe.Pointer(cDC))
+	// Provide internal Data Channel as reference to create the Go wrapper.
+	dc := data.NewChannel(unsafe.Pointer(cDataChannel))
 	return dc, nil
 }
 
@@ -350,7 +402,8 @@ func cgoOnNegotiationNeeded(p unsafe.Pointer) {
 }
 
 //export cgoOnIceCandidate
-func cgoOnIceCandidate(p unsafe.Pointer, candidate *C.char, sdpMid *C.char, sdpMLineIndex int) {
+func cgoOnIceCandidate(
+	p unsafe.Pointer, candidate *C.char, sdpMid *C.char, sdpMLineIndex int) {
 	ic := IceCandidate{
 		C.GoString(candidate),
 		C.GoString(sdpMid),
@@ -363,16 +416,11 @@ func cgoOnIceCandidate(p unsafe.Pointer, candidate *C.char, sdpMid *C.char, sdpM
 	}
 }
 
-type CDC C.CGO_Channel
-
-// func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 //export cgoOnDataChannel
-func cgoOnDataChannel(p unsafe.Pointer, cDC CDC) {
+func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 	INFO.Println("fired OnDataChannel: ", p, cDC)
 	pc := (*PeerConnection)(p)
-	// TODO: Convert DataChannel to Go for real.
 	dc := data.NewChannel(unsafe.Pointer(cDC))
-	// C.CGO_Channel)(cDC))
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)
 	}

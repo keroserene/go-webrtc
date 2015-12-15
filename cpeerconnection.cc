@@ -25,28 +25,20 @@ typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
 typedef SessionDescriptionInterface* SDP;
 typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
 
-// Peer acts as the glue between go and native code PeerConnectionInterface.
-// However, it's not directly accessible from the Go side, which can only
-// see what's exposed in the more pure extern "C" header file.
+// Peer acts as the glue between Go PeerConnection and the native
+// webrtc::PeerConnectionInterface. However, it's not directly accessible
+// through CGO, but indirectly through what's available in the more pure
+// extern "C" header.
 //
 // The Go side may access this class through C.CGO_Peer.
-//
-// This class also stubs libwebrtc's callback interface to be blocking,
-// which allows the usage of goroutines, which is more idiomatic and easier
-// for users of this library.
-// The alternative would require casting Go function pointers, calling Go code
-// from C code from Go code, which is less likely to be a good time.
-//
-// TODO(keroserene): More documentation...
-// TODO: Better logging
+// TODO: Better logging on the C side.
 class Peer
   : public PeerConnectionObserver,
     public CreateSessionDescriptionObserver {
  public:
 
+  // Should be called before anything else happens.
   bool Initialize() {
-    // Prepare everything.
-    // Should be called before anything else happens.
     promiseSDP = promise<SDP>();
     // Due to the different threading model, in order for PeerConnectionFactory
     // to be able to post async messages without getting blocked, we need to use
@@ -68,10 +60,10 @@ class Peer
     // TODO: Make actual media constraints, decide whether to expose in Go.
     auto c = new FakeConstraints();
     c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, DTLS_SRTP);
+    // c->AddOptional(MediaConstraintsInterface::kEnableRtpDataChannels, "true");
     c->SetMandatoryReceiveAudio(false);
     c->SetMandatoryReceiveVideo(false);
     constraints = c;
-    // cout << "[C] Peer initialized." << endl;
     return true;
   }
 
@@ -81,6 +73,10 @@ class Peer
 
   //
   // CreateSessionDescriptionObserver implementation
+  //
+  // These callbacks have been stubbed out using promises + futures, to be
+  // blocking as far as Go is concerned, which allows the usage
+  // of goroutines. This should be easier and more idiomatic for users.
   //
   void OnSuccess(SDP desc) {
     cout << "[C] SDP successfully created at " << desc << endl;
@@ -109,9 +105,11 @@ class Peer
   */
   void OnAddStream(webrtc::MediaStreamInterface* stream) {
     cout << "[C] OnAddStream: " << stream << endl;
+    // TODO: This is required when beginning implementing Media API.
   }
   void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
     cout << "[C] OnRemoveStream: " << stream << endl;
+    // TODO: This is required when beginning implementing Media API.
   }
 
   void OnRenegotiationNeeded() {
@@ -120,7 +118,7 @@ class Peer
   }
 
   void OnIceCandidate(const IceCandidateInterface* ic) {
-    cout << "[C] OnIceCandidate" << ic << endl;
+    // cout << "[C] OnIceCandidate" << ic << endl;
     std::string candidate;
     ic->ToString(&candidate);
     cgoOnIceCandidate(goPeerConnection, const_cast<char*>(candidate.c_str()),
@@ -140,12 +138,12 @@ class Peer
   PC pc_;                  // Pointer to internal PeerConnection
   void *goPeerConnection;  // External GO PeerConnection
 
-  // Passing SDPs through promises instead of callbacks, to allow the benefits
+  // Pass SDPs through promises instead of callbacks, to allow benefits
   // as described above.
+  promise<SDP> promiseSDP;
   // However, this has the effect that CreateOffer and CreateAnswer must not be
   // concurrent, to themselves or each other (which isn't expected anyways) due
   // to the simplistic way in which futures are used here.
-  promise<SDP> promiseSDP;
 
   rtc::scoped_refptr<PeerConnectionFactoryInterface> pc_factory;
   // TODO: prepare and expose IceServers for real.
@@ -377,7 +375,7 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
   // TODO: Keep track of a vector of these internally.
   cPeer->channel = channel;
-  cout << "Created data channel: " << channel << endl;
+  // cout << "Created data channel: " << channel << endl;
   return (CGO_Channel)channel.get();
 }
 

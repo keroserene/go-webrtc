@@ -28,6 +28,7 @@ class CGoDataChannelObserver : public DataChannelObserver {
 
   void OnBufferedAmountChange(uint64_t previous_amount) {
     cout << "[C] OnBufferedAmountChange" << endl;
+    // cgoChannelOnBufferedAmountChange(previous_amount);
   }
 
  protected:

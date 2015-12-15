@@ -15,7 +15,12 @@ var cast = [
   "Faythe", "Mallory", "Oscar", "Peggy",
   "Sybil", "Trent", "Wendy"
 ]
-var PeerConnection = webkitRTCPeerConnection;
+// var PeerConnection
+// var PeerConnection = mozRTCPeerConnection;
+// if (webkitRTCPeerConnection) {
+var  PeerConnection = webkitRTCPeerConnection;
+// }
+  // || RTCPeerConnection;
 var pc;  // PeerConnection
 var offer;
 // Let's randomize initial username from the cast of characters, why not.
@@ -25,9 +30,8 @@ var channel;
 // Janky state machine
 var MODE = {
   INIT:       0,
-  ACK:        3,
-  CONNECTING: 4,
-  CHAT:       5
+  CONNECTING: 1,
+  CHAT:       2
 }
 var currentMode = MODE.INIT;
 
@@ -102,7 +106,7 @@ function acceptInput(is) {
         Signalling.receive(msg);
       }
       break;
-    case MODE.ACK:
+    case MODE.CONNECTING:
       Signalling.receive(msg);
       break;
     case MODE.CHAT:
@@ -159,11 +163,10 @@ function receiveICE(ice) {
     return;
   }
   log("ICE candidate successfully received: " + ice.candidate);
-  // console.log("ICE candidate received: ", ice);
 }
 
 function waitForSignals() {
-  currentMode = MODE.ACK;
+  currentMode = MODE.CONNECTING;
 }
 
 function prepareDataChannel(channel) {
@@ -234,5 +237,4 @@ var log = function(msg) {
   $chatlog.scrollTop = $chatlog.scrollHeight;
 }
 
-document.onload = init;
 window.onload = init;

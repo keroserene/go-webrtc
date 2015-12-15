@@ -2,8 +2,8 @@
 
 [![Circle CI](https://circleci.com/gh/keroserene/go-webrtc.svg?style=svg)](https://circleci.com/gh/keroserene/go-webrtc)
 
-This repository is currently fluctuating a lot, *do not rely* on anything in
-here yet.
+This repository is currently not ready and fluctuating a lot.
+*Do not rely* on anything in here yet!
 
 This currently only builds on linux, but OSX is in progress.
 Actual documentation is on the way.
@@ -13,6 +13,7 @@ Actual documentation is on the way.
 - The Go code successfully wraps the C++ code.
 - From Go, you can now create a WebRTC PeerConnection, create SDP messages, and
 create DataChannels.
+- The go-webrtc chat client and the JS chat client can now connect over webrtc.
 
 There is still lots of work to do!
 

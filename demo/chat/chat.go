@@ -137,7 +137,7 @@ func prepareDataChannel(channel *data.Channel) {
 	}
 	channel.OnClose = func() {
 		fmt.Println("Data Channel closed.")
-		fmt.Println("------- chat disabled -------")
+		endChat()
 	}
 	channel.OnMessage = func(msg []byte) {
 		receiveChat(string(msg))
@@ -152,6 +152,16 @@ func sendChat(msg string) {
 
 func receiveChat(msg string) {
 	fmt.Println("\n" + string(msg))
+}
+
+func startChat() {
+	mode = ModeChat
+	fmt.Println("------- chat enabled! -------")
+}
+
+func endChat() {
+	mode = ModeInit
+	fmt.Println("------- chat disabled -------")
 }
 
 func start(instigator bool) {
@@ -180,20 +190,16 @@ func start(instigator bool) {
 	}
 
 	if instigator {
+	// if true {
 		// Attempting to create the first datachannel triggers ICE.
 		fmt.Println("Trying to create a datachannel.")
-		dc, err = pc.CreateDataChannel("init", data.Init{})
+		dc, err = pc.CreateDataChannel("test", data.Init{})
 		if nil != err {
 			fmt.Println("Unexpected failure creating data.Channel.")
 			return
 		}
 		prepareDataChannel(dc)
 	}
-}
-
-func startChat() {
-	mode = ModeChat
-	fmt.Println("------- chat enabled! -------")
 }
 
 func main() {
