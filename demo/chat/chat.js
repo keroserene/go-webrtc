@@ -81,7 +81,12 @@ function welcome() {
 
 function start(initiator) {
   log("Starting up RTCPeerConnection...");
-  pc = new PeerConnection(config);
+  pc = new PeerConnection(config, {
+    optional: [
+      { DtlsSrtpKeyAgreement: false },
+      { RtpDataChannels: true },
+    ],
+  });
   pc.onicecandidate = function(evt) {
     var candidate = evt.candidate;
     if (!candidate)

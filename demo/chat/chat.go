@@ -33,7 +33,6 @@ const (
 	ModeChat
 )
 
-
 // Signaling channel can be copy paste.
 func signalSend(msg string) {
 	fmt.Println("\n ---- Please copy the below to peer ---- \n")
@@ -201,6 +200,7 @@ func main() {
 			if strings.HasPrefix(text, "start") {
 				start(true)
 			} else {
+				start(false)
 				signalReceive(text)
 			}
 		case ModeConnect:
