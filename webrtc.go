@@ -44,6 +44,7 @@ import "C"
 import (
 	"errors"
 	"github.com/keroserene/go-webrtc/data"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"os"
@@ -98,15 +99,33 @@ func init() {
 	SetVerbosity(3) // Default verbosity.
 }
 
+var SdpTypes = []string{"offer", "pranswer", "answer", "rollback"}
+
+/* WebRTC SessionDescription
+
+See: https://w3c.github.io/webrtc-pc/#idl-def-RTCSessionDescription
+*/
 type SessionDescription struct {
-	// Keep track of both a pointer to the C++ SessionDescription object,
+	Type string `json:"type"`
+	Sdp  string `json:"sdp"`
+
+	// Keep track of a pointer to the C++ SessionDescription object,
 	// and the serialized string version (which native code generates)
 	cgoSdp      C.CGO_sdp
-	Description string
 }
 
 // Construct a SessionDescription object from a valid msg.
 func NewSessionDescription(sdpType string, msg string) *SessionDescription {
+	in := false
+	for i := 0; i < len(SdpTypes); i++ {
+		if SdpTypes[i] == sdpType {
+			in = true
+		}
+	}
+	if !in {
+		ERROR.Println("Invalid SDP type.")
+		return nil
+	}
 	s := C.CString(sdpType)
 	defer C.free(unsafe.Pointer(s))
 	m := C.CString(msg)
@@ -118,8 +137,30 @@ func NewSessionDescription(sdpType string, msg string) *SessionDescription {
 	}
 	sdp := new(SessionDescription)
 	sdp.cgoSdp = cSdp
-	sdp.Description = msg
+	sdp.Type = sdpType
+	sdp.Sdp = msg
 	return sdp
+}
+
+// Serialize a SessionDescription into a JSON string.
+func (desc *SessionDescription) Serialize() string {
+	bytes, _ := json.Marshal(sdp)
+	return string(bytes)
+}
+
+// Deserialize a received "json-like" map into a SessionDescription.
+func DeserializeSessionDescription(data map[string]interface{})	*SessionDescription {
+	if _, ok := data["type"]; !ok {
+		ERROR.Println("Cannot deserialize SessionDescription without type field.")
+		return nil
+	}
+	if _, ok := data["sdp"].(string); ok {
+		ERROR.Println("Cannot deserialize SessionDescription without sdp field.")
+		return nil
+	}
+	return NewSessionDescription(data["type"].(string), data["sdp"].(string))
+	// var sdpType, sdpStr string
+	// return NewSessionDescription(sdpType, sdpStr)
 }
 
 /* WebRTC PeerConnection
@@ -197,7 +238,8 @@ func (pc *PeerConnection) CreateOffer() (*SessionDescription, error) {
 	}
 	offer := new(SessionDescription)
 	offer.cgoSdp = sdp
-	offer.Description = C.GoString(C.CGO_SerializeSDP(sdp))
+	offer.Type = "offer"
+	offer.Sdp = C.GoString(C.CGO_SerializeSDP(sdp))
 	return offer, nil
 }
 
@@ -216,7 +258,8 @@ func (pc *PeerConnection) CreateAnswer() (*SessionDescription, error) {
 	}
 	answer := new(SessionDescription)
 	answer.cgoSdp = sdp
-	answer.Description = C.GoString(C.CGO_SerializeSDP(sdp))
+	answer.Type = "answer"
+	answer.Sdp = C.GoString(C.CGO_SerializeSDP(sdp))
 	return answer, nil
 }
 

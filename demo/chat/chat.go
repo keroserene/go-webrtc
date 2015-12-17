@@ -38,17 +38,6 @@ func signalSend(msg string) {
 	fmt.Println(msg + "\n")
 }
 
-type (
-	// TODO: Put json stuff into go-webrtc.
-	Description struct {
-		Type string `json:"type"`
-		Sdp  string `json:"sdp"`
-	}
-	Message struct {
-		Desc Description `json:"desc"`
-	}
-)
-
 func signalReceive(msg string) {
 	var parsed map[string]interface{}
 	err = json.Unmarshal([]byte(msg), &parsed)
@@ -64,10 +53,12 @@ func signalReceive(msg string) {
 	// This JSON parsing should probably go into go-webrtc.
 	if nil != parsed["desc"] {
 		data := parsed["desc"].(map[string]interface{})
-		receiveDescription(Description{
-			data["type"].(string),
-			data["sdp"].(string),
-		})
+		sdp := webrtc.DeserializeSessionDescription(data)
+  	if nil == sdp {
+  		fmt.Println("Invalid SDP.")
+  		return
+  	}
+		receiveDescription(sdp)
 	}
 	if nil != parsed["candidate"] {
 		ice := webrtc.IceCandidate{
@@ -80,14 +71,9 @@ func signalReceive(msg string) {
 	}
 }
 
-// TODO: More of this should be wrapped into webrtc package.
-func prepareSDP(kind string, desc string) {
-	data := Description{
-		kind,
-		desc,
-	}
-	bytes, _ := json.Marshal(data)
-	message := fmt.Sprintf(`{"desc":%s}`, string(bytes))
+// Serializes and sends the SDP message to the remote peer.
+func sendSDPtoRemote(sdp *webrtc.SessionDescription) {
+	message := fmt.Sprintf(`{"desc":%s}`, sdp.Serialize())
 	signalSend(message)
 }
 
@@ -98,7 +84,7 @@ func sendOffer() {
 		return
 	}
 	pc.SetLocalDescription(offer)
-	prepareSDP("offer", offer.Description)
+	sendSDPtoRemote(offer)
 }
 
 func sendAnswer() {
@@ -108,23 +94,18 @@ func sendAnswer() {
 		return
 	}
 	pc.SetLocalDescription(answer)
-	prepareSDP("answer", answer.Description)
+	sendSDPtoRemote(answer)
 }
 
-func receiveDescription(desc Description) {
-	sdp := webrtc.NewSessionDescription(desc.Type, desc.Sdp)
-	if nil == sdp {
-		fmt.Println("Invalid SDP.")
-		return
-	}
+func receiveDescription(sdp *webrtc.SessionDescription) {
 	err = pc.SetRemoteDescription(sdp)
 	if nil != err {
 		fmt.Println("ERROR", err)
 		return
 	}
-	fmt.Println("SDP " + desc.Type + " successfully received.")
-	if "offer" == desc.Type {
-		fmt.Println("Replying with answer.")
+	fmt.Println("SDP " + sdp.Type + " successfully received.")
+	if "offer" == sdp.Type {
+		fmt.Println("Generating and replying with an answer.")
 		go sendAnswer()
 	}
 }

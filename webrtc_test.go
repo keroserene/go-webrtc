@@ -35,13 +35,17 @@ func TestCreateSecondPeerConnections(t *testing.T) {
 	}
 }
 
+//
+// SessionDescription tests
+//
+
 func TestCreateOffer(t *testing.T) {
 	fmt.Println("\n== ALICE's PeerConnection ==")
 	sdp, err = pcA.CreateOffer()
 	if nil != err {
 		t.Fatal(err)
 	}
-	fmt.Println("SDP Offer:\n", sdp.Description)
+	fmt.Println("SDP Offer:\n", sdp.Sdp)
 }
 
 func TestOnSignalingStateChangeCallback(t *testing.T) {
@@ -85,8 +89,8 @@ func TestSetLocalDescription(t *testing.T) {
 }
 
 func TestSDPSerializing(t *testing.T) {
-	check := NewSessionDescription("offer", sdp.Description)
-	if check.Description != sdp.Description {
+	check := NewSessionDescription("offer", sdp.Sdp)
+	if check.Sdp != sdp.Sdp {
 		t.Error("Failed to deserialize")
 	}
 }
@@ -133,7 +137,7 @@ func TestCreateAnswer(t *testing.T) {
 	if nil != err {
 		t.Fatal(err)
 	}
-	fmt.Println("SDP Answer:\n", sdp.Description)
+	fmt.Println("SDP Answer:\n", sdp.Sdp)
 }
 
 func TestOnNegotiationNeededCallback(t *testing.T) {
