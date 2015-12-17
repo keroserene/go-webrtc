@@ -63,13 +63,13 @@ var Signalling = {
     if (!pc) {
       start(false);
     }
-    var desc = recv['desc']
+    var desc = recv['sdp']
     var ice = recv['candidate']
     if (!desc && ! ice) {
       log("Invalid SDP.");
       return false;
     }
-    if (desc) { receiveDescription(desc); }
+    if (desc) { receiveDescription(recv); }
     if (ice) { receiveICE(recv); }
   }
 }
@@ -135,7 +135,8 @@ function acceptInput(is) {
 // Need to support both - same for createAnswer below.
 function sendOffer() {
   var signalSDP = function() {
-    Signalling.send({desc: offer});
+    // Signalling.send({desc: offer});
+    Signalling.send(offer);
     waitForSignals();
   }
   var next = function(sdp) {
@@ -156,7 +157,8 @@ function sendOffer() {
 
 function sendAnswer() {
   var signalSDP = function() {
-    Signalling.send({desc: answer});
+    // Signalling.send({desc: answer});
+    Signalling.send(answer);
   }
   var next = function (sdp) {
     log("webrtc: Created Answer");

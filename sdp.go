@@ -64,7 +64,7 @@ func (desc *SessionDescription) Serialize() string {
 // Deserialize a received json string into a SessionDescription, if possible.
 func DeserializeSessionDescription(msg string) *SessionDescription {
 	var parsed map[string]interface{}
-	err = json.Unmarshal([]byte(msg), &parsed)
+	err := json.Unmarshal([]byte(msg), &parsed)
 	if nil != err {
 		ERROR.Println(err)
 		return nil

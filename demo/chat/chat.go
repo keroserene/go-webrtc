@@ -18,6 +18,13 @@ import (
 	"strings"
 )
 
+var pc *webrtc.PeerConnection
+var dc *data.Channel
+var mode Mode
+var err error
+var username = "Alice"
+
+// Janky state machine.
 type Mode int
 
 const (
@@ -26,11 +33,6 @@ const (
 	ModeChat
 )
 
-var pc *webrtc.PeerConnection
-var dc *data.Channel
-var mode Mode
-var err error
-var username = "Alice"
 
 // Signaling channel can be copy paste.
 func signalSend(msg string) {
@@ -42,22 +44,23 @@ func signalReceive(msg string) {
 	var parsed map[string]interface{}
 	err = json.Unmarshal([]byte(msg), &parsed)
 	if nil != err {
-		// fmt.Println(err, ", try again.")
+		fmt.Println(err, ", try again.")
 		return
 	}
 
+	// If this is a valid signal and no PeerConnection has been instantiated,
+	// start as the "answerer."
 	if nil == pc {
 		start(false)
 	}
 
 	// This JSON parsing should probably go into go-webrtc.
-	if nil != parsed["desc"] {
-		data := parsed["desc"].(map[string]interface{})
-		sdp := webrtc.DeserializeSessionDescription(data)
-  	if nil == sdp {
-  		fmt.Println("Invalid SDP.")
-  		return
-  	}
+	if nil != parsed["sdp"] {
+		sdp := webrtc.DeserializeSessionDescription(msg)
+		if nil == sdp {
+			fmt.Println("Invalid SDP.")
+			return
+		}
 		receiveDescription(sdp)
 	}
 	if nil != parsed["candidate"] {
@@ -71,12 +74,6 @@ func signalReceive(msg string) {
 	}
 }
 
-// Serializes and sends the SDP message to the remote peer.
-func sendSDPtoRemote(sdp *webrtc.SessionDescription) {
-	message := fmt.Sprintf(`{"desc":%s}`, sdp.Serialize())
-	signalSend(message)
-}
-
 func sendOffer() {
 	offer, err := pc.CreateOffer()
 	if err != nil {
@@ -84,7 +81,7 @@ func sendOffer() {
 		return
 	}
 	pc.SetLocalDescription(offer)
-	sendSDPtoRemote(offer)
+	signalSend(offer.Serialize())
 }
 
 func sendAnswer() {
@@ -94,7 +91,7 @@ func sendAnswer() {
 		return
 	}
 	pc.SetLocalDescription(answer)
-	sendSDPtoRemote(answer)
+	signalSend(answer.Serialize())
 }
 
 func receiveDescription(sdp *webrtc.SessionDescription) {
@@ -170,7 +167,6 @@ func start(instigator bool) {
 	}
 
 	if instigator {
-	// if true {
 		// Attempting to create the first datachannel triggers ICE.
 		fmt.Println("Trying to create a datachannel.")
 		dc, err = pc.CreateDataChannel("test", data.Init{})
