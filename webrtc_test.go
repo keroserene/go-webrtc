@@ -35,10 +35,6 @@ func TestCreateSecondPeerConnections(t *testing.T) {
 	}
 }
 
-//
-// SessionDescription tests
-//
-
 func TestCreateOffer(t *testing.T) {
 	fmt.Println("\n== ALICE's PeerConnection ==")
 	sdp, err = pcA.CreateOffer()
@@ -88,12 +84,6 @@ func TestSetLocalDescription(t *testing.T) {
 	fmt.Print("\n ~~ Signalling Happens here ~~ \n\n")
 }
 
-func TestSDPSerializing(t *testing.T) {
-	check := NewSessionDescription("offer", sdp.Sdp)
-	if check.Sdp != sdp.Sdp {
-		t.Error("Failed to deserialize")
-	}
-}
 
 func TestSetRemoteDescription(t *testing.T) {
 	fmt.Println("\n == BOB's PeerConnection ==")
