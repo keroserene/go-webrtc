@@ -4,8 +4,8 @@ package webrtc
 // #include <stdlib.h>  // Needed for C.free
 import "C"
 import (
-	"unsafe"
 	"encoding/json"
+	"unsafe"
 )
 
 /* WebRTC SessionDescription
@@ -17,7 +17,7 @@ type SessionDescription struct {
 	Sdp  string `json:"sdp"`
 
 	// Keep track of internal C++ *webrtc::SessionDescriptionInterface.
-	cgoSdp      C.CGO_sdp
+	cgoSdp C.CGO_sdp
 }
 
 // TODO: Turn into Enum.
@@ -62,7 +62,7 @@ func (desc *SessionDescription) Serialize() string {
 }
 
 // Deserialize a received json string into a SessionDescription, if possible.
-func DeserializeSessionDescription(msg string)	*SessionDescription {
+func DeserializeSessionDescription(msg string) *SessionDescription {
 	var parsed map[string]interface{}
 	err = json.Unmarshal([]byte(msg), &parsed)
 	if nil != err {
@@ -79,4 +79,3 @@ func DeserializeSessionDescription(msg string)	*SessionDescription {
 	}
 	return NewSessionDescription(parsed["type"].(string), parsed["sdp"].(string))
 }
-

@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-func init() {
-	// SetVerbosity(0)
-}
-
 // Ensure the Go "enums" generated in the idiomatic iota const way actually
 // match up with actual int values of the underlying native WebRTC Enums.
 func checkEnum(t *testing.T, desc string, enum int, expected int) {

@@ -183,7 +183,7 @@ func start(instigator bool) {
 }
 
 func main() {
-	webrtc.SetVerbosity(1)
+	webrtc.SetLoggingVerbosity(1)
 	mode = ModeInit
 	reader := bufio.NewReader(os.Stdin)
 

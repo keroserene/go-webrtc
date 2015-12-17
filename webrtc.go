@@ -44,59 +44,11 @@ import "C"
 import (
 	"errors"
 	"github.com/keroserene/go-webrtc/data"
-	// "encoding/json"
-	"io/ioutil"
-	"log"
-	"os"
 	"unsafe"
 )
 
-var (
-	INFO  log.Logger
-	WARN  log.Logger
-	ERROR log.Logger
-	TRACE log.Logger
-)
-
-// Logging verbosity level, from 0 (nothing) upwards.
-func SetVerbosity(level int) {
-	// handle io.Writer
-	infoOut := ioutil.Discard
-	warnOut := ioutil.Discard
-	errOut := ioutil.Discard
-	traceOut := ioutil.Discard
-
-	// TODO: Better logging levels
-	if level > 0 {
-		errOut = os.Stdout
-	}
-	if level > 1 {
-		warnOut = os.Stdout
-	}
-	if level > 2 {
-		infoOut = os.Stdout
-	}
-	if level > 3 {
-		traceOut = os.Stdout
-	}
-
-	INFO = *log.New(infoOut,
-		"INFO: ",
-		// log.Ldate|log.Ltime|log.Lshortfile)
-		log.Lshortfile)
-	WARN = *log.New(warnOut,
-		"WARNING: ",
-		log.Ldate|log.Ltime|log.Lshortfile)
-	ERROR = *log.New(errOut,
-		"ERROR: ",
-		log.Ldate|log.Ltime|log.Lshortfile)
-	TRACE = *log.New(traceOut,
-		"TRACE: ",
-		log.Ldate|log.Ltime|log.Lshortfile)
-}
-
 func init() {
-	SetVerbosity(3) // Default verbosity.
+	SetLoggingVerbosity(3) // Default verbosity.
 }
 
 /* WebRTC PeerConnection

@@ -84,7 +84,6 @@ func TestSetLocalDescription(t *testing.T) {
 	fmt.Print("\n ~~ Signalling Happens here ~~ \n\n")
 }
 
-
 func TestSetRemoteDescription(t *testing.T) {
 	fmt.Println("\n == BOB's PeerConnection ==")
 	err = pcB.SetRemoteDescription(sdp)
