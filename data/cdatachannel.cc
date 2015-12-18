@@ -48,10 +48,12 @@ void CGO_Channel_RegisterObserver(CGO_Channel channel, void *goChannel) {
   dc->RegisterObserver(obs);
 }
 
-void CGO_Channel_Send(CGO_Channel channel, void *data, int size) {
+void CGO_Channel_Send(CGO_Channel channel, char *data) {
   auto dc = (webrtc::DataChannelInterface*)channel;
-  auto bytes = new rtc::Buffer((uint8_t*)data, size);
-  auto buffer = DataBuffer(*bytes, true);
+  // auto bytes = new rtc::Buffer((uint8_t*)data, size);
+  // auto buffer = DataBuffer(*bytes, true);
+  string d(data);
+  webrtc::DataBuffer buffer(d);
   dc->Send(buffer);
 }
 

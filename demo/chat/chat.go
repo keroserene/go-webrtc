@@ -124,7 +124,7 @@ func prepareDataChannel(channel *data.Channel) {
 func sendChat(msg string) {
 	line := username + ": " + msg
 	fmt.Println("[sent]")
-	dc.Send([]byte(line))
+	dc.Send(line)
 }
 
 func receiveChat(msg string) {

@@ -9,6 +9,7 @@ package data
 #cgo LDFLAGS: -L${SRCDIR}/../lib
 #cgo linux,amd64 pkg-config: webrtc-data-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-data-darwin-amd64.pc
+#include <stdlib.h>
 #include "cdatachannel.h"
 */
 import "C"
@@ -60,11 +61,13 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 	return dc
 }
 
-func (c *Channel) Send(data []byte) error {
-	if nil == data {
+func (c *Channel) Send(data string) error {
+	if len(data) == 0 {
 		return nil
 	}
-	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)))
+	d := C.CString(data)
+	defer C.free(unsafe.Pointer(d))
+	C.CGO_Channel_Send(c.cgoChannel, d)
 	return nil
 }
 
