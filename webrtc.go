@@ -196,55 +196,6 @@ func (pc *PeerConnection) SignalingState() SignalingState {
 	return (SignalingState)(C.CGO_GetSignalingState(pc.cgoPeer))
 }
 
-//
-// === ICE / Configuration ===
-//
-
-type (
-	IceProtocol         int
-	IceCandidateType    int
-	IceTcpCandidateType int
-)
-
-const (
-	IceProtocolUPD IceProtocol = iota
-	IceProtocolTCP
-)
-
-var IceProtocolString = []string{"udp", "tcp"}
-
-const (
-	IceCandidateTypeHost IceCandidateType = iota
-	IceCandidateTypeSrflx
-	IceCandidateTypePrflx
-	IceCandidateTypeRelay
-)
-
-var IceCandidateTypeString = []string{"host", "srflx", "prflx", "relay"}
-
-const (
-	IceTcpCandidateTypeActive IceTcpCandidateType = iota
-	IceTcpCandidateTypePassive
-	IceTcpCandidateTypeSo
-)
-
-var IceTcpCandidateTypeString = []string{"active", "passive", "so"}
-
-type IceCandidate struct {
-	Candidate     string `json:"candidate"`
-	SdpMid        string `json:"sdpMid"`
-	SdpMLineIndex int    `json:"sdpMLineIndex"`
-	// Foundation     string
-	// Priority       C.ulong
-	// IP             net.IP
-	// Protocol       IceProtocol
-	// Port           C.ushort
-	// Type           IceCandidateType
-	// TcpType        IceTcpCandidateType
-	// RelatedAddress string
-	// RelatedPort    C.ushort
-}
-
 func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
 	sdpMid := C.CString(ic.SdpMid)
 	defer C.free(unsafe.Pointer(sdpMid))
