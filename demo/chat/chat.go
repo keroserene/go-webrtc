@@ -145,7 +145,8 @@ func start(instigator bool) {
 	mode = ModeConnect
 	fmt.Println("Starting up PeerConnection...")
 	config := webrtc.NewConfiguration(
-		webrtc.OptionIceServer("stun:stun.l.google.com:19302"))
+		webrtc.OptionIceServer("stun:stun.l.google.com:19302"),
+		webrtc.OptionBundlePolicy(webrtc.BundlePolicyMaxBundle))
 	pc, err = webrtc.NewPeerConnection(config)
 	if nil != err {
 		fmt.Println("Failed to create PeerConnection.")

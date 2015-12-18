@@ -1,6 +1,8 @@
 /*
 Package webrtc/data contains the go wrapper for the Peer-to-Peer Data API
 portion of WebRTC spec.
+
+See: https://w3c.github.io/webrtc-pc/#idl-def-RTCDataChannel
 */
 package data
 
@@ -127,7 +129,6 @@ type Init struct {
 //export cgoChannelOnMessage
 func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size int) {
 	bytes := C.GoBytes(cBytes, C.int(size))
-	// fmt.Println("fired data.Channel.OnMessage: ", goChannel, bytes, size)
 	dc := (*Channel)(goChannel)
 	if nil != dc.OnMessage {
 		dc.OnMessage(bytes)
@@ -137,10 +138,11 @@ func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size i
 //export cgoChannelOnStateChange
 func cgoChannelOnStateChange(c unsafe.Pointer) {
 	dc := (*Channel)(c)
-	// This event handler picks between different Go callbacks, depending
-	// on the state.
-	// TODO: look at state.
+	// This event handler picks between different Go callbacks.
+	// TODO: look at state change connecting/closing relationship to OnError..
 	switch dc.ReadyState() {
+	case DataStateConnecting:
+		fmt.Println("fired data.Channel.Statechange: Connecting", c)
 	case DataStateOpen:
 		fmt.Println("fired data.Channel.OnOpen", c)
 		if nil != dc.OnOpen {
@@ -151,6 +153,8 @@ func cgoChannelOnStateChange(c unsafe.Pointer) {
 		if nil != dc.OnClose {
 			dc.OnClose()
 		}
+	case DataStateClosing:
+		fmt.Println("fired data.Channel.Statechange: Closing", c)
 	default:
 		fmt.Println("fired an un-implemented data.Channel StateChange.", c)
 	}

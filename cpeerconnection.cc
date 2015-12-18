@@ -59,8 +59,8 @@ class Peer
 
     // TODO: Make actual media constraints, decide whether to expose in Go.
     auto c = new FakeConstraints();
-    c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, false);
-    c->AddOptional(MediaConstraintsInterface::kEnableRtpDataChannels, true);
+    c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, true);
+    c->AddOptional(MediaConstraintsInterface::kEnableRtpDataChannels, false);
     constraints = c;
 
     return true;
