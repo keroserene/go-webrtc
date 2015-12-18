@@ -161,8 +161,8 @@ func start(instigator bool) {
 	}
 	pc.OnDataChannel = func(channel *data.Channel) {
 		fmt.Println("Datachannel established...", channel)
+		dc = channel
 		prepareDataChannel(channel)
-		startChat()
 	}
 
 	if instigator {
@@ -200,8 +200,6 @@ func main() {
 			if strings.HasPrefix(text, "start") {
 				start(true)
 			} else {
-				// start(false) this probably shouldn't be here - it happens in
-				// signalReceive.
 				signalReceive(text)
 			}
 		case ModeConnect:
