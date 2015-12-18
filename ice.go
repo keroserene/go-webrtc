@@ -1,5 +1,10 @@
 package webrtc
 
+import (
+	"encoding/json"
+)
+
+// See: https://w3c.github.io/webrtc-pc/#idl-def-RTCIceCandidate
 
 type (
 	IceProtocol         int
@@ -45,4 +50,40 @@ type IceCandidate struct {
 	// RelatedAddress string
 	// RelatedPort    C.ushort
 }
-https://w3c.github.io/webrtc-pc/#idl-def-RTCIceCandidate
+
+// Serialize an IceCandidate into a JSON string.
+func (candidate *IceCandidate) Serialize() string {
+	bytes, err := json.Marshal(candidate)
+	if nil != err {
+		ERROR.Println(err)
+		return ""
+	}
+	return string(bytes)
+}
+
+// Deserialize a received json string into an IceCandidate, if possible.
+func DeserializeIceCandidate(msg string) *IceCandidate {
+	var parsed map[string]interface{}
+	err := json.Unmarshal([]byte(msg), &parsed)
+	if nil != err {
+		ERROR.Println(err)
+		return nil
+	}
+	if _, ok := parsed["candidate"]; !ok {
+		ERROR.Println("Cannot deserialize IceCandidate without candidate field.")
+		return nil
+	}
+	if _, ok := parsed["sdpMid"]; !ok {
+		ERROR.Println("Cannot deserialize IceCandidate without sdpMid field.")
+		return nil
+	}
+	if _, ok := parsed["sdpMLineIndex"]; !ok {
+		ERROR.Println("Cannot deserialize IceCandidate without sdpMLineIndex field.")
+		return nil
+	}
+	ice := new(IceCandidate)
+	ice.Candidate = parsed["candidate"].(string)
+	ice.SdpMid = parsed["sdpMid"].(string)
+	ice.SdpMLineIndex = int(parsed["sdpMLineIndex"].(float64))
+	return ice
+}

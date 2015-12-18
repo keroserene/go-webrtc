@@ -53,7 +53,8 @@ func signalReceive(msg string) {
 		start(false)
 	}
 
-	// This JSON parsing should probably go into go-webrtc.
+	// TODO: Allow multiple candidates combined with an offer/answer description
+	// as a single json string to copy paste.
 	if nil != parsed["sdp"] {
 		sdp := webrtc.DeserializeSessionDescription(msg)
 		if nil == sdp {
@@ -63,12 +64,12 @@ func signalReceive(msg string) {
 		receiveDescription(sdp)
 	}
 	if nil != parsed["candidate"] {
-		ice := webrtc.IceCandidate{
-			parsed["candidate"].(string),
-			parsed["sdpMid"].(string),
-			int(parsed["sdpMLineIndex"].(float64)),
+		ice := webrtc.DeserializeIceCandidate(msg)
+		if nil == ice {
+			fmt.Println("Invalid ICE candidate.")
+			return
 		}
-		pc.AddIceCandidate(ice)
+		pc.AddIceCandidate(*ice)
 		fmt.Println("ICE candidate successfully received.")
 	}
 }
@@ -156,8 +157,7 @@ func start(instigator bool) {
 		go sendOffer()
 	}
 	pc.OnIceCandidate = func(candidate webrtc.IceCandidate) {
-		bytes, _ := json.Marshal(candidate)
-		signalSend(string(bytes))
+		signalSend(candidate.Serialize())
 	}
 	pc.OnDataChannel = func(channel *data.Channel) {
 		fmt.Println("Datachannel established...", channel)
@@ -200,7 +200,8 @@ func main() {
 			if strings.HasPrefix(text, "start") {
 				start(true)
 			} else {
-				start(false)
+				// start(false) this probably shouldn't be here - it happens in
+				// signalReceive.
 				signalReceive(text)
 			}
 		case ModeConnect:
