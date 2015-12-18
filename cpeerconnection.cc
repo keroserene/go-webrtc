@@ -130,6 +130,7 @@ class Peer
 
   void OnDataChannel(DataChannelInterface* data_channel) {
     cout << "[C] OnDataChannel: " << data_channel << endl;
+    data_channel->AddRef();
     cgoOnDataChannel(goPeerConnection, data_channel);
   }
 
@@ -377,7 +378,9 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   // TODO: Keep track of a vector of these internally.
   cPeer->channel = channel;
   // cout << "Created data channel: " << channel << endl;
-  return (CGO_Channel)channel.get();
+  webrtc::DataChannelInterface* c = channel.get();
+  c->AddRef();
+  return c;
 }
 
 void CGO_Close(CGO_Peer peer) {
