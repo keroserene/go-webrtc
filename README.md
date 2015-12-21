@@ -2,6 +2,8 @@
 
 [![Circle CI](https://circleci.com/gh/keroserene/go-webrtc.svg?style=svg)](https://circleci.com/gh/keroserene/go-webrtc)
 
+WebRTC for Golang.
+
 This repository is currently **not ready** and fluctuating a lot.
 **Do not rely** on anything in here yet!
 
@@ -46,15 +48,16 @@ to really begin at the last dash. Reasons:
 
 ### Dependencies / Building
 
-To build this from scratch is currently challenging, due to the way building
-webrtc is.
-See [webrtc.org native-code dev](http://webrtc.org/native-code/development/) pages.
+To build this from scratch is currently challenging, as it requires
+building native webrtc.
+See [webrtc.org native-code dev](http://webrtc.org/native-code/development/).
+This is why a pre-built archive is already provided in `lib/`.
 
 Once the archive is prepared though, cgo takes care of everything, and building
 is as easy as `go build` or `go install`.
 If you'd like to try the chat demo, you can do `go run demo/chat/chat.go`.
 
-TODO(keroserene): More information / make things easier.
+TODO(keroserene): More information / provide a real build script for this.
 
 ### Conventions
 
