@@ -36,7 +36,6 @@
 #include "webrtc/voice_engine/include/voe_audio_processing.h"
 #include "webrtc/voice_engine/include/voe_base.h"
 #include "webrtc/voice_engine/include/voe_codec.h"
-#include "webrtc/voice_engine/include/voe_dtmf.h"
 #include "webrtc/voice_engine/include/voe_errors.h"
 #include "webrtc/voice_engine/include/voe_hardware.h"
 #include "webrtc/voice_engine/include/voe_network.h"
@@ -91,14 +90,13 @@ class VoEWrapper {
  public:
   VoEWrapper()
       : engine_(webrtc::VoiceEngine::Create()), processing_(engine_),
-        base_(engine_), codec_(engine_), dtmf_(engine_),
+        base_(engine_), codec_(engine_),
         hw_(engine_), network_(engine_),
         rtp_(engine_), volume_(engine_) {
   }
   VoEWrapper(webrtc::VoEAudioProcessing* processing,
              webrtc::VoEBase* base,
              webrtc::VoECodec* codec,
-             webrtc::VoEDtmf* dtmf,
              webrtc::VoEHardware* hw,
              webrtc::VoENetwork* network,
              webrtc::VoERTP_RTCP* rtp,
@@ -107,7 +105,6 @@ class VoEWrapper {
         processing_(processing),
         base_(base),
         codec_(codec),
-        dtmf_(dtmf),
         hw_(hw),
         network_(network),
         rtp_(rtp),
@@ -118,7 +115,6 @@ class VoEWrapper {
   webrtc::VoEAudioProcessing* processing() const { return processing_.get(); }
   webrtc::VoEBase* base() const { return base_.get(); }
   webrtc::VoECodec* codec() const { return codec_.get(); }
-  webrtc::VoEDtmf* dtmf() const { return dtmf_.get(); }
   webrtc::VoEHardware* hw() const { return hw_.get(); }
   webrtc::VoENetwork* network() const { return network_.get(); }
   webrtc::VoERTP_RTCP* rtp() const { return rtp_.get(); }
@@ -130,29 +126,11 @@ class VoEWrapper {
   scoped_voe_ptr<webrtc::VoEAudioProcessing> processing_;
   scoped_voe_ptr<webrtc::VoEBase> base_;
   scoped_voe_ptr<webrtc::VoECodec> codec_;
-  scoped_voe_ptr<webrtc::VoEDtmf> dtmf_;
   scoped_voe_ptr<webrtc::VoEHardware> hw_;
   scoped_voe_ptr<webrtc::VoENetwork> network_;
   scoped_voe_ptr<webrtc::VoERTP_RTCP> rtp_;
   scoped_voe_ptr<webrtc::VoEVolumeControl> volume_;
 };
-
-// Adds indirection to static WebRtc functions, allowing them to be mocked.
-class VoETraceWrapper {
- public:
-  virtual ~VoETraceWrapper() {}
-
-  virtual int SetTraceFilter(const unsigned int filter) {
-    return webrtc::VoiceEngine::SetTraceFilter(filter);
-  }
-  virtual int SetTraceFile(const char* fileNameUTF8) {
-    return webrtc::VoiceEngine::SetTraceFile(fileNameUTF8);
-  }
-  virtual int SetTraceCallback(webrtc::TraceCallback* callback) {
-    return webrtc::VoiceEngine::SetTraceCallback(callback);
-  }
-};
-
 }  // namespace cricket
 
 #endif  // TALK_MEDIA_WEBRTCVOE_H_

@@ -33,7 +33,7 @@
 #include "webrtc/base/refcount.h"
 #include "webrtc/base/scoped_ref_ptr.h"
 #include "webrtc/common_types.h"
-#include "webrtc/common_video/interface/video_frame_buffer.h"
+#include "webrtc/common_video/include/video_frame_buffer.h"
 
 namespace cricket {
 
@@ -45,11 +45,6 @@ class WebRtcVideoFrame : public VideoFrame {
   WebRtcVideoFrame(const rtc::scoped_refptr<webrtc::VideoFrameBuffer>& buffer,
                    int64_t time_stamp_ns,
                    webrtc::VideoRotation rotation);
-
-  // TODO(guoweis): Remove this when chrome code base is updated.
-  WebRtcVideoFrame(const rtc::scoped_refptr<webrtc::VideoFrameBuffer>& buffer,
-                   int64_t elapsed_time_ns,
-                   int64_t time_stamp_ns);
 
   ~WebRtcVideoFrame();
 
@@ -73,10 +68,6 @@ class WebRtcVideoFrame : public VideoFrame {
 
   void InitToEmptyBuffer(int w, int h, size_t pixel_width, size_t pixel_height,
                          int64_t time_stamp_ns);
-
-  // TODO(magjed): Remove once Chromium is updated.
-  bool InitToBlack(int w, int h, size_t pixel_width, size_t pixel_height,
-                   int64_t elapsed_time_ns, int64_t time_stamp_ns);
 
   bool InitToBlack(int w, int h, size_t pixel_width, size_t pixel_height,
                    int64_t time_stamp_ns) override;

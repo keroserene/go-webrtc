@@ -45,8 +45,11 @@ class Peer
     // external signalling and worker threads.
     signaling_thread = new rtc::Thread();
     worker_thread = new rtc::Thread();
+    signaling_thread->SetName("CGO Signalling", NULL);
     signaling_thread->Start();
+    worker_thread->SetName("CGO Worker", NULL);
     worker_thread->Start();
+    // pc_factory = CreatePeerConnectionFactory();
     pc_factory = CreatePeerConnectionFactory(
       worker_thread,
       signaling_thread,
@@ -60,7 +63,7 @@ class Peer
     // TODO: Make actual media constraints, decide whether to expose in Go.
     auto c = new FakeConstraints();
     c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, true);
-    c->AddOptional(MediaConstraintsInterface::kEnableRtpDataChannels, false);
+    // c->AddOptional(MediaConstraintsInterface::kEnableRtpDataChannels, false);
     constraints = c;
 
     return true;
@@ -377,7 +380,7 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
   // TODO: Keep track of a vector of these internally.
   cPeer->channel = channel;
-  // cout << "Created data channel: " << channel << endl;
+  cout << "Created data channel: " << channel << endl;
   webrtc::DataChannelInterface* c = channel.get();
   c->AddRef();
   return c;

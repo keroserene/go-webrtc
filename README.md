@@ -48,10 +48,14 @@ to really begin at the last dash. Reasons:
 
 ### Dependencies / Building
 
+Latest tested native webrtc archive: `a4df27b6713583045e51e20c4eb93718d15ca33e`
+
 To build this from scratch is currently challenging, as it requires
-building native webrtc.
+building and concatenating the native webrtc archive.
+
 See [webrtc.org native-code dev](http://webrtc.org/native-code/development/).
-This is why a pre-built archive is already provided in `lib/`.
+
+To make life easier,a pre-built archive is provided in `lib/`.
 
 Once the archive is prepared though, cgo takes care of everything, and building
 is as easy as `go build` or `go install`.
@@ -66,5 +70,5 @@ TODO(keroserene): More information / provide a real build script for this.
 - There is a `.CGO()` method for every Go struct which expects being passed to
   native code.
 
-
+Current webrtc commit
 

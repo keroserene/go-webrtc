@@ -38,19 +38,24 @@
 #include "talk/media/base/mediaengine.h"
 #include "talk/media/base/streamparams.h"
 #include "talk/media/base/videocapturer.h"
-#include "webrtc/p2p/base/transportcontroller.h"
-#include "webrtc/p2p/client/socketmonitor.h"
 #include "talk/session/media/audiomonitor.h"
 #include "talk/session/media/bundlefilter.h"
 #include "talk/session/media/mediamonitor.h"
 #include "talk/session/media/mediasession.h"
 #include "talk/session/media/rtcpmuxfilter.h"
 #include "talk/session/media/srtpfilter.h"
+#include "webrtc/audio/audio_sink.h"
 #include "webrtc/base/asyncudpsocket.h"
 #include "webrtc/base/criticalsection.h"
 #include "webrtc/base/network.h"
 #include "webrtc/base/sigslot.h"
 #include "webrtc/base/window.h"
+#include "webrtc/p2p/base/transportcontroller.h"
+#include "webrtc/p2p/client/socketmonitor.h"
+
+namespace webrtc {
+class AudioSinkInterface;
+}  // namespace webrtc
 
 namespace cricket {
 
@@ -174,8 +179,11 @@ class BaseChannel
   // Sets the |transport_channel_| (and |rtcp_transport_channel_|, if |rtcp_| is
   // true). Gets the transport channels from |transport_controller_|.
   bool SetTransport_w(const std::string& transport_name);
+
   void set_transport_channel(TransportChannel* transport);
-  void set_rtcp_transport_channel(TransportChannel* transport);
+  void set_rtcp_transport_channel(TransportChannel* transport,
+                                  bool update_writablity);
+
   bool was_ever_writable() const { return was_ever_writable_; }
   void set_local_content_direction(MediaContentDirection direction) {
     local_content_direction_ = direction;
@@ -213,6 +221,8 @@ class BaseChannel
                              int flags);
   void OnReadyToSend(TransportChannel* channel);
 
+  void OnDtlsState(TransportChannel* channel, DtlsTransportState state);
+
   bool PacketIsRtcp(const TransportChannel* channel, const char* data,
                     size_t len);
   bool SendPacket(bool rtcp,
@@ -235,8 +245,9 @@ class BaseChannel
   // Do the DTLS key expansion and impose it on the SRTP/SRTCP filters.
   // |rtcp_channel| indicates whether to set up the RTP or RTCP filter.
   bool SetupDtlsSrtp(bool rtcp_channel);
+  void MaybeSetupDtlsSrtp_w();
   // Set the DTLS-SRTP cipher policy on this channel as appropriate.
-  bool SetDtlsSrtpCiphers(TransportChannel *tc, bool rtcp);
+  bool SetDtlsSrtpCryptoSuites(TransportChannel* tc, bool rtcp);
 
   virtual void ChangeState() = 0;
 
@@ -282,9 +293,8 @@ class BaseChannel
   void OnMessage(rtc::Message* pmsg) override;
 
   // Handled in derived classes
-  // Get the SRTP ciphers to use for RTP media
-  virtual void GetSrtpCryptoSuiteNames(
-      std::vector<std::string>* ciphers) const = 0;
+  // Get the SRTP crypto suites to use for RTP media
+  virtual void GetSrtpCryptoSuites(std::vector<int>* crypto_suites) const = 0;
   virtual void OnConnectionMonitorUpdate(ConnectionMonitor* monitor,
       const std::vector<ConnectionInfo>& infos) = 0;
 
@@ -356,8 +366,6 @@ class VoiceChannel : public BaseChannel {
   // own ringing sound
   sigslot::signal1<VoiceChannel*> SignalEarlyMediaTimeout;
 
-  // TODO(ronghuawu): Replace PressDTMF with InsertDtmf.
-  bool PressDTMF(int digit, bool playout);
   // Returns if the telephone-event has been negotiated.
   bool CanInsertDtmf();
   // Send and/or play a DTMF |event| according to the |flags|.
@@ -365,8 +373,11 @@ class VoiceChannel : public BaseChannel {
   // The |ssrc| should be either 0 or a valid send stream ssrc.
   // The valid value for the |event| are 0 which corresponding to DTMF
   // event 0-9, *, #, A-D.
-  bool InsertDtmf(uint32_t ssrc, int event_code, int duration, int flags);
+  bool InsertDtmf(uint32_t ssrc, int event_code, int duration);
   bool SetOutputVolume(uint32_t ssrc, double volume);
+  void SetRawAudioSink(uint32_t ssrc,
+                       rtc::scoped_ptr<webrtc::AudioSinkInterface> sink);
+
   // Get statistics about the current media session.
   bool GetStats(VoiceMediaInfo* stats);
 
@@ -402,12 +413,12 @@ class VoiceChannel : public BaseChannel {
                                   ContentAction action,
                                   std::string* error_desc);
   void HandleEarlyMediaTimeout();
-  bool InsertDtmf_w(uint32_t ssrc, int event, int duration, int flags);
+  bool InsertDtmf_w(uint32_t ssrc, int event, int duration);
   bool SetOutputVolume_w(uint32_t ssrc, double volume);
   bool GetStats_w(VoiceMediaInfo* stats);
 
   virtual void OnMessage(rtc::Message* pmsg);
-  virtual void GetSrtpCryptoSuiteNames(std::vector<std::string>* ciphers) const;
+  virtual void GetSrtpCryptoSuites(std::vector<int>* crypto_suites) const;
   virtual void OnConnectionMonitorUpdate(
       ConnectionMonitor* monitor, const std::vector<ConnectionInfo>& infos);
   virtual void OnMediaMonitorUpdate(
@@ -497,7 +508,7 @@ class VideoChannel : public BaseChannel {
   bool GetStats_w(VideoMediaInfo* stats);
 
   virtual void OnMessage(rtc::Message* pmsg);
-  virtual void GetSrtpCryptoSuiteNames(std::vector<std::string>* ciphers) const;
+  virtual void GetSrtpCryptoSuites(std::vector<int>* crypto_suites) const;
   virtual void OnConnectionMonitorUpdate(
       ConnectionMonitor* monitor, const std::vector<ConnectionInfo>& infos);
   virtual void OnMediaMonitorUpdate(
@@ -614,7 +625,7 @@ class DataChannel : public BaseChannel {
   virtual bool WantsPacket(bool rtcp, rtc::Buffer* packet);
 
   virtual void OnMessage(rtc::Message* pmsg);
-  virtual void GetSrtpCryptoSuiteNames(std::vector<std::string>* ciphers) const;
+  virtual void GetSrtpCryptoSuites(std::vector<int>* crypto_suites) const;
   virtual void OnConnectionMonitorUpdate(
       ConnectionMonitor* monitor, const std::vector<ConnectionInfo>& infos);
   virtual void OnMediaMonitorUpdate(

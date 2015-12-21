@@ -36,6 +36,18 @@ namespace cricket {
 
 extern const uint32_t WEAK_PING_DELAY;
 
+struct IceParameters {
+  std::string ufrag;
+  std::string pwd;
+  IceParameters(const std::string& ice_ufrag, const std::string& ice_pwd)
+      : ufrag(ice_ufrag), pwd(ice_pwd) {}
+
+  bool operator==(const IceParameters& other) {
+    return ufrag == other.ufrag && pwd == other.pwd;
+  }
+  bool operator!=(const IceParameters& other) { return !(*this == other); }
+};
+
 // Adds the port on which the candidate originated.
 class RemoteCandidate : public Candidate {
  public:
@@ -108,12 +120,12 @@ class P2PTransportChannel : public TransportChannelImpl,
   bool SetSslRole(rtc::SSLRole role) override { return false; }
 
   // Set up the ciphers to use for DTLS-SRTP.
-  bool SetSrtpCiphers(const std::vector<std::string>& ciphers) override {
+  bool SetSrtpCryptoSuites(const std::vector<int>& ciphers) override {
     return false;
   }
 
   // Find out which DTLS-SRTP cipher was negotiated.
-  bool GetSrtpCryptoSuite(std::string* cipher) override { return false; }
+  bool GetSrtpCryptoSuite(int* cipher) override { return false; }
 
   // Find out which DTLS cipher was negotiated.
   bool GetSslCipherSuite(int* cipher) override { return false; }
@@ -161,11 +173,14 @@ class P2PTransportChannel : public TransportChannelImpl,
   // Public for unit tests.
   const std::vector<Connection*>& connections() const { return connections_; }
 
- private:
-  rtc::Thread* thread() { return worker_thread_; }
+  // Public for unit tests.
   PortAllocatorSession* allocator_session() {
     return allocator_sessions_.back();
   }
+
+ private:
+  rtc::Thread* thread() { return worker_thread_; }
+  bool IsGettingPorts() { return allocator_session()->IsGettingPorts(); }
 
   // A transport channel is weak if the current best connection is either
   // not receiving or not writable, or if there is no best connection at all.
@@ -174,10 +189,10 @@ class P2PTransportChannel : public TransportChannelImpl,
   void RequestSort();
   void SortConnections();
   void SwitchBestConnectionTo(Connection* conn);
-  void UpdateChannelState();
-  void HandleWritable();
-  void HandleNotWritable();
+  void UpdateState();
   void HandleAllTimedOut();
+  void MaybeStopPortAllocatorSessions();
+  TransportChannelState ComputeState() const;
 
   Connection* GetBestConnectionOnNetwork(rtc::Network* network) const;
   bool CreateConnections(const Candidate& remote_candidate,
@@ -191,7 +206,7 @@ class P2PTransportChannel : public TransportChannelImpl,
   bool IsDuplicateRemoteCandidate(const Candidate& candidate);
   void RememberRemoteCandidate(const Candidate& remote_candidate,
                                PortInterface* origin_port);
-  bool IsPingable(Connection* conn);
+  bool IsPingable(Connection* conn, uint32_t now);
   void PingConnection(Connection* conn);
   void AddAllocatorSession(PortAllocatorSession* session);
   void AddConnection(Connection* connection);
@@ -224,6 +239,21 @@ class P2PTransportChannel : public TransportChannelImpl,
 
   void PruneConnections();
   Connection* best_nominated_connection() const;
+  bool IsBackupConnection(Connection* conn) const;
+
+  // Returns the latest remote ICE parameters or nullptr if there are no remote
+  // ICE parameters yet.
+  IceParameters* remote_ice() {
+    return remote_ice_parameters_.empty() ? nullptr
+                                          : &remote_ice_parameters_.back();
+  }
+  // Returns the index of the latest remote ICE parameters, or 0 if no remote
+  // ICE parameters have been received.
+  uint32_t remote_ice_generation() {
+    return remote_ice_parameters_.empty()
+               ? 0
+               : static_cast<uint32_t>(remote_ice_parameters_.size() - 1);
+  }
 
   P2PTransport* transport_;
   PortAllocator* allocator_;
@@ -239,25 +269,24 @@ class P2PTransportChannel : public TransportChannelImpl,
   Connection* pending_best_connection_;
   std::vector<RemoteCandidate> remote_candidates_;
   bool sort_dirty_;  // indicates whether another sort is needed right now
-  bool was_writable_;
   bool had_connection_ = false;  // if connections_ has ever been nonempty
   typedef std::map<rtc::Socket::Option, int> OptionMap;
   OptionMap options_;
   std::string ice_ufrag_;
   std::string ice_pwd_;
-  std::string remote_ice_ufrag_;
-  std::string remote_ice_pwd_;
+  std::vector<IceParameters> remote_ice_parameters_;
   IceMode remote_ice_mode_;
   IceRole ice_role_;
   uint64_t tiebreaker_;
-  uint32_t remote_candidate_generation_;
   IceGatheringState gathering_state_;
 
   int check_receiving_delay_;
   int receiving_timeout_;
+  int backup_connection_ping_interval_;
   uint32_t last_ping_sent_ms_ = 0;
   bool gather_continually_ = false;
   int weak_ping_delay_ = WEAK_PING_DELAY;
+  TransportChannelState state_ = TransportChannelState::STATE_INIT;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(P2PTransportChannel);
 };

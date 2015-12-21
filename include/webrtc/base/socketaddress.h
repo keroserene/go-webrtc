@@ -141,7 +141,6 @@ class SocketAddress {
 
   // Determines whether the hostname has been resolved to an IP.
   bool IsUnresolvedIP() const;
-  inline bool IsUnresolved() const { return IsUnresolvedIP(); }  // deprecated
 
   // Determines whether this address is identical to the given one.
   bool operator ==(const SocketAddress& addr) const;
@@ -176,16 +175,6 @@ class SocketAddress {
   // written to the sockaddr_storage, or zero on failure.
   size_t ToDualStackSockAddrStorage(sockaddr_storage* saddr) const;
   size_t ToSockAddrStorage(sockaddr_storage* saddr) const;
-
-  // Converts the IP address given in dotted form into compact form.
-  // Only dotted names (A.B.C.D) are  converted.
-  // Output integer is returned in host byte order.
-  // TODO: Deprecate, replace wth agnostic versions.
-  static bool StringToIP(const std::string& str, uint32_t* ip);
-  static uint32_t StringToIP(const std::string& str);
-
-  // Converts the IP address given in printable form into an IPAddress.
-  static bool StringToIP(const std::string& str, IPAddress* ip);
 
  private:
   std::string hostname_;

@@ -129,17 +129,12 @@ class ChannelManager : public rtc::MessageHandler,
 
   bool GetOutputVolume(int* level);
   bool SetOutputVolume(int level);
-  bool SetDefaultVideoEncoderConfig(const VideoEncoderConfig& config);
   // RTX will be enabled/disabled in engines that support it. The supporting
   // engines will start offering an RTX codec. Must be called before Init().
   bool SetVideoRtxEnabled(bool enable);
 
   // Starts/stops the local microphone and enables polling of the input level.
   bool capturing() const { return capturing_; }
-
-  // Configures the logging output of the mediaengine(s).
-  void SetVoiceLogging(int level, const char* filter);
-  void SetVideoLogging(int level, const char* filter);
 
   // Gets capturer's supported formats in a thread safe manner
   std::vector<cricket::VideoFormat> GetSupportedFormats(
@@ -181,11 +176,6 @@ class ChannelManager : public rtc::MessageHandler,
 
   sigslot::signal2<VideoCapturer*, CaptureState> SignalVideoCaptureStateChange;
 
- protected:
-  // Adds non-transient parameters which can only be changed through the
-  // options store.
-  bool SetAudioOptions(const AudioOptions& options);
-
  private:
   typedef std::vector<VoiceChannel*> VoiceChannels;
   typedef std::vector<VideoChannel*> VideoChannels;
@@ -217,8 +207,6 @@ class ChannelManager : public rtc::MessageHandler,
                                    bool rtcp,
                                    DataChannelType data_channel_type);
   void DestroyDataChannel_w(DataChannel* data_channel);
-  bool SetAudioOptions_w(const AudioOptions& options,
-                         const Device* in_dev, const Device* out_dev);
   void OnVideoCaptureStateChange(VideoCapturer* capturer,
                                  CaptureState result);
   void GetSupportedFormats_w(
@@ -238,9 +226,7 @@ class ChannelManager : public rtc::MessageHandler,
   VideoChannels video_channels_;
   DataChannels data_channels_;
 
-  AudioOptions audio_options_;
   int audio_output_volume_;
-  VideoEncoderConfig default_video_encoder_config_;
   VideoRenderer* local_renderer_;
   bool enable_rtx_;
 

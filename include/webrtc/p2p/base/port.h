@@ -54,6 +54,10 @@ extern const char TCPTYPE_SIMOPEN_STR[];
 // it.
 const uint32_t MIN_CONNECTION_LIFETIME = 10 * 1000;  // 10 seconds.
 
+// A connection will be declared dead if it has not received anything for this
+// long.
+const uint32_t DEAD_CONNECTION_RECEIVE_TIMEOUT = 30 * 1000;  // 30 seconds.
+
 // The timeout duration when a connection does not receive anything.
 const uint32_t WEAK_CONNECTION_RECEIVE_TIMEOUT = 2500;  // 2.5 seconds
 
@@ -442,7 +446,6 @@ class Connection : public rtc::MessageHandler,
   bool connected() const { return connected_; }
   bool weak() const { return !(writable() && receiving() && connected()); }
   bool active() const {
-    // TODO(honghaiz): Move from using |write_state_| to using |pruned_|.
     return write_state_ != STATE_WRITE_TIMEOUT;
   }
   // A connection is dead if it can be safely deleted.
@@ -510,6 +513,9 @@ class Connection : public rtc::MessageHandler,
   // Makes the connection go away.
   void Destroy();
 
+  // Makes the connection go away, in a failed state.
+  void FailAndDestroy();
+
   // Checks that the state of this connection is up-to-date.  The argument is
   // the current time, which is compared against various timeouts.
   void UpdateState(uint32_t now);
@@ -518,11 +524,16 @@ class Connection : public rtc::MessageHandler,
   uint32_t last_ping_sent() const { return last_ping_sent_; }
   void Ping(uint32_t now);
   void ReceivedPingResponse();
+  uint32_t last_ping_response_received() const {
+    return last_ping_response_received_;
+  }
 
   // Called whenever a valid ping is received on this connection.  This is
   // public because the connection intercepts the first ping for us.
   uint32_t last_ping_received() const { return last_ping_received_; }
   void ReceivedPing();
+  // Handles the binding request; sends a response if this is a valid request.
+  void HandleBindingRequest(IceMessage* msg);
 
   // Debugging description of this connection
   std::string ToDebugId() const;
@@ -557,7 +568,7 @@ class Connection : public rtc::MessageHandler,
 
   // Returns the last received time of any data, stun request, or stun
   // response in milliseconds
-  uint32_t last_received();
+  uint32_t last_received() const;
 
  protected:
   enum { MSG_DELETE = 0, MSG_FIRST_AVAILABLE };
@@ -628,17 +639,18 @@ class Connection : public rtc::MessageHandler,
   friend class ConnectionRequest;
 };
 
-// ProxyConnection defers all the interesting work to the port
+// ProxyConnection defers all the interesting work to the port.
 class ProxyConnection : public Connection {
  public:
-  ProxyConnection(Port* port, size_t index, const Candidate& candidate);
+  ProxyConnection(Port* port, size_t index, const Candidate& remote_candidate);
 
-  virtual int Send(const void* data, size_t size,
-                   const rtc::PacketOptions& options);
-  virtual int GetError() { return error_; }
+  int Send(const void* data,
+           size_t size,
+           const rtc::PacketOptions& options) override;
+  int GetError() override { return error_; }
 
  private:
-  int error_;
+  int error_ = 0;
 };
 
 }  // namespace cricket

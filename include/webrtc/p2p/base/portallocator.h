@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "webrtc/p2p/base/port.h"
 #include "webrtc/p2p/base/portinterface.h"
 #include "webrtc/base/helpers.h"
 #include "webrtc/base/proxyinfo.h"
@@ -46,10 +47,14 @@ enum {
   PORTALLOCATOR_ENABLE_SHARED_UFRAG = 0x80,
   PORTALLOCATOR_ENABLE_SHARED_SOCKET = 0x100,
   PORTALLOCATOR_ENABLE_STUN_RETRANSMIT_ATTRIBUTE = 0x200,
+  // When specified, we'll only allocate the STUN candidate for the public
+  // interface as seen by regular http traffic and the HOST candidate associated
+  // with the default local interface.
   PORTALLOCATOR_DISABLE_ADAPTER_ENUMERATION = 0x400,
-  // When specified, a loopback candidate will be generated if
-  // PORTALLOCATOR_DISABLE_ADAPTER_ENUMERATION is specified.
-  PORTALLOCATOR_ENABLE_LOCALHOST_CANDIDATE = 0x800,
+  // When specified along with PORTALLOCATOR_DISABLE_ADAPTER_ENUMERATION, the
+  // default local candidate mentioned above will not be allocated. Only the
+  // STUN candidate will be.
+  PORTALLOCATOR_DISABLE_DEFAULT_LOCAL_CANDIDATE = 0x800,
   // Disallow use of UDP when connecting to a relay server. Since proxy servers
   // usually don't handle UDP, using UDP will leak the IP address.
   PORTALLOCATOR_DISABLE_UDP_RELAY = 0x1000,
@@ -69,6 +74,27 @@ enum {
   CF_REFLEXIVE = 0x2,
   CF_RELAY = 0x4,
   CF_ALL = 0x7,
+};
+
+// TODO(deadbeef): Rename to TurnCredentials (and username to ufrag).
+struct RelayCredentials {
+  RelayCredentials() {}
+  RelayCredentials(const std::string& username, const std::string& password)
+      : username(username), password(password) {}
+
+  std::string username;
+  std::string password;
+};
+
+typedef std::vector<ProtocolAddress> PortList;
+// TODO(deadbeef): Rename to TurnServerConfig.
+struct RelayServerConfig {
+  RelayServerConfig(RelayType type) : type(type), priority(0) {}
+
+  RelayType type;
+  PortList ports;
+  RelayCredentials credentials;
+  int priority;
 };
 
 class PortAllocatorSession : public sigslot::has_slots<> {
@@ -136,6 +162,11 @@ class PortAllocator : public sigslot::has_slots<> {
     // This will allow us to have old behavior on non webrtc clients.
   }
   virtual ~PortAllocator() {}
+
+  // Set STUN and TURN servers to be used in future sessions.
+  virtual void SetIceServers(
+      const ServerAddresses& stun_servers,
+      const std::vector<RelayServerConfig>& turn_servers) = 0;
 
   PortAllocatorSession* CreateSession(
       const std::string& sid,

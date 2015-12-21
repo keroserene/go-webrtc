@@ -69,6 +69,7 @@
 #define TALK_APP_WEBRTC_PEERCONNECTIONINTERFACE_H_
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "talk/app/webrtc/datachannelinterface.h"
@@ -86,6 +87,7 @@
 #include "webrtc/base/rtccertificate.h"
 #include "webrtc/base/sslstreamadapter.h"
 #include "webrtc/base/socketaddress.h"
+#include "webrtc/p2p/base/portallocator.h"
 
 namespace rtc {
 class SSLIdentity;
@@ -93,7 +95,6 @@ class Thread;
 }
 
 namespace cricket {
-class PortAllocator;
 class WebRtcVideoDecoderFactory;
 class WebRtcVideoEncoderFactory;
 }
@@ -248,28 +249,27 @@ class PeerConnectionInterface : public rtc::RefCountInterface {
     // TODO(pthatcher): Rename this ice_servers, but update Chromium
     // at the same time.
     IceServers servers;
-    // A localhost candidate is signaled whenever a candidate with the any
-    // address is allocated.
-    bool enable_localhost_ice_candidate;
     BundlePolicy bundle_policy;
     RtcpMuxPolicy rtcp_mux_policy;
     TcpCandidatePolicy tcp_candidate_policy;
     int audio_jitter_buffer_max_packets;
     bool audio_jitter_buffer_fast_accelerate;
-    int ice_connection_receiving_timeout;
+    int ice_connection_receiving_timeout;         // ms
+    int ice_backup_candidate_pair_ping_interval;  // ms
     ContinualGatheringPolicy continual_gathering_policy;
     std::vector<rtc::scoped_refptr<rtc::RTCCertificate>> certificates;
-
+    bool disable_prerenderer_smoothing;
     RTCConfiguration()
         : type(kAll),
-          enable_localhost_ice_candidate(false),
           bundle_policy(kBundlePolicyBalanced),
           rtcp_mux_policy(kRtcpMuxPolicyNegotiate),
           tcp_candidate_policy(kTcpCandidatePolicyEnabled),
           audio_jitter_buffer_max_packets(kAudioJitterBufferMaxPackets),
           audio_jitter_buffer_fast_accelerate(false),
           ice_connection_receiving_timeout(kUndefined),
-          continual_gathering_policy(GATHER_ONCE) {}
+          ice_backup_candidate_pair_ping_interval(kUndefined),
+          continual_gathering_policy(GATHER_ONCE),
+          disable_prerenderer_smoothing(false) {}
   };
 
   struct RTCOfferAnswerOptions {
@@ -337,6 +337,15 @@ class PeerConnectionInterface : public rtc::RefCountInterface {
       AudioTrackInterface* track) = 0;
 
   // TODO(deadbeef): Make these pure virtual once all subclasses implement them.
+  // |kind| must be "audio" or "video".
+  // |stream_id| is used to populate the msid attribute; if empty, one will
+  // be generated automatically.
+  virtual rtc::scoped_refptr<RtpSenderInterface> CreateSender(
+      const std::string& kind,
+      const std::string& stream_id) {
+    return rtc::scoped_refptr<RtpSenderInterface>();
+  }
+
   virtual std::vector<rtc::scoped_refptr<RtpSenderInterface>> GetSenders()
       const {
     return std::vector<rtc::scoped_refptr<RtpSenderInterface>>();
@@ -562,13 +571,27 @@ class PeerConnectionFactoryInterface : public rtc::RefCountInterface {
 
   virtual void SetOptions(const Options& options) = 0;
 
-  virtual rtc::scoped_refptr<PeerConnectionInterface>
-      CreatePeerConnection(
-          const PeerConnectionInterface::RTCConfiguration& configuration,
-          const MediaConstraintsInterface* constraints,
-          PortAllocatorFactoryInterface* allocator_factory,
-          rtc::scoped_ptr<DtlsIdentityStoreInterface> dtls_identity_store,
-          PeerConnectionObserver* observer) = 0;
+  // TODO(deadbeef): Remove this overload of CreatePeerConnection once clients
+  // are moved to the new version.
+  virtual rtc::scoped_refptr<PeerConnectionInterface> CreatePeerConnection(
+      const PeerConnectionInterface::RTCConfiguration& configuration,
+      const MediaConstraintsInterface* constraints,
+      PortAllocatorFactoryInterface* allocator_factory,
+      rtc::scoped_ptr<DtlsIdentityStoreInterface> dtls_identity_store,
+      PeerConnectionObserver* observer) {
+    return nullptr;
+  }
+
+  // TODO(deadbeef): Make this pure virtual once it's implemented by all
+  // subclasses.
+  virtual rtc::scoped_refptr<PeerConnectionInterface> CreatePeerConnection(
+      const PeerConnectionInterface::RTCConfiguration& configuration,
+      const MediaConstraintsInterface* constraints,
+      rtc::scoped_ptr<cricket::PortAllocator> allocator,
+      rtc::scoped_ptr<DtlsIdentityStoreInterface> dtls_identity_store,
+      PeerConnectionObserver* observer) {
+    return nullptr;
+  }
 
   // TODO(hbos): Remove below version after clients are updated to above method.
   // In latest W3C WebRTC draft, PC constructor will take RTCConfiguration,
@@ -585,7 +608,7 @@ class PeerConnectionFactoryInterface : public rtc::RefCountInterface {
       PeerConnectionInterface::RTCConfiguration rtc_config;
       rtc_config.servers = servers;
       return CreatePeerConnection(rtc_config, constraints, allocator_factory,
-                                  dtls_identity_store.Pass(), observer);
+                                  std::move(dtls_identity_store), observer);
   }
 
   virtual rtc::scoped_refptr<MediaStreamInterface>

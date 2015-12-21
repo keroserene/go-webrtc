@@ -24,6 +24,7 @@
 #define WEBRTC_ARCH_64_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__aarch64__)
+#define WEBRTC_ARCH_ARM_FAMILY
 #define WEBRTC_ARCH_64_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(_M_IX86) || defined(__i386__)
@@ -32,16 +33,15 @@
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__ARMEL__)
-// TODO(ajm): We'd prefer to control platform defines here, but this is
-// currently provided by the Android makefiles. Commented to avoid duplicate
-// definition warnings.
-//#define WEBRTC_ARCH_ARM
-// TODO(ajm): Chromium uses the following two defines. Should we switch?
-//#define WEBRTC_ARCH_ARM_FAMILY
-//#define WEBRTC_ARCH_ARMEL
+#define WEBRTC_ARCH_ARM_FAMILY
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__MIPSEL__)
+#if defined(__LP64__)
+#define WEBRTC_ARCH_MIPS64_FAMILY
+#else
+#define WEBRTC_ARCH_MIPS_FAMILY
+#endif
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__pnacl__)
@@ -68,10 +68,11 @@
 // Annotate a function indicating the caller must examine the return value.
 // Use like:
 //   int foo() WARN_UNUSED_RESULT;
+// To explicitly ignore a result, see |ignore_result()| in <base/macros.h>.
 // TODO(ajm): Hack to avoid multiple definitions until the base/ of webrtc and
 // libjingle are merged.
 #if !defined(WARN_UNUSED_RESULT)
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #define WARN_UNUSED_RESULT

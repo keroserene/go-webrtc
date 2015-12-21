@@ -126,327 +126,6 @@ class VideoEngineOverride : public T {
   }
 };
 
-template<class E>
-class VideoEngineTest : public testing::Test {
- protected:
-  // Tests starting and stopping the engine, and creating a channel.
-  void StartupShutdown() {
-    EXPECT_TRUE(engine_.Init(rtc::Thread::Current()));
-    cricket::VideoMediaChannel* channel = engine_.CreateChannel(NULL);
-    EXPECT_TRUE(channel != NULL);
-    delete channel;
-    engine_.Terminate();
-  }
-
-  void ConstrainNewCodecBody() {
-    cricket::VideoCodec empty, in, out;
-    cricket::VideoCodec max_settings(engine_.codecs()[0].id,
-                                     engine_.codecs()[0].name,
-                                     1280, 800, 30, 0);
-
-    // set max settings of 1280x800x30
-    EXPECT_TRUE(engine_.SetDefaultEncoderConfig(
-        cricket::VideoEncoderConfig(max_settings)));
-
-    // don't constrain the max resolution
-    in = max_settings;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // constrain resolution greater than the max and wider aspect,
-    // picking best aspect (16:10)
-    in.width = 1380;
-    in.height = 800;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 720, 30);
-
-    // constrain resolution greater than the max and narrow aspect,
-    // picking best aspect (16:9)
-    in.width = 1280;
-    in.height = 740;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 720, 30);
-
-    // constrain resolution greater than the max, picking equal aspect (4:3)
-    in.width = 1280;
-    in.height = 960;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 800, 30);
-
-    // constrain resolution greater than the max, picking equal aspect (16:10)
-    in.width = 1280;
-    in.height = 800;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 800, 30);
-
-    // reduce max settings to 640x480x30
-    max_settings.width = 640;
-    max_settings.height = 480;
-    EXPECT_TRUE(engine_.SetDefaultEncoderConfig(
-        cricket::VideoEncoderConfig(max_settings)));
-
-    // don't constrain the max resolution
-    in = max_settings;
-    in.width = 640;
-    in.height = 480;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // keep 16:10 if they request it
-    in.height = 400;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // don't constrain lesser 4:3 resolutions
-    in.width = 320;
-    in.height = 240;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // don't constrain lesser 16:10 resolutions
-    in.width = 320;
-    in.height = 200;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // requested resolution of 0x0 succeeds
-    in.width = 0;
-    in.height = 0;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // constrain resolution lesser than the max and wider aspect,
-    // picking best aspect (16:9)
-    in.width = 350;
-    in.height = 201;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 320, 180, 30);
-
-    // constrain resolution greater than the max and narrow aspect,
-    // picking best aspect (4:3)
-    in.width = 350;
-    in.height = 300;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 320, 240, 30);
-
-    // constrain resolution greater than the max and wider aspect,
-    // picking best aspect (16:9)
-    in.width = 1380;
-    in.height = 800;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 360, 30);
-
-    // constrain resolution greater than the max and narrow aspect,
-    // picking best aspect (4:3)
-    in.width = 1280;
-    in.height = 900;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 480, 30);
-
-    // constrain resolution greater than the max, picking equal aspect (4:3)
-    in.width = 1280;
-    in.height = 960;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 480, 30);
-
-    // constrain resolution greater than the max, picking equal aspect (16:10)
-    in.width = 1280;
-    in.height = 800;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 400, 30);
-
-    // constrain res & fps greater than the max
-    in.framerate = 50;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 400, 30);
-
-    // reduce max settings to 160x100x10
-    max_settings.width = 160;
-    max_settings.height = 100;
-    max_settings.framerate = 10;
-    EXPECT_TRUE(engine_.SetDefaultEncoderConfig(
-        cricket::VideoEncoderConfig(max_settings)));
-
-    // constrain res & fps to new max
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 160, 100, 10);
-
-    // allow 4:3 "comparable" resolutions
-    in.width = 160;
-    in.height = 120;
-    in.framerate = 10;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 160, 120, 10);
-  }
-
-  // This is the new way of constraining codec size, where we no longer maintain
-  // a list of the supported formats. Instead, CanSendCodec will just downscale
-  // the resolution by 2 until the width is below clamp.
-  void ConstrainNewCodec2Body() {
-    cricket::VideoCodec empty, in, out;
-    cricket::VideoCodec max_settings(engine_.codecs()[0].id,
-                                     engine_.codecs()[0].name,
-                                     1280, 800, 30, 0);
-
-    // Set max settings of 1280x800x30
-    EXPECT_TRUE(engine_.SetDefaultEncoderConfig(
-        cricket::VideoEncoderConfig(max_settings)));
-
-    // Don't constrain the max resolution
-    in = max_settings;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // Constrain resolution greater than the max width.
-    in.width = 1380;
-    in.height = 800;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 690, 400, 30);
-
-    // Don't constrain resolution when only the height is greater than max.
-    in.width = 960;
-    in.height = 1280;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 960, 1280, 30);
-
-    // Don't constrain smaller format.
-    in.width = 640;
-    in.height = 480;
-    EXPECT_TRUE(engine_.CanSendCodec(in, empty, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 480, 30);
-  }
-
-  void ConstrainRunningCodecBody() {
-    cricket::VideoCodec in, out, current;
-    cricket::VideoCodec max_settings(engine_.codecs()[0].id,
-                                     engine_.codecs()[0].name,
-                                     1280, 800, 30, 0);
-
-    // set max settings of 1280x960x30
-    EXPECT_TRUE(engine_.SetDefaultEncoderConfig(
-        cricket::VideoEncoderConfig(max_settings)));
-
-    // establish current call at 1280x800x30 (16:10)
-    current = max_settings;
-    current.height = 800;
-
-    // Don't constrain current resolution
-    in = current;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // requested resolution of 0x0 succeeds
-    in.width = 0;
-    in.height = 0;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // Reduce an intermediate resolution down to the next lowest one, preserving
-    // aspect ratio.
-    in.width = 800;
-    in.height = 600;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 400, 30);
-
-    // Clamping by aspect ratio, but still never return a dimension higher than
-    // requested.
-    in.width = 1280;
-    in.height = 720;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 720, 30);
-
-    in.width = 1279;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 960, 600, 30);
-
-    in.width = 1281;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 720, 30);
-
-    // Clamp large resolutions down, always preserving aspect
-    in.width = 1920;
-    in.height = 1080;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 800, 30);
-
-    in.width = 1921;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 800, 30);
-
-    in.width = 1919;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 1280, 800, 30);
-
-    // reduce max settings to 640x480x30
-    max_settings.width = 640;
-    max_settings.height = 480;
-    EXPECT_TRUE(engine_.SetDefaultEncoderConfig(
-        cricket::VideoEncoderConfig(max_settings)));
-
-    // establish current call at 640x400x30 (16:10)
-    current = max_settings;
-    current.height = 400;
-
-    // Don't constrain current resolution
-    in = current;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // requested resolution of 0x0 succeeds
-    in.width = 0;
-    in.height = 0;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED2(IsEqualCodec, out, in);
-
-    // Reduce an intermediate resolution down to the next lowest one, preserving
-    // aspect ratio.
-    in.width = 400;
-    in.height = 300;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 320, 200, 30);
-
-    // Clamping by aspect ratio, but still never return a dimension higher than
-    // requested.
-    in.width = 640;
-    in.height = 360;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 360, 30);
-
-    in.width = 639;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 480, 300, 30);
-
-    in.width = 641;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 360, 30);
-
-    // Clamp large resolutions down, always preserving aspect
-    in.width = 1280;
-    in.height = 800;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 400, 30);
-
-    in.width = 1281;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 400, 30);
-
-    in.width = 1279;
-    EXPECT_TRUE(engine_.CanSendCodec(in, current, &out));
-    EXPECT_PRED4(IsEqualRes, out, 640, 400, 30);
-
-    // Should fail for any that are smaller than our supported formats
-    in.width = 80;
-    in.height = 80;
-    EXPECT_FALSE(engine_.CanSendCodec(in, current, &out));
-
-    in.height = 50;
-    EXPECT_FALSE(engine_.CanSendCodec(in, current, &out));
-  }
-
-  VideoEngineOverride<E> engine_;
-  rtc::scoped_ptr<cricket::FakeVideoCapturer> video_capturer_;
-};
-
 template<class E, class C>
 class VideoMediaChannelTest : public testing::Test,
                               public sigslot::has_slots<> {
@@ -875,7 +554,7 @@ class VideoMediaChannelTest : public testing::Test,
     EXPECT_TRUE(SetOneCodec(DefaultCodec()));
     cricket::VideoSendParameters parameters;
     parameters.codecs.push_back(DefaultCodec());
-    parameters.options.conference_mode.Set(true);
+    parameters.options.conference_mode = rtc::Optional<bool>(true);
     EXPECT_TRUE(channel_->SetSendParameters(parameters));
     EXPECT_TRUE(SetSend(true));
     EXPECT_TRUE(channel_->AddRecvStream(
@@ -926,7 +605,7 @@ class VideoMediaChannelTest : public testing::Test,
     EXPECT_TRUE(SetOneCodec(DefaultCodec()));
     cricket::VideoSendParameters parameters;
     parameters.codecs.push_back(DefaultCodec());
-    parameters.options.conference_mode.Set(true);
+    parameters.options.conference_mode = rtc::Optional<bool>(true);
     EXPECT_TRUE(channel_->SetSendParameters(parameters));
     EXPECT_TRUE(channel_->AddRecvStream(
         cricket::StreamParams::CreateLegacy(kSsrc)));
@@ -1009,8 +688,10 @@ class VideoMediaChannelTest : public testing::Test,
     rtc::scoped_ptr<const rtc::Buffer> p(GetRtpPacket(0));
     ParseRtpPacket(p.get(), NULL, NULL, NULL, NULL, &ssrc, NULL);
     EXPECT_EQ(kSsrc, ssrc);
-    EXPECT_EQ(NumRtpPackets(), NumRtpPackets(ssrc));
-    EXPECT_EQ(NumRtpBytes(), NumRtpBytes(ssrc));
+    // Packets are being paced out, so these can mismatch between the first and
+    // second call to NumRtpPackets until pending packets are paced out.
+    EXPECT_EQ_WAIT(NumRtpPackets(), NumRtpPackets(ssrc), kTimeout);
+    EXPECT_EQ_WAIT(NumRtpBytes(), NumRtpBytes(ssrc), kTimeout);
     EXPECT_EQ(1, NumSentSsrcs());
     EXPECT_EQ(0, NumRtpPackets(kSsrc - 1));
     EXPECT_EQ(0, NumRtpBytes(kSsrc - 1));
@@ -1031,8 +712,10 @@ class VideoMediaChannelTest : public testing::Test,
     rtc::scoped_ptr<const rtc::Buffer> p(GetRtpPacket(0));
     ParseRtpPacket(p.get(), NULL, NULL, NULL, NULL, &ssrc, NULL);
     EXPECT_EQ(999u, ssrc);
-    EXPECT_EQ(NumRtpPackets(), NumRtpPackets(ssrc));
-    EXPECT_EQ(NumRtpBytes(), NumRtpBytes(ssrc));
+    // Packets are being paced out, so these can mismatch between the first and
+    // second call to NumRtpPackets until pending packets are paced out.
+    EXPECT_EQ_WAIT(NumRtpPackets(), NumRtpPackets(ssrc), kTimeout);
+    EXPECT_EQ_WAIT(NumRtpBytes(), NumRtpBytes(ssrc), kTimeout);
     EXPECT_EQ(1, NumSentSsrcs());
     EXPECT_EQ(0, NumRtpPackets(kSsrc));
     EXPECT_EQ(0, NumRtpBytes(kSsrc));
@@ -1236,7 +919,7 @@ class VideoMediaChannelTest : public testing::Test,
     EXPECT_TRUE(SetDefaultCodec());
     cricket::VideoSendParameters parameters;
     parameters.codecs.push_back(DefaultCodec());
-    parameters.options.conference_mode.Set(true);
+    parameters.options.conference_mode = rtc::Optional<bool>(true);
     EXPECT_TRUE(channel_->SetSendParameters(parameters));
     EXPECT_TRUE(SetSend(true));
     EXPECT_TRUE(channel_->AddRecvStream(
@@ -1746,8 +1429,8 @@ class VideoMediaChannelTest : public testing::Test,
   // Tests that we can send and receive frames with early receive.
   void TwoStreamsSendAndUnsignalledRecv(const cricket::VideoCodec& codec) {
     cricket::VideoSendParameters parameters;
-    parameters.options.conference_mode.Set(true);
-    parameters.options.unsignalled_recv_stream_limit.Set(1);
+    parameters.options.conference_mode = rtc::Optional<bool>(true);
+    parameters.options.unsignalled_recv_stream_limit = rtc::Optional<int>(1);
     EXPECT_TRUE(channel_->SetSendParameters(parameters));
     SetUpSecondStreamWithNoRecv();
     // Test sending and receiving on first stream.
@@ -1780,8 +1463,8 @@ class VideoMediaChannelTest : public testing::Test,
   void TwoStreamsAddAndRemoveUnsignalledRecv(
       const cricket::VideoCodec& codec) {
     cricket::VideoOptions vmo;
-    vmo.conference_mode.Set(true);
-    vmo.unsignalled_recv_stream_limit.Set(1);
+    vmo.conference_mode = rtc::Optional<bool>(true);
+    vmo.unsignalled_recv_stream_limit = rtc::Optional<int>(1);
     EXPECT_TRUE(channel_->SetOptions(vmo));
     SetUpSecondStreamWithNoRecv();
     // Sending and receiving on first stream.

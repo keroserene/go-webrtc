@@ -79,8 +79,9 @@ class TransportChannel : public sigslot::has_slots<> {
   // Emitted when the TransportChannel's ability to send has changed.
   sigslot::signal1<TransportChannel*> SignalReadyToSend;
   sigslot::signal1<TransportChannel*> SignalReceivingState;
-  // Emitted when the DtlsTransportState has changed.
-  sigslot::signal1<TransportChannel*> SignalDtlsState;
+  // Emitted whenever DTLS-SRTP is setup which will require setting up a new
+  // SRTP context.
+  sigslot::signal2<TransportChannel*, DtlsTransportState> SignalDtlsState;
 
   // Attempts to send the given packet.  The return value is < 0 on failure.
   // TODO: Remove the default argument once channel code is updated.
@@ -107,14 +108,17 @@ class TransportChannel : public sigslot::has_slots<> {
   // Default implementation.
   virtual bool GetSslRole(rtc::SSLRole* role) const = 0;
 
-  // Sets up the ciphers to use for DTLS-SRTP.
-  virtual bool SetSrtpCiphers(const std::vector<std::string>& ciphers) = 0;
+  // Sets up the ciphers to use for DTLS-SRTP. TODO(guoweis): Make this pure
+  // virtual once all dependencies have implementation.
+  virtual bool SetSrtpCryptoSuites(const std::vector<int>& ciphers);
+
+  // Keep the original one for backward compatibility until all dependencies
+  // move away. TODO(guoweis): Remove this function.
+  virtual bool SetSrtpCiphers(const std::vector<std::string>& ciphers);
 
   // Finds out which DTLS-SRTP cipher was negotiated.
   // TODO(guoweis): Remove this once all dependencies implement this.
-  virtual bool GetSrtpCryptoSuite(std::string* cipher) {
-    return false;
-  }
+  virtual bool GetSrtpCryptoSuite(int* cipher) { return false; }
 
   // Finds out which DTLS cipher was negotiated.
   // TODO(guoweis): Remove this once all dependencies implement this.
@@ -154,9 +158,6 @@ class TransportChannel : public sigslot::has_slots<> {
   std::string ToString() const;
 
  protected:
-  // TODO(honghaiz): Remove this once chromium's unit tests no longer call it.
-  void set_readable(bool readable) { set_receiving(readable); }
-
   // Sets the writable state, signaling if necessary.
   void set_writable(bool writable);
 

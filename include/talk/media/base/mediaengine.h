@@ -40,8 +40,8 @@
 #include "talk/media/base/mediacommon.h"
 #include "talk/media/base/videocapturer.h"
 #include "talk/media/base/videocommon.h"
-#include "talk/media/base/voiceprocessor.h"
 #include "talk/media/devices/devicemanager.h"
+#include "webrtc/audio_state.h"
 #include "webrtc/base/fileutils.h"
 #include "webrtc/base/sigslotrepeater.h"
 
@@ -51,12 +51,15 @@
 
 namespace webrtc {
 class Call;
-class VoiceEngine;
 }
 
 namespace cricket {
 
 class VideoCapturer;
+
+struct RtpCapabilities {
+  std::vector<RtpHeaderExtension> header_extensions;
+};
 
 // MediaEngineInterface is an abstraction of a media engine which can be
 // subclassed to support different media componentry backends.
@@ -72,7 +75,7 @@ class MediaEngineInterface {
   // Shuts down the engine.
   virtual void Terminate() = 0;
   // TODO(solenberg): Remove once VoE API refactoring is done.
-  virtual webrtc::VoiceEngine* GetVoE() = 0;
+  virtual rtc::scoped_refptr<webrtc::AudioState> GetAudioState() const = 0;
 
   // MediaChannel creation
   // Creates a voice media channel. Returns NULL on failure.
@@ -85,20 +88,6 @@ class MediaEngineInterface {
       webrtc::Call* call,
       const VideoOptions& options) = 0;
 
-  // Configuration
-  // Gets global audio options.
-  virtual AudioOptions GetAudioOptions() const = 0;
-  // Sets global audio options. "options" are from AudioOptions, above.
-  virtual bool SetAudioOptions(const AudioOptions& options) = 0;
-  // Sets the default (maximum) codec/resolution and encoder option to capture
-  // and encode video.
-  virtual bool SetDefaultVideoEncoderConfig(const VideoEncoderConfig& config)
-      = 0;
-
-  // Device selection
-  virtual bool SetSoundDevices(const Device* in_device,
-                               const Device* out_device) = 0;
-
   // Device configuration
   // Gets the current speaker volume, as a value between 0 and 255.
   virtual bool GetOutputVolume(int* level) = 0;
@@ -109,15 +98,9 @@ class MediaEngineInterface {
   virtual int GetInputLevel() = 0;
 
   virtual const std::vector<AudioCodec>& audio_codecs() = 0;
-  virtual const std::vector<RtpHeaderExtension>&
-      audio_rtp_header_extensions() = 0;
+  virtual RtpCapabilities GetAudioCapabilities() = 0;
   virtual const std::vector<VideoCodec>& video_codecs() = 0;
-  virtual const std::vector<RtpHeaderExtension>&
-      video_rtp_header_extensions() = 0;
-
-  // Logging control
-  virtual void SetVoiceLogging(int min_sev, const char* filter) = 0;
-  virtual void SetVideoLogging(int min_sev, const char* filter) = 0;
+  virtual RtpCapabilities GetVideoCapabilities() = 0;
 
   // Starts AEC dump using existing file.
   virtual bool StartAecDump(rtc::PlatformFile file) = 0;
@@ -167,8 +150,8 @@ class CompositeMediaEngine : public MediaEngineInterface {
     voice_.Terminate();
   }
 
-  virtual webrtc::VoiceEngine* GetVoE() {
-    return voice_.GetVoE();
+  virtual rtc::scoped_refptr<webrtc::AudioState> GetAudioState() const {
+    return voice_.GetAudioState();
   }
   virtual VoiceMediaChannel* CreateChannel(webrtc::Call* call,
                                            const AudioOptions& options) {
@@ -177,21 +160,6 @@ class CompositeMediaEngine : public MediaEngineInterface {
   virtual VideoMediaChannel* CreateVideoChannel(webrtc::Call* call,
                                                 const VideoOptions& options) {
     return video_.CreateChannel(call, options);
-  }
-
-  virtual AudioOptions GetAudioOptions() const {
-    return voice_.GetOptions();
-  }
-  virtual bool SetAudioOptions(const AudioOptions& options) {
-    return voice_.SetOptions(options);
-  }
-  virtual bool SetDefaultVideoEncoderConfig(const VideoEncoderConfig& config) {
-    return video_.SetDefaultEncoderConfig(config);
-  }
-
-  virtual bool SetSoundDevices(const Device* in_device,
-                               const Device* out_device) {
-    return voice_.SetDevices(in_device, out_device);
   }
 
   virtual bool GetOutputVolume(int* level) {
@@ -207,21 +175,14 @@ class CompositeMediaEngine : public MediaEngineInterface {
   virtual const std::vector<AudioCodec>& audio_codecs() {
     return voice_.codecs();
   }
-  virtual const std::vector<RtpHeaderExtension>& audio_rtp_header_extensions() {
-    return voice_.rtp_header_extensions();
+  virtual RtpCapabilities GetAudioCapabilities() {
+    return voice_.GetCapabilities();
   }
   virtual const std::vector<VideoCodec>& video_codecs() {
     return video_.codecs();
   }
-  virtual const std::vector<RtpHeaderExtension>& video_rtp_header_extensions() {
-    return video_.rtp_header_extensions();
-  }
-
-  virtual void SetVoiceLogging(int min_sev, const char* filter) {
-    voice_.SetLogging(min_sev, filter);
-  }
-  virtual void SetVideoLogging(int min_sev, const char* filter) {
-    video_.SetLogging(min_sev, filter);
+  virtual RtpCapabilities GetVideoCapabilities() {
+    return video_.GetCapabilities();
   }
 
   virtual bool StartAecDump(rtc::PlatformFile file) {
@@ -242,70 +203,6 @@ class CompositeMediaEngine : public MediaEngineInterface {
   VOICE voice_;
   VIDEO video_;
 };
-
-// NullVoiceEngine can be used with CompositeMediaEngine in the case where only
-// a video engine is desired.
-class NullVoiceEngine {
- public:
-  bool Init(rtc::Thread* worker_thread) { return true; }
-  void Terminate() {}
-  // If you need this to return an actual channel, use FakeMediaEngine instead.
-  VoiceMediaChannel* CreateChannel(const AudioOptions& options) {
-    return nullptr;
-  }
-  AudioOptions GetOptions() const { return AudioOptions(); }
-  bool SetOptions(const AudioOptions& options) { return true; }
-  bool SetDevices(const Device* in_device, const Device* out_device) {
-    return true;
-  }
-  bool GetOutputVolume(int* level) {
-    *level = 0;
-    return true;
-  }
-  bool SetOutputVolume(int level) { return true; }
-  int GetInputLevel() { return 0; }
-  const std::vector<AudioCodec>& codecs() { return codecs_; }
-  const std::vector<RtpHeaderExtension>& rtp_header_extensions() {
-    return rtp_header_extensions_;
-  }
-  void SetLogging(int min_sev, const char* filter) {}
-  bool StartAecDump(rtc::PlatformFile file) { return false; }
-  bool StartRtcEventLog(rtc::PlatformFile file) { return false; }
-  void StopRtcEventLog() {}
-
- private:
-  std::vector<AudioCodec> codecs_;
-  std::vector<RtpHeaderExtension> rtp_header_extensions_;
-};
-
-// NullVideoEngine can be used with CompositeMediaEngine in the case where only
-// a voice engine is desired.
-class NullVideoEngine {
- public:
-  bool Init(rtc::Thread* worker_thread) { return true; }
-  void Terminate() {}
-  // If you need this to return an actual channel, use FakeMediaEngine instead.
-  VideoMediaChannel* CreateChannel(
-      const VideoOptions& options,
-      VoiceMediaChannel* voice_media_channel) {
-    return NULL;
-  }
-  bool SetOptions(const VideoOptions& options) { return true; }
-  bool SetDefaultEncoderConfig(const VideoEncoderConfig& config) {
-    return true;
-  }
-  const std::vector<VideoCodec>& codecs() { return codecs_; }
-  const std::vector<RtpHeaderExtension>& rtp_header_extensions() {
-    return rtp_header_extensions_;
-  }
-  void SetLogging(int min_sev, const char* filter) {}
-
- private:
-  std::vector<VideoCodec> codecs_;
-  std::vector<RtpHeaderExtension> rtp_header_extensions_;
-};
-
-typedef CompositeMediaEngine<NullVoiceEngine, NullVideoEngine> NullMediaEngine;
 
 enum DataChannelType {
   DCT_NONE = 0,

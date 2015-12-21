@@ -6,3 +6,23 @@
 third_party/
 demo/demo
 demo/chat/chat
+
+# When updating .h, make sure not to include unnecessary directories.
+include/webrtc/api
+include/webrtc/audio
+include/webrtc/build
+include/webrtc/call
+include/webrtc/common_audio
+include/webrtc/examples
+include/webrtc/libjingle
+include/webrtc/modules
+include/webrtc/sound
+include/webrtc/test
+include/webrtc/tools
+include/webrtc/video
+include/webrtc/voice_engine
+include/talk/app/webrtc/androidtests
+include/talk/app/webrtc/java
+include/talk/app/webrtc/javatests
+include/talk/app/webrtc/objc
+include/talk/app/webrtc/objctests

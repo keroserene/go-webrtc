@@ -14,16 +14,16 @@
 // These classes are helper classes used for logging data for offline
 // processing. Data logged with these classes can conveniently be parsed and
 // processed with e.g. Matlab.
-#ifndef WEBRTC_SYSTEM_WRAPPERS_INTERFACE_DATA_LOG_IMPL_H_
-#define WEBRTC_SYSTEM_WRAPPERS_INTERFACE_DATA_LOG_IMPL_H_
+#ifndef WEBRTC_SYSTEM_WRAPPERS_INCLUDE_DATA_LOG_IMPL_H_
+#define WEBRTC_SYSTEM_WRAPPERS_INCLUDE_DATA_LOG_IMPL_H_
 
 #include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "webrtc/base/platform_thread.h"
 #include "webrtc/base/scoped_ptr.h"
-#include "webrtc/system_wrappers/include/thread_wrapper.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
@@ -146,10 +146,12 @@ class DataLogImpl {
   int                       counter_;
   TableMap                  tables_;
   EventWrapper*             flush_event_;
-  rtc::scoped_ptr<ThreadWrapper> file_writer_thread_;
+  // This is a scoped_ptr so that we don't have to create threads in the no-op
+  // impl.
+  rtc::scoped_ptr<rtc::PlatformThread> file_writer_thread_;
   RWLockWrapper*            tables_lock_;
 };
 
 }  // namespace webrtc
 
-#endif  // WEBRTC_SYSTEM_WRAPPERS_INTERFACE_DATA_LOG_IMPL_H_
+#endif  // WEBRTC_SYSTEM_WRAPPERS_INCLUDE_DATA_LOG_IMPL_H_

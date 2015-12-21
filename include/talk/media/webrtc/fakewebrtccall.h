@@ -47,14 +47,19 @@
 #include "webrtc/video_send_stream.h"
 
 namespace cricket {
-
-class FakeAudioSendStream : public webrtc::AudioSendStream {
+class FakeAudioSendStream final : public webrtc::AudioSendStream {
  public:
-  explicit FakeAudioSendStream(
-      const webrtc::AudioSendStream::Config& config);
+  struct TelephoneEvent {
+    int payload_type = -1;
+    uint8_t event_code = 0;
+    uint32_t duration_ms = 0;
+  };
+
+  explicit FakeAudioSendStream(const webrtc::AudioSendStream::Config& config);
 
   const webrtc::AudioSendStream::Config& GetConfig() const;
   void SetStats(const webrtc::AudioSendStream::Stats& stats);
+  TelephoneEvent GetLatestTelephoneEvent() const;
 
  private:
   // webrtc::SendStream implementation.
@@ -66,13 +71,16 @@ class FakeAudioSendStream : public webrtc::AudioSendStream {
   }
 
   // webrtc::AudioSendStream implementation.
+  bool SendTelephoneEvent(int payload_type, uint8_t event,
+                          uint32_t duration_ms) override;
   webrtc::AudioSendStream::Stats GetStats() const override;
 
+  TelephoneEvent latest_telephone_event_;
   webrtc::AudioSendStream::Config config_;
   webrtc::AudioSendStream::Stats stats_;
 };
 
-class FakeAudioReceiveStream : public webrtc::AudioReceiveStream {
+class FakeAudioReceiveStream final : public webrtc::AudioReceiveStream {
  public:
   explicit FakeAudioReceiveStream(
       const webrtc::AudioReceiveStream::Config& config);
@@ -98,14 +106,16 @@ class FakeAudioReceiveStream : public webrtc::AudioReceiveStream {
 
   // webrtc::AudioReceiveStream implementation.
   webrtc::AudioReceiveStream::Stats GetStats() const override;
+  void SetSink(rtc::scoped_ptr<webrtc::AudioSinkInterface> sink) override;
 
   webrtc::AudioReceiveStream::Config config_;
   webrtc::AudioReceiveStream::Stats stats_;
   int received_packets_;
+  rtc::scoped_ptr<webrtc::AudioSinkInterface> sink_;
 };
 
-class FakeVideoSendStream : public webrtc::VideoSendStream,
-                            public webrtc::VideoCaptureInput {
+class FakeVideoSendStream final : public webrtc::VideoSendStream,
+                                  public webrtc::VideoCaptureInput {
  public:
   FakeVideoSendStream(const webrtc::VideoSendStream::Config& config,
                       const webrtc::VideoEncoderConfig& encoder_config);
@@ -153,7 +163,7 @@ class FakeVideoSendStream : public webrtc::VideoSendStream,
   webrtc::VideoSendStream::Stats stats_;
 };
 
-class FakeVideoReceiveStream : public webrtc::VideoReceiveStream {
+class FakeVideoReceiveStream final : public webrtc::VideoReceiveStream {
  public:
   explicit FakeVideoReceiveStream(
       const webrtc::VideoReceiveStream::Config& config);
@@ -188,7 +198,7 @@ class FakeVideoReceiveStream : public webrtc::VideoReceiveStream {
   webrtc::VideoReceiveStream::Stats stats_;
 };
 
-class FakeCall : public webrtc::Call, public webrtc::PacketReceiver {
+class FakeCall final : public webrtc::Call, public webrtc::PacketReceiver {
  public:
   explicit FakeCall(const webrtc::Call::Config& config);
   ~FakeCall() override;
