@@ -74,6 +74,7 @@ type PeerConnection struct {
 	// Event handlers
 	// TODO: Implement remainder of callbacks.
 	OnIceCandidate      func(IceCandidate)
+	OnIceComplete       func()
 	OnNegotiationNeeded func()
 	// onicecandidateerror
 	OnSignalingStateChange func(SignalingState)
@@ -167,6 +168,9 @@ func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
 
 // readonly localDescription
 func (pc *PeerConnection) LocalDescription() (sdp *SessionDescription) {
+	// Refresh SDP; it might have changed by ICE candidate gathering.
+	pc.localDescription.Sdp = C.GoString(C.CGO_SerializeSDP(
+		pc.localDescription.cgoSdp))
 	return pc.localDescription
 }
 
@@ -299,6 +303,15 @@ func cgoOnIceCandidate(p unsafe.Pointer, cIC C.CGO_IceCandidate) {
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnIceCandidate {
 		pc.OnIceCandidate(ic)
+	}
+}
+
+//export cgoOnIceComplete
+func cgoOnIceComplete(p unsafe.Pointer) {
+	INFO.Println("fired OnIceComplete: ", p)
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnIceComplete {
+		pc.OnIceComplete()
 	}
 }
 
