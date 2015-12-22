@@ -12,7 +12,6 @@
 #include <future>
 #include "_cgo_export.h"
 
-#define DTLS_SRTP "true"
 #define SUCCESS 0
 #define FAILURE -1
 #define TIMEOUT_SECS 3
@@ -20,10 +19,12 @@
 using namespace std;
 using namespace webrtc;
 
+
 // Smaller typedefs
 typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
 typedef SessionDescriptionInterface* SDP;
 typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
+
 
 // Peer acts as the glue between Go PeerConnection and the native
 // webrtc::PeerConnectionInterface. However, it's not directly accessible
@@ -40,16 +41,16 @@ class Peer
   // Should be called before anything else happens.
   bool Initialize() {
     promiseSDP = promise<SDP>();
+
     // Due to the different threading model, in order for PeerConnectionFactory
     // to be able to post async messages without getting blocked, we need to use
-    // external signalling and worker threads.
+    // external signalling and worker thread, accounted for in this class.
     signaling_thread = new rtc::Thread();
     worker_thread = new rtc::Thread();
     signaling_thread->SetName("CGO Signalling", NULL);
     signaling_thread->Start();
     worker_thread->SetName("CGO Worker", NULL);
     worker_thread->Start();
-    // pc_factory = CreatePeerConnectionFactory();
     pc_factory = CreatePeerConnectionFactory(
       worker_thread,
       signaling_thread,
@@ -58,12 +59,11 @@ class Peer
       cout << "ERROR: Could not create PeerConnectionFactory" << endl;
       return false;
     }
-    // PortAllocatorFactoryInterface *allocator;
 
-    // TODO: Make actual media constraints, decide whether to expose in Go.
+    // Media constraints are hard-coded here and not exposed in Go, because
+    // in this case only DTLS/SCTP data channels are desired.
     auto c = new FakeConstraints();
     c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, true);
-    // c->AddOptional(MediaConstraintsInterface::kEnableRtpDataChannels, false);
     constraints = c;
 
     return true;
@@ -81,12 +81,12 @@ class Peer
   // of goroutines. This should be easier and more idiomatic for users.
   //
   void OnSuccess(SDP desc) {
-    cout << "[C] SDP successfully created at " << desc << endl;
+    // cout << "[C] SDP successfully created at " << desc << endl;
     promiseSDP.set_value(desc);
   }
 
   void OnFailure(const std::string& error) {
-    cout << "[C] SDP Failure: " << error << endl;
+    // cout << "[C] SDP Failure: " << error << endl;
     promiseSDP.set_value(NULL);
   }
 
@@ -132,7 +132,7 @@ class Peer
   }
 
   void OnDataChannel(DataChannelInterface* data_channel) {
-    cout << "[C] OnDataChannel: " << data_channel << endl;
+    // cout << "[C] OnDataChannel: " << data_channel << endl;
     data_channel->AddRef();
     cgoOnDataChannel(goPeerConnection, data_channel);
   }
@@ -168,7 +168,6 @@ class Peer
 vector<rtc::scoped_refptr<Peer>> localPeers;
 
 
-// TODO: Make a better generalized class for every "Observer" later.
 class PeerSDPObserver : public SetSessionDescriptionObserver {
  public:
   static PeerSDPObserver* Create() {
@@ -249,9 +248,9 @@ int CGO_CreatePeerConnection(CGO_Peer cgoPeer, CGO_Configuration *cgoConfig) {
   peer->pc_ = peer->pc_factory->CreatePeerConnection(
     *peer->config,
     peer->constraints,
-    NULL,  // port allocator
-    NULL,  // TODO: DTLS
-    peer
+    NULL,  // port allocator      (reasonable default already within)
+    NULL,  // dtls identity store (reasonable default already within)
+    peer   // "observer"
     );
 
   if (!peer->pc_.get()) {
@@ -322,6 +321,7 @@ CGO_sdp CGO_DeserializeSDP(const char *type, const char *msg) {
   return (CGO_sdp)jsep_sdp;
 }
 
+// PeerConnection::SetLocalDescription
 int CGO_SetLocalDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   PC cPC = ((Peer*)cgoPeer)->pc_;
   auto obs = PeerSDPObserver::Create();
@@ -330,6 +330,7 @@ int CGO_SetLocalDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   return r.get();
 }
 
+// PeerConnection::SetRemoteDescription
 int CGO_SetRemoteDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   PC cPC = ((Peer*)cgoPeer)->pc_;
   auto obs = PeerSDPObserver::Create();
@@ -338,6 +339,7 @@ int CGO_SetRemoteDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   return r.get();
 }
 
+// PeerConnection::AddIceCandidate
 int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_IceCandidate *cgoIC) {
   PC cPC = ((Peer*)cgoPeer)->pc_;
   SdpParseError *error = nullptr;
@@ -354,11 +356,13 @@ int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_IceCandidate *cgoIC) {
   return SUCCESS;
 }
 
+// PeerConnection::signaling_state
 int CGO_GetSignalingState(CGO_Peer pc) {
   PC cPC = ((Peer*)pc)->pc_;
   return cPC->signaling_state();
 }
 
+// PeerConnection::SetConfiguration
 int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
   auto cConfig = castConfig_(cgoConfig);
@@ -370,6 +374,7 @@ int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
   return FAILURE;
 }
 
+// PeerConnection::CreateDataChannel
 CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   auto cPeer = (Peer*)cgoPeer;
   DataChannelInit *r = (DataChannelInit*)dict;
@@ -377,17 +382,17 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   DataChannelInit config;
   string *l = new string(label);
   // This is a ref_ptr, and needs to be kept track of.
-  auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
   // TODO: Keep track of a vector of these internally.
+  auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
   cPeer->channel = channel;
-  cout << "Created data channel: " << channel << endl;
-  webrtc::DataChannelInterface* c = channel.get();
-  c->AddRef();
+  cout << "[C] Created data channel: " << channel << endl;
+  webrtc::DataChannelInterface* c = cPeer->channel.get();
   return c;
 }
 
+// PeerConnection::Close
 void CGO_Close(CGO_Peer peer) {
   auto cPeer = (Peer*)peer;
   cPeer->pc_->Close();
-  cout << "Closed PeerConnection." << endl;
+  cout << "[C] Closed PeerConnection." << endl;
 }

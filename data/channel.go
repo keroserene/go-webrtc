@@ -55,9 +55,8 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 		return nil
 	}
 	dc := new(Channel)
-	fmt.Println("Go channel at: ", unsafe.Pointer(dc))
 	dc.cgoChannel = (C.CGO_Channel)(cDC)
-	// Observer is required for attaching callbacks correctly.
+	// "Observer" is required for attaching callbacks correctly.
 	C.CGO_Channel_RegisterObserver(dc.cgoChannel, unsafe.Pointer(dc))
 	return dc
 }
@@ -139,7 +138,7 @@ func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size i
 func cgoChannelOnStateChange(c unsafe.Pointer) {
 	dc := (*Channel)(c)
 	// This event handler picks between different Go callbacks.
-	// TODO: look at state change connecting/closing relationship to OnError..
+	// TODO: look at state change connecting/closing relationship to OnError.
 	switch dc.ReadyState() {
 	case DataStateConnecting:
 		fmt.Println("fired data.Channel.Statechange: Connecting", c)

@@ -33,7 +33,45 @@ const (
 	ModeChat
 )
 
-// Signaling channel can be copy paste.
+//
+// Preparing SDP messages for signaling.
+// sendOffer and sendAnswer are expected to be called within goroutines.
+//
+
+func sendOffer() {
+	offer, err := pc.CreateOffer() // blocking
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	pc.SetLocalDescription(offer)
+	signalSend(offer.Serialize())
+}
+
+func sendAnswer() {
+	answer, err := pc.CreateAnswer() // blocking
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	pc.SetLocalDescription(answer)
+	signalSend(answer.Serialize())
+}
+
+func receiveDescription(sdp *webrtc.SessionDescription) {
+	err = pc.SetRemoteDescription(sdp)
+	if nil != err {
+		fmt.Println("ERROR", err)
+		return
+	}
+	fmt.Println("SDP " + sdp.Type + " successfully received.")
+	if "offer" == sdp.Type {
+		fmt.Println("Generating and replying with an answer.")
+		go sendAnswer()
+	}
+}
+
+// Manual "copy-paste" signaling channel.
 func signalSend(msg string) {
 	fmt.Println("\n ---- Please copy the below to peer ---- \n")
 	fmt.Println(msg + "\n")
@@ -63,6 +101,7 @@ func signalReceive(msg string) {
 		}
 		receiveDescription(sdp)
 	}
+
 	if nil != parsed["candidate"] {
 		ice := webrtc.DeserializeIceCandidate(msg)
 		if nil == ice {
@@ -74,39 +113,10 @@ func signalReceive(msg string) {
 	}
 }
 
-func sendOffer() {
-	offer, err := pc.CreateOffer()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	pc.SetLocalDescription(offer)
-	signalSend(offer.Serialize())
-}
-
-func sendAnswer() {
-	answer, err := pc.CreateAnswer()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	pc.SetLocalDescription(answer)
-	signalSend(answer.Serialize())
-}
-
-func receiveDescription(sdp *webrtc.SessionDescription) {
-	err = pc.SetRemoteDescription(sdp)
-	if nil != err {
-		fmt.Println("ERROR", err)
-		return
-	}
-	fmt.Println("SDP " + sdp.Type + " successfully received.")
-	if "offer" == sdp.Type {
-		fmt.Println("Generating and replying with an answer.")
-		go sendAnswer()
-	}
-}
-
+// Attach callbacks to a newly created data channel.
+// In this demo, only one data channel is expected, and is only used for chat.
+// But it is possible to send any sort of bytes over a data channel, for many
+// more interesting purposes.
 func prepareDataChannel(channel *data.Channel) {
 	channel.OnOpen = func() {
 		fmt.Println("Data Channel opened!")
@@ -121,16 +131,6 @@ func prepareDataChannel(channel *data.Channel) {
 	}
 }
 
-func sendChat(msg string) {
-	line := username + ": " + msg
-	fmt.Println("[sent]")
-	dc.Send([]byte(line))
-}
-
-func receiveChat(msg string) {
-	fmt.Println("\n" + string(msg))
-}
-
 func startChat() {
 	mode = ModeChat
 	fmt.Println("------- chat enabled! -------")
@@ -141,12 +141,28 @@ func endChat() {
 	fmt.Println("------- chat disabled -------")
 }
 
+func sendChat(msg string) {
+	line := username + ": " + msg
+	fmt.Println("[sent]")
+	dc.Send([]byte(line))
+}
+
+func receiveChat(msg string) {
+	fmt.Println("\n" + string(msg))
+}
+
+// Create a PeerConnection.
+// If |instigator| is true, create local data channel which causes a
+// negotiation-needed, leading to preparing an SDP offer to be sent to the
+// remote peer. Otherwise, await an SDP offer from the remote peer, and send an
+// answer back.
 func start(instigator bool) {
 	mode = ModeConnect
 	fmt.Println("Starting up PeerConnection...")
+	// TODO: Try with TURN servers.
 	config := webrtc.NewConfiguration(
-		webrtc.OptionIceServer("stun:stun.l.google.com:19302"),
-		webrtc.OptionBundlePolicy(webrtc.BundlePolicyMaxBundle))
+		webrtc.OptionIceServer("stun:stun.l.google.com:19302"))
+
 	pc, err = webrtc.NewPeerConnection(config)
 	if nil != err {
 		fmt.Println("Failed to create PeerConnection.")
@@ -154,12 +170,19 @@ func start(instigator bool) {
 	}
 
 	// The below three callbacks are the minimum required.
+	// OnNegotiationNeeded is triggered when something important has occurred in
+	// the state of PeerConnection (such as creating a new data channel), in which
+	// case a new SDP offer must be prepared and sent to the remote peer.
 	pc.OnNegotiationNeeded = func() {
 		go sendOffer()
 	}
+	// Local ICE candidates need to be sent to the remote peer, in order to
+	// attempt reaching the local peer through NATs.
 	pc.OnIceCandidate = func(candidate webrtc.IceCandidate) {
 		signalSend(candidate.Serialize())
 	}
+	// A DataChannel is generated through this callback only when the remote peer
+	// has initiated the creation of the data channel.
 	pc.OnDataChannel = func(channel *data.Channel) {
 		fmt.Println("Datachannel established...", channel)
 		dc = channel
