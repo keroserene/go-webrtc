@@ -35,9 +35,9 @@ func TestNewChannel(t *testing.T) {
 	}
 }
 
-// TODO: There's not a good way to create a DataChannel without first having
+// There's not a good way to create a DataChannel without first having
 // an available PeerConnection object with a valid session, but that's part of
-// the outer package, making these tests pretty useless. To fix.
+// the outer package, so testing the attributes is less useful here.
 
 func TestChannelLabel(t *testing.T) {
 	if "fake" != c.Label() {
@@ -106,6 +106,20 @@ func TestStateChangeCallbacks(t *testing.T) {
 	}
 	// Set to open for the next tests.
 	cgoFakeStateChange(c, DataStateOpen)
+}
+
+func TestOnBufferedAmountLowCallback(t *testing.T) {
+	success := make(chan int, 1)
+	c.BufferedAmountLowThreshold = 100
+	c.OnBufferedAmountLow = func() {
+		success <- 1
+	}
+	cgoFakeBufferAmount(c, 90)
+	select {
+	case <-success:
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
 }
 
 func TestSend(t *testing.T) {

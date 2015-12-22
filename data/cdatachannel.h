@@ -39,6 +39,7 @@ extern "C" {
   CGO_Channel CGO_getFakeDataChannel();
   void CGO_fakeMessage(CGO_Channel channel, void *data, int size);
   void CGO_fakeStateChange(CGO_Channel channel, int state);
+  void CGO_fakeBufferAmount(CGO_Channel channel, int amount);
 
 #ifdef __cplusplus
 }

@@ -30,17 +30,22 @@ const (
 
 var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
 
-// data.Channel
+/* DataChannel
+
+OnError - is not implemented because the underlying Send
+always returns true as specified for SCTP, there is no reasonable
+exposure of other specific errors from the native code, and OnClose
+already covers the bases.
+*/
 type Channel struct {
 	BufferedAmountLowThreshold int
 	BinaryType                 string
 
 	// Event Handlers
-	OnOpen func()
-	// OnError func()
-	OnClose   func()
-	OnMessage func([]byte) // byte slice.
-	// OnBufferedAmountLow
+	OnOpen              func()
+	OnClose             func()
+	OnMessage           func([]byte) // byte slice.
+	OnBufferedAmountLow func()
 
 	cgoChannel C.CGO_Channel // Internal DataChannel functionality.
 }
@@ -56,6 +61,7 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 	}
 	dc := new(Channel)
 	dc.cgoChannel = (C.CGO_Channel)(cDC)
+	dc.BinaryType = "blob"
 	// "Observer" is required for attaching callbacks correctly.
 	C.CGO_Channel_RegisterObserver(dc.cgoChannel, unsafe.Pointer(dc))
 	return dc
@@ -111,8 +117,9 @@ func (c *Channel) BufferedAmount() int {
 	return int(C.CGO_Channel_BufferedAmount(c.cgoChannel))
 }
 
+// TODO: Variadic options constructor, probably makes more sense for
+// CreateDataChannel in parent package PeerConnection.
 type Init struct {
-	// TODO: defaults
 	Ordered           bool
 	MaxPacketLifeTime uint
 	MaxRetransmits    uint
@@ -135,27 +142,36 @@ func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size i
 }
 
 //export cgoChannelOnStateChange
-func cgoChannelOnStateChange(c unsafe.Pointer) {
-	dc := (*Channel)(c)
-	// This event handler picks between different Go callbacks.
-	// TODO: look at state change connecting/closing relationship to OnError.
+func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
+	dc := (*Channel)(goChannel)
 	switch dc.ReadyState() {
+	// Picks between different Go callbacks...
 	case DataStateConnecting:
-		fmt.Println("fired data.Channel.Statechange: Connecting", c)
+		fmt.Println("fired data.Channel.Statechange: Connecting", dc)
 	case DataStateOpen:
-		fmt.Println("fired data.Channel.OnOpen", c)
+		fmt.Println("fired data.Channel.OnOpen", dc)
 		if nil != dc.OnOpen {
 			dc.OnOpen()
 		}
 	case DataStateClosed:
-		fmt.Println("fired data.Channel.OnClose", c)
+		fmt.Println("fired data.Channel.OnClose", dc)
 		if nil != dc.OnClose {
 			dc.OnClose()
 		}
 	case DataStateClosing:
-		fmt.Println("fired data.Channel.Statechange: Closing", c)
+		fmt.Println("fired data.Channel.Statechange: Closing", dc)
 	default:
-		fmt.Println("fired an un-implemented data.Channel StateChange.", c)
+		fmt.Println("fired an un-implemented data.Channel StateChange.", dc)
+	}
+}
+
+//export cgoChannelOnBufferedAmountChange
+func cgoChannelOnBufferedAmountChange(goChannel unsafe.Pointer, amount int) {
+	dc := (*Channel)(goChannel)
+	if nil != dc.OnBufferedAmountLow {
+		if amount <= dc.BufferedAmountLowThreshold {
+			dc.OnBufferedAmountLow()
+		}
 	}
 }
 
@@ -177,4 +193,8 @@ func cgoFakeMessage(c *Channel, b []byte, size int) {
 
 func cgoFakeStateChange(c *Channel, s DataState) {
 	C.CGO_fakeStateChange((C.CGO_Channel)(c.cgoChannel), (C.int)(s))
+}
+
+func cgoFakeBufferAmount(c *Channel, amount int) {
+	C.CGO_fakeBufferAmount((C.CGO_Channel)(c.cgoChannel), (C.int)(amount))
 }

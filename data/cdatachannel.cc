@@ -17,7 +17,6 @@ class CGoDataChannelObserver : public DataChannelObserver {
   }
 
   void OnStateChange() {
-    // cout << "[C] OnStateChange" << endl;
     cgoChannelOnStateChange(goChannel);
   }
 
@@ -27,8 +26,7 @@ class CGoDataChannelObserver : public DataChannelObserver {
   }
 
   void OnBufferedAmountChange(uint64_t previous_amount) {
-    cout << "[C] OnBufferedAmountChange" << endl;
-    // cgoChannelOnBufferedAmountChange(previous_amount);
+    cgoChannelOnBufferedAmountChange(goChannel, previous_amount);
   }
 
  protected:
@@ -153,7 +151,6 @@ class FakeDataChannel : public DataChannelInterface {
 
   // Sends data to self.
   bool Send(const DataBuffer& buffer) {
-    // auto b = DataBuffer(data, true);
     obs_->OnMessage(buffer);
     return false;
   };
@@ -165,6 +162,10 @@ class FakeDataChannel : public DataChannelInterface {
   void SetState(DataChannelInterface::DataState state) {
     state_ = state;
     obs_->OnStateChange();
+  }
+
+  void SetBufferedAmount(int amount) {
+    obs_->OnBufferedAmountChange(amount);
   }
 
  protected:
@@ -186,10 +187,11 @@ void CGO_fakeMessage(CGO_Channel channel, void *data, int size) {
 }
 
 void CGO_fakeStateChange(CGO_Channel channel, int state) {
-  // auto dc = (FakeDataChannel)(webrtc::DataChannelInterface*)channel;
-  // auto dc = (webrtc::DataChannelInterface*)channel;
-  // auto fdc = (rtc::scoped_refptr<FakeDataChannel>)dc;
   test_dc->SetState((DataChannelInterface::DataState)state);
+}
+
+void CGO_fakeBufferAmount(CGO_Channel channel, int amount) {
+  test_dc->SetBufferedAmount(amount);
 }
 
 const int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting;
