@@ -9,7 +9,6 @@ demo/chat/chat
 
 # When updating .h, make sure not to include unnecessary directories.
 include/webrtc/api
-include/webrtc/audio
 include/webrtc/build
 include/webrtc/call
 include/webrtc/common_audio
