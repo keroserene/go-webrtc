@@ -135,6 +135,11 @@ class Peer
     cgoOnIceComplete(goPeerConnection);
   }
 
+  void OnIceConnectionChange(
+      PeerConnectionInterface::IceConnectionState new_state) {
+    cgoOnConnectionStateChange(goPeerConnection, new_state);
+  }
+
   void OnDataChannel(DataChannelInterface* data_channel) {
     // cout << "[C] OnDataChannel: " << data_channel << endl;
     data_channel->AddRef();

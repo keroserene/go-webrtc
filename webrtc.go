@@ -79,13 +79,15 @@ type PeerConnection struct {
 	// onicecandidateerror
 	OnSignalingStateChange func(SignalingState)
 	// onicegatheringstatechange
-	// oniceconnectionstatechange
+	OnConnectionStateChange func(PeerConnectionState)
 	OnDataChannel func(*data.Channel)
 
 	config Configuration
 
 	cgoPeer C.CGO_Peer // Native code internals
 }
+
+type PeerConnectionState int
 
 /* Construct a WebRTC PeerConnection.
 
@@ -315,6 +317,15 @@ func cgoOnIceComplete(p unsafe.Pointer) {
 	}
 }
 
+//export cgoOnConnectionStateChange
+func cgoOnConnectionStateChange(p unsafe.Pointer, state PeerConnectionState) {
+	INFO.Println("fired OnConnectionStateChange: ", p)
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnConnectionStateChange {
+		pc.OnConnectionStateChange(state)
+	}
+}
+
 //export cgoOnDataChannel
 func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 	INFO.Println("fired OnDataChannel: ", p, cDC)
@@ -323,4 +334,12 @@ func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)
 	}
+}
+
+//
+// test helpers
+//
+
+func cgoFakeConnectionStateChange(p *PeerConnection, state PeerConnectionState) {
+	// TODO
 }

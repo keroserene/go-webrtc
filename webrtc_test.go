@@ -142,6 +142,23 @@ func TestOnNegotiationNeededCallback(t *testing.T) {
 	}
 }
 
+func TestOnConnectionStateChangeCallback(t *testing.T) {
+	success := make(chan PeerConnectionState, 1)
+	pcA.OnConnectionStateChange = func(state PeerConnectionState) {
+		success <- state
+	}
+	cgoFakeConnectionStateChange(pcA, 1)
+	select {
+	case r := <-success:
+		if r != 0 {
+			t.Error("Unexpected PeerConnectionState:", r)
+		}
+	case <-time.After(time.Second * 1):
+		t.Fatal("Timed out.")
+	}
+}
+
+
 // TODO: real datachannel tests
 func TestCreateDataChannel(t *testing.T) {
 	channel, err := pcA.CreateDataChannel("test", data.Init{})
