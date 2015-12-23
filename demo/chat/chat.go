@@ -35,27 +35,34 @@ const (
 
 //
 // Preparing SDP messages for signaling.
-// sendOffer and sendAnswer are expected to be called within goroutines.
+// generateOffer and generateAnswer are expected to be called within goroutines.
+// It is possible to send the serialized offers or answers immediately upon
+// creation, followed by subsequent individual ICE candidates.
+//
+// However, to ease the user's copy & paste experience, in this case we forgo
+// the trickle ICE and wait for OnIceComplete to fire, which will contain
+// a full SDP mesasge with all ICE candidates, so the user only has to copy
+// one message.
 //
 
-func sendOffer() {
+func generateOffer() {
+	fmt.Println("Generating offer...")
 	offer, err := pc.CreateOffer() // blocking
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	pc.SetLocalDescription(offer)
-	signalSend(offer.Serialize())
 }
 
-func sendAnswer() {
+func generateAnswer() {
+	fmt.Println("Generating answer...")
 	answer, err := pc.CreateAnswer() // blocking
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	pc.SetLocalDescription(answer)
-	signalSend(answer.Serialize())
 }
 
 func receiveDescription(sdp *webrtc.SessionDescription) {
@@ -67,7 +74,7 @@ func receiveDescription(sdp *webrtc.SessionDescription) {
 	fmt.Println("SDP " + sdp.Type + " successfully received.")
 	if "offer" == sdp.Type {
 		fmt.Println("Generating and replying with an answer.")
-		go sendAnswer()
+		go generateAnswer()
 	}
 }
 
@@ -91,8 +98,6 @@ func signalReceive(msg string) {
 		start(false)
 	}
 
-	// TODO: Allow multiple candidates combined with an offer/answer description
-	// as a single json string to copy paste.
 	if nil != parsed["sdp"] {
 		sdp := webrtc.DeserializeSessionDescription(msg)
 		if nil == sdp {
@@ -102,6 +107,8 @@ func signalReceive(msg string) {
 		receiveDescription(sdp)
 	}
 
+	// Allow individual ICE candidate messages, but this won't be necessary if
+	// the remote peer also doesn't use trickle ICE.
 	if nil != parsed["candidate"] {
 		ice := webrtc.DeserializeIceCandidate(msg)
 		if nil == ice {
@@ -169,17 +176,18 @@ func start(instigator bool) {
 		return
 	}
 
-	// The below three callbacks are the minimum required.
 	// OnNegotiationNeeded is triggered when something important has occurred in
 	// the state of PeerConnection (such as creating a new data channel), in which
 	// case a new SDP offer must be prepared and sent to the remote peer.
 	pc.OnNegotiationNeeded = func() {
-		go sendOffer()
+		go generateOffer()
 	}
-	// Local ICE candidates need to be sent to the remote peer, in order to
-	// attempt reaching the local peer through NATs.
-	pc.OnIceCandidate = func(candidate webrtc.IceCandidate) {
-		signalSend(candidate.Serialize())
+	// Once all ICE candidates are prepared, they need to be sent to the remote
+	// peer which will attempt reaching the local peer through NATs.
+	pc.OnIceComplete = func() {
+		fmt.Println("Finished gathering ICE candidates.")
+		sdp := pc.LocalDescription().Serialize()
+		signalSend(sdp)
 	}
 	// A DataChannel is generated through this callback only when the remote peer
 	// has initiated the creation of the data channel.
@@ -229,6 +237,7 @@ func main() {
 		case ModeConnect:
 			signalReceive(text)
 		case ModeChat:
+			// TODO: make chat look nicer.
 			sendChat(text)
 			// fmt.Print(username + ": ")
 			break
