@@ -64,6 +64,7 @@ extern "C" {
   int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_IceCandidate *cgoIC);
 
   int CGO_GetSignalingState(CGO_Peer);
+  int CGO_IceConnectionState(CGO_Peer);
   // int CGO_GetConfiguration(CGO_Peer);
   int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration*);
 

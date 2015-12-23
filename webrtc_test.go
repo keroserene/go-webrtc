@@ -8,7 +8,24 @@ import (
 	"unsafe"
 )
 
-// TODO: Try Gucumber or some potential fancy test framework.
+// TODO: Try Gucumber or some potential fancy test framework for go.
+/*
+func checkEnum(t *testing.T, desc string, enum int, expected int) {
+	if enum != expected {
+		t.Error("Mismatched Enum Value -", desc,
+			"\nwas:", enum,
+			"\nexpected:", expected)
+	}
+}
+
+func TestPeerConnectionStateEnums(t *testing.T) {
+	checkEnum(t, "PeerConnectionStateNew",
+		int(PeerConnectionStateNewd), _cgoBundlePolicyBalanced)
+	checkEnum(t, "BundlePolicyMaxCompat",
+		int(BundlePolicyMaxCompat), _cgoBundlePolicyMaxCompat)
+	checkEnum(t, "BundlePolicyMaxBundle",
+		int(BundlePolicyMaxBundle), _cgoBundlePolicyMaxBundle)
+} */
 
 // These tests create two PeerConnections objects, which allows a loopback test.
 var pcA *PeerConnection
@@ -147,10 +164,11 @@ func TestOnConnectionStateChangeCallback(t *testing.T) {
 	pcA.OnConnectionStateChange = func(state PeerConnectionState) {
 		success <- state
 	}
-	cgoFakeConnectionStateChange(pcA, 1)
+	cgoOnConnectionStateChange(unsafe.Pointer(pcA),
+		PeerConnectionStateDisconnected)
 	select {
 	case r := <-success:
-		if r != 0 {
+		if PeerConnectionStateDisconnected != r {
 			t.Error("Unexpected PeerConnectionState:", r)
 		}
 	case <-time.After(time.Second * 1):
@@ -158,8 +176,6 @@ func TestOnConnectionStateChangeCallback(t *testing.T) {
 	}
 }
 
-
-// TODO: real datachannel tests
 func TestCreateDataChannel(t *testing.T) {
 	channel, err := pcA.CreateDataChannel("test", data.Init{})
 	if nil != err {

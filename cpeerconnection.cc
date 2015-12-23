@@ -115,7 +115,7 @@ class Peer
   }
 
   void OnRenegotiationNeeded() {
-    cout << "[C] OnRenegotiationNeeded" << endl;
+    // cout << "[C] OnRenegotiationNeeded" << endl;
     cgoOnNegotiationNeeded(goPeerConnection);
   }
 
@@ -137,6 +137,8 @@ class Peer
 
   void OnIceConnectionChange(
       PeerConnectionInterface::IceConnectionState new_state) {
+    // TODO: This may need to be slightly more complicated...
+    // https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
     cgoOnConnectionStateChange(goPeerConnection, new_state);
   }
 
@@ -145,6 +147,14 @@ class Peer
     data_channel->AddRef();
     cgoOnDataChannel(goPeerConnection, data_channel);
   }
+
+/*
+  int connection_state() {
+    // TODO: Aggregate states according to:
+    // https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
+    return pc_->ice_connection_state();
+  }
+*/
 
   PeerConnectionInterface::RTCConfiguration *config;
   PeerConnectionInterface::RTCOfferAnswerOptions options;
@@ -366,9 +376,15 @@ int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_IceCandidate *cgoIC) {
 }
 
 // PeerConnection::signaling_state
-int CGO_GetSignalingState(CGO_Peer pc) {
-  PC cPC = ((Peer*)pc)->pc_;
+int CGO_GetSignalingState(CGO_Peer cgoPeer) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
   return cPC->signaling_state();
+}
+
+// PeerConnection::ice_connection_state (and more)
+int CGO_IceConnectionState(CGO_Peer cgoPeer) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
+  return cPC->ice_connection_state();
 }
 
 // PeerConnection::SetConfiguration

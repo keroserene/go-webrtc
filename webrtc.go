@@ -51,6 +51,19 @@ func init() {
 	SetLoggingVerbosity(3) // Default verbosity.
 }
 
+type PeerConnectionState int
+
+const (
+	PeerConnectionStateNew PeerConnectionState = iota
+	PeerConnectionStateConnecting
+	PeerConnectionStateConnected
+	PeerConnectionStateDisconnected
+	PeerConnectionStateFailed
+)
+
+var PeerConnectionStateString = []string{
+	"New", "Connecting", "Connected", "Disconnected", "Failed"}
+
 /* WebRTC PeerConnection
 
 This is the main container of WebRTC functionality - from handling the ICE
@@ -67,8 +80,8 @@ type PeerConnection struct {
 	// currentRemoteDescription
 	// pendingRemoteDescription
 
-	// iceGatheringState  RTCIceGatheringState
-	// iceConnectionState  RTCIceConnectionState
+	// iceGatheringState  IceGatheringState
+	// iceConnectionState  IceConnectionState
 	canTrickleIceCandidates bool
 
 	// Event handlers
@@ -80,14 +93,12 @@ type PeerConnection struct {
 	OnSignalingStateChange func(SignalingState)
 	// onicegatheringstatechange
 	OnConnectionStateChange func(PeerConnectionState)
-	OnDataChannel func(*data.Channel)
+	OnDataChannel           func(*data.Channel)
 
 	config Configuration
 
 	cgoPeer C.CGO_Peer // Native code internals
 }
-
-type PeerConnectionState int
 
 /* Construct a WebRTC PeerConnection.
 
@@ -200,6 +211,13 @@ func (pc *PeerConnection) RemoteDescription() (sdp *SessionDescription) {
 // readonly signalingState
 func (pc *PeerConnection) SignalingState() SignalingState {
 	return (SignalingState)(C.CGO_GetSignalingState(pc.cgoPeer))
+}
+
+// readonly connectionState
+func (pc *PeerConnection) ConnectionState() PeerConnectionState {
+	// TODO: Aggregate states according to:
+	// https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
+	return (PeerConnectionState)(C.CGO_IceConnectionState(pc.cgoPeer))
 }
 
 func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
@@ -334,12 +352,4 @@ func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)
 	}
-}
-
-//
-// test helpers
-//
-
-func cgoFakeConnectionStateChange(p *PeerConnection, state PeerConnectionState) {
-	// TODO
 }
