@@ -89,9 +89,13 @@ function start(initiator) {
   });
   pc.onicecandidate = function(evt) {
     var candidate = evt.candidate;
-    if (!candidate)
+    // Chrome sends a null candidate once the ICE gathering phase completes.
+    // In this case, it makes sense to send one copy-paste blob.
+    if (null == candidate) {
+      log("Finished gathering ICE candidates.");
+      Signalling.send(pc.localDescription);
       return;
-    Signalling.send(candidate);
+    }
   }
   pc.onnegotiationneeded = function() {
     sendOffer();
@@ -139,20 +143,10 @@ function acceptInput(is) {
 // Chrome uses callbacks while Firefox uses promises.
 // Need to support both - same for createAnswer below.
 function sendOffer() {
-  var signalSDP = function() {
-    // Signalling.send({desc: offer});
-    Signalling.send(offer);
-    waitForSignals();
-  }
   var next = function(sdp) {
     log("webrtc: Created Offer");
     offer = sdp;
-    var promise = pc.setLocalDescription(sdp);
-    if (promise) {
-      promise.then(signalSDP);
-    } else {
-      signalSDP();
-    }
+    pc.setLocalDescription(sdp);
   }
   var promise = pc.createOffer(next);
   if (promise) {
@@ -161,19 +155,10 @@ function sendOffer() {
 }
 
 function sendAnswer() {
-  var signalSDP = function() {
-    // Signalling.send({desc: answer});
-    Signalling.send(answer);
-  }
   var next = function (sdp) {
     log("webrtc: Created Answer");
     answer = sdp;
-    var promise = pc.setLocalDescription(sdp)
-    if (promise) {
-      promise.then(signalSDP);
-    } else {
-      signalSDP();
-    }
+    pc.setLocalDescription(sdp)
   }
   var promise = pc.createAnswer(next);
   if (promise) {
