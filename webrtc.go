@@ -242,7 +242,6 @@ func (pc *PeerConnection) GetConfiguration() Configuration {
 	// There does not appear to be a native code version of GetConfiguration -
 	// so we'll keep track of it purely from Go.
 	return pc.config
-	// return (Configuration)(C.CGO_GetConfiguration(pc.cgoPeer))
 }
 
 func (pc *PeerConnection) SetConfiguration(config Configuration) error {

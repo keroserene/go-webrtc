@@ -50,8 +50,6 @@ extern "C" {
   // Below are "C methods" for the Peer class, which must be hidden from cgo.
 
   int CGO_CreatePeerConnection(CGO_Peer, CGO_Configuration*);
-  // PeerConnectionInterface::IceServers
-  // void* GetIceServers(CGO_PeePeerConnection pc);
 
   CGO_sdp CGO_CreateOffer(CGO_Peer);
   CGO_sdp CGO_CreateAnswer(CGO_Peer);
@@ -65,7 +63,6 @@ extern "C" {
 
   int CGO_GetSignalingState(CGO_Peer);
   int CGO_IceConnectionState(CGO_Peer);
-  // int CGO_GetConfiguration(CGO_Peer);
   int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration*);
 
   CGO_Channel CGO_CreateDataChannel(CGO_Peer, char*, void*);
