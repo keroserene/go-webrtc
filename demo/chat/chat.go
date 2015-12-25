@@ -73,7 +73,6 @@ func receiveDescription(sdp *webrtc.SessionDescription) {
 	}
 	fmt.Println("SDP " + sdp.Type + " successfully received.")
 	if "offer" == sdp.Type {
-		fmt.Println("Generating and replying with an answer.")
 		go generateAnswer()
 	}
 }
@@ -88,7 +87,7 @@ func signalReceive(msg string) {
 	var parsed map[string]interface{}
 	err = json.Unmarshal([]byte(msg), &parsed)
 	if nil != err {
-		fmt.Println(err, ", try again.")
+		// fmt.Println(err, ", try again.")
 		return
 	}
 
@@ -126,7 +125,7 @@ func signalReceive(msg string) {
 // more interesting purposes.
 func prepareDataChannel(channel *data.Channel) {
 	channel.OnOpen = func() {
-		fmt.Println("Data Channel opened!")
+		fmt.Println("Data Channel Opened!")
 		startChat()
 	}
 	channel.OnClose = func() {
@@ -156,6 +155,35 @@ func sendChat(msg string) {
 
 func receiveChat(msg string) {
 	fmt.Println("\n" + string(msg))
+}
+
+// Janky /command inputs.
+func parseCommands(input string) bool {
+	if !strings.HasPrefix(input, "/") {
+		return false
+	}
+	cmd := strings.TrimSpace(strings.TrimLeft(input, "/"))
+	switch cmd {
+	case "quit":
+		fmt.Println("Disconnecting chat session...")
+		dc.Close()
+	case "status":
+		fmt.Println("WebRTC PeerConnection Configuration:\n", pc.GetConfiguration())
+		fmt.Println("Signaling State: ",
+			webrtc.SignalingStateString[pc.SignalingState()])
+		fmt.Println("Connection State: ",
+			webrtc.PeerConnectionStateString[pc.ConnectionState()])
+	case "help":
+		showCommands()
+	default:
+		fmt.Println("Unknown command:", cmd)
+		showCommands()
+	}
+	return true
+}
+
+func showCommands() {
+	fmt.Println("Possible commands: help status quit")
 }
 
 // Create a PeerConnection.
@@ -192,14 +220,14 @@ func start(instigator bool) {
 	// A DataChannel is generated through this callback only when the remote peer
 	// has initiated the creation of the data channel.
 	pc.OnDataChannel = func(channel *data.Channel) {
-		fmt.Println("Datachannel established...", channel)
+		fmt.Println("Datachannel established by remote... ", channel.Label())
 		dc = channel
 		prepareDataChannel(channel)
 	}
 
 	if instigator {
 		// Attempting to create the first datachannel triggers ICE.
-		fmt.Println("Trying to create a datachannel.")
+		fmt.Println("Initializing datachannel....")
 		dc, err = pc.CreateDataChannel("test", data.Init{})
 		if nil != err {
 			fmt.Println("Unexpected failure creating data.Channel.")
@@ -237,8 +265,10 @@ func main() {
 		case ModeConnect:
 			signalReceive(text)
 		case ModeChat:
-			// TODO: make chat look nicer.
-			sendChat(text)
+			// TODO: make chat interface nicer.
+			if !parseCommands(text) {
+				sendChat(text)
+			}
 			// fmt.Print(username + ": ")
 			break
 		}

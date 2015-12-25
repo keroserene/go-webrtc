@@ -119,8 +119,8 @@ int CGO_Channel_BufferedAmount(CGO_Channel channel) {
 //
 
 // Real DataChannels can only be created from a correctly configured
-// PeerConnection, which is outside the scope of functionality this data
-// subpackage. However, we can still need fake DataChannelInterface for testing.
+// PeerConnection, which is outside the scope of this subpackage.
+// However, we can still create a fake DataChannelInterface for testing.
 
 class FakeDataChannel : public DataChannelInterface {
  public:

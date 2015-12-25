@@ -381,7 +381,6 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   string *l = new string(label);
   auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
   cPeer->channels.push_back(channel);
-  cout << "[C] Created data channel: " << channel << endl;
   webrtc::DataChannelInterface* c = channel.get();
   return c;
 }

@@ -149,17 +149,15 @@ func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
 	case DataStateConnecting:
 		fmt.Println("fired data.Channel.Statechange: Connecting", dc)
 	case DataStateOpen:
-		fmt.Println("fired data.Channel.OnOpen", dc)
 		if nil != dc.OnOpen {
 			dc.OnOpen()
 		}
 	case DataStateClosed:
-		fmt.Println("fired data.Channel.OnClose", dc)
 		if nil != dc.OnClose {
 			dc.OnClose()
 		}
 	case DataStateClosing:
-		fmt.Println("fired data.Channel.Statechange: Closing", dc)
+		// fmt.Println("fired data.Channel.Statechange: Closing", dc)
 	default:
 		fmt.Println("fired an un-implemented data.Channel StateChange.", dc)
 	}
