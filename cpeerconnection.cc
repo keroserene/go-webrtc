@@ -134,6 +134,11 @@ class Peer
     cgoOnConnectionStateChange(goPeerConnection, new_state);
   }
 
+  void OnIceGatheringChange(
+      PeerConnectionInterface::IceGatheringState new_state) {
+    cgoOnIceGatheringStateChange(goPeerConnection, new_state);
+  }
+
   void OnDataChannel(DataChannelInterface* data_channel) {
     this->channels.push_back(data_channel);
     cgoOnDataChannel(goPeerConnection, data_channel);

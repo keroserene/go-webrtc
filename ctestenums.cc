@@ -37,3 +37,10 @@ const int CGO_SignalingStateHaveRemotePrAnswer =
     PeerConnectionInterface::SignalingState::kHaveRemotePrAnswer;
 const int CGO_SignalingStateClosed =
     PeerConnectionInterface::SignalingState::kClosed;
+
+const int CGO_IceGatheringStateNew =
+    PeerConnectionInterface::IceGatheringState::kIceGatheringNew;
+const int CGO_IceGatheringStateGathering =
+    PeerConnectionInterface::IceGatheringState::kIceGatheringGathering;
+const int CGO_IceGatheringStateComplete =
+    PeerConnectionInterface::IceGatheringState::kIceGatheringComplete;

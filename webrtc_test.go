@@ -9,15 +9,15 @@ import (
 )
 
 // TODO: Try Gucumber or some potential fancy test framework for go.
+// func checkEnum(t *testing.T, desc string, enum int, expected int) {
+// if enum != expected {
+// t.Error("Mismatched Enum Value -", desc,
+// "\nwas:", enum,
+// "\nexpected:", expected)
+// }
+// }
+//
 /*
-func checkEnum(t *testing.T, desc string, enum int, expected int) {
-	if enum != expected {
-		t.Error("Mismatched Enum Value -", desc,
-			"\nwas:", enum,
-			"\nexpected:", expected)
-	}
-}
-
 func TestPeerConnectionStateEnums(t *testing.T) {
 	checkEnum(t, "PeerConnectionStateNew",
 		int(PeerConnectionStateNewd), _cgoBundlePolicyBalanced)
@@ -25,7 +25,17 @@ func TestPeerConnectionStateEnums(t *testing.T) {
 		int(BundlePolicyMaxCompat), _cgoBundlePolicyMaxCompat)
 	checkEnum(t, "BundlePolicyMaxBundle",
 		int(BundlePolicyMaxBundle), _cgoBundlePolicyMaxBundle)
-} */
+}
+*/
+
+func TestIceGatheringStateEnums(t *testing.T) {
+	checkEnum(t, "IceGatheringStateNew",
+		int(IceGatheringStateNew), _cgoIceGatheringStateNew)
+	checkEnum(t, "IceGatheringStateGathering",
+		int(IceGatheringStateGathering), _cgoIceGatheringStateGathering)
+	checkEnum(t, "IceGatheringStateComplete",
+		int(IceGatheringStateComplete), _cgoIceGatheringStateComplete)
+}
 
 // These tests create two PeerConnections objects, which allows a loopback test.
 var pcA *PeerConnection

@@ -29,6 +29,10 @@ extern "C" {
   extern const int CGO_SignalingStateHaveRemotePrAnswer;
   extern const int CGO_SignalingStateClosed;
 
+  extern const int CGO_IceGatheringStateNew;
+  extern const int CGO_IceGatheringStateGathering;
+  extern const int CGO_IceGatheringStateComplete;
+
 #ifdef __cplusplus
 }
 #endif

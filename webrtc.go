@@ -26,8 +26,6 @@ This will however have implications for the archives that need to be built
 and linked.
 
 Please share any improvements or concerns as issues or pull requests on github.
-
-TODO(keroserene): More / better documentation everywhere.
 */
 package webrtc
 
@@ -39,6 +37,7 @@ package webrtc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
 #include "cpeerconnection.h"
+#include "ctestenums.h"
 */
 import "C"
 import (
@@ -51,7 +50,10 @@ func init() {
 	SetLoggingVerbosity(3) // Default verbosity.
 }
 
-type PeerConnectionState int
+type (
+	PeerConnectionState int
+	IceGatheringState   int
+)
 
 const (
 	PeerConnectionStateNew PeerConnectionState = iota
@@ -63,6 +65,15 @@ const (
 
 var PeerConnectionStateString = []string{
 	"New", "Connecting", "Connected", "Disconnected", "Failed"}
+
+const (
+	IceGatheringStateNew IceGatheringState = iota
+	IceGatheringStateGathering
+	IceGatheringStateComplete
+)
+
+var IceGatheringStateString = []string{
+	"New", "Gathering", "Complete"}
 
 /* WebRTC PeerConnection
 
@@ -90,10 +101,10 @@ type PeerConnection struct {
 	OnIceComplete       func()
 	OnNegotiationNeeded func()
 	// onicecandidateerror
-	OnSignalingStateChange func(SignalingState)
-	// onicegatheringstatechange
-	OnConnectionStateChange func(PeerConnectionState)
-	OnDataChannel           func(*data.Channel)
+	OnSignalingStateChange    func(SignalingState)
+	OnIceGatheringStateChange func(IceGatheringState)
+	OnConnectionStateChange   func(PeerConnectionState)
+	OnDataChannel             func(*data.Channel)
 
 	config Configuration
 
@@ -343,6 +354,15 @@ func cgoOnConnectionStateChange(p unsafe.Pointer, state PeerConnectionState) {
 	}
 }
 
+//export cgoOnIceGatheringStateChange
+func cgoOnIceGatheringStateChange(p unsafe.Pointer, state IceGatheringState) {
+	INFO.Println("fired OnIceGatheringStateChange:", p)
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnIceGatheringStateChange {
+		pc.OnIceGatheringStateChange(state)
+	}
+}
+
 //export cgoOnDataChannel
 func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 	INFO.Println("fired OnDataChannel: ", p, cDC)
@@ -352,3 +372,7 @@ func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 		pc.OnDataChannel(dc)
 	}
 }
+
+var _cgoIceGatheringStateNew = int(C.CGO_IceGatheringStateNew)
+var _cgoIceGatheringStateGathering = int(C.CGO_IceGatheringStateGathering)
+var _cgoIceGatheringStateComplete = int(C.CGO_IceGatheringStateComplete)
