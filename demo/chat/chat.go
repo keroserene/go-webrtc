@@ -15,6 +15,7 @@ import (
 	"github.com/keroserene/go-webrtc"
 	"github.com/keroserene/go-webrtc/data"
 	"os"
+	"os/signal"
 	"strings"
 )
 
@@ -251,6 +252,20 @@ func main() {
 	fmt.Println("Welcome, " + username + "!")
 	fmt.Println("To initiate a WebRTC PeerConnection, type \"start\".")
 	fmt.Println("(Alternatively, immediately input SDP messages from the peer.)")
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
+	go func() {
+		<- sigs
+		fmt.Println("Demo interrupted. Disconnecting...")
+		if nil != dc {
+			dc.Close()
+		}
+		if nil != pc {
+			pc.Close()
+		}
+		os.Exit(1)
+	}()
 
 	// Input loop.
 	for true {
