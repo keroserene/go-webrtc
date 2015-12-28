@@ -121,12 +121,6 @@ class Peer
     cgoOnIceCandidate(goPeerConnection, cgoIC);
   }
 
-  // TODO: OnIceComplete is actually being deprecated in native code.
-  // Should switch to OnIceGatheringState.
-  void OnIceComplete() {
-    cgoOnIceComplete(goPeerConnection);
-  }
-
   void OnIceConnectionChange(
       PeerConnectionInterface::IceConnectionState new_state) {
     // TODO: This may need to be slightly more complicated...

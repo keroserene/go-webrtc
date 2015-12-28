@@ -49,7 +49,6 @@ import (
 func init() {
 	SetLoggingVerbosity(3) // Default verbosity.
 }
-
 type (
 	PeerConnectionState int
 	IceGatheringState   int
@@ -336,15 +335,6 @@ func cgoOnIceCandidate(p unsafe.Pointer, cIC C.CGO_IceCandidate) {
 	}
 }
 
-//export cgoOnIceComplete
-func cgoOnIceComplete(p unsafe.Pointer) {
-	INFO.Println("fired OnIceComplete: ", p)
-	pc := (*PeerConnection)(p)
-	if nil != pc.OnIceComplete {
-		pc.OnIceComplete()
-	}
-}
-
 //export cgoOnConnectionStateChange
 func cgoOnConnectionStateChange(p unsafe.Pointer, state PeerConnectionState) {
 	INFO.Println("fired OnConnectionStateChange: ", p)
@@ -360,6 +350,11 @@ func cgoOnIceGatheringStateChange(p unsafe.Pointer, state IceGatheringState) {
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnIceGatheringStateChange {
 		pc.OnIceGatheringStateChange(state)
+	}
+	// Although OnIceComplete is to be deprecated in the native API, and no longer
+	// part of the w3 spec, keeping it for go seems easier for the users.
+	if IceGatheringStateComplete == state && nil != pc.OnIceComplete {
+		pc.OnIceComplete()
 	}
 }
 

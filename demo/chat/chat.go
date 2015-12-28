@@ -218,6 +218,14 @@ func start(instigator bool) {
 		sdp := pc.LocalDescription().Serialize()
 		signalSend(sdp)
 	}
+	/*
+	pc.OnIceGatheringStateChange = func(state webrtc.IceGatheringState) {
+		fmt.Println("Ice Gathering State:", webrtc.IceGatheringStateString[state])
+		if webrtc.IceGatheringStateComplete == state {
+			// send local description.
+		}
+	}
+	*/
 	// A DataChannel is generated through this callback only when the remote peer
 	// has initiated the creation of the data channel.
 	pc.OnDataChannel = func(channel *data.Channel) {
