@@ -49,6 +49,7 @@ import (
 func init() {
 	SetLoggingVerbosity(3) // Default verbosity.
 }
+
 type (
 	PeerConnectionState int
 	IceGatheringState   int
@@ -116,8 +117,11 @@ For a successful connection, provide at least one ICE server (stun or turn)
 in the |Configuration| struct.
 */
 func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
+	if nil == config {
+		return nil, errors.New("PeerConnection requires a Configuration.")
+	}
 	pc := new(PeerConnection)
-	INFO.Println("PC at ", unsafe.Pointer(pc))
+	// INFO.Println("PC at ", unsafe.Pointer(pc))
 	// Internal CGO Peer wraps the native webrtc::PeerConnectionInterface.
 	pc.cgoPeer = C.CGO_InitializePeer(unsafe.Pointer(pc))
 	if nil == pc.cgoPeer {
@@ -181,6 +185,9 @@ generated from the local peer's CreateOffer or CreateAnswer, and not be a
 description received over the signaling channel.
 */
 func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
+	if nil == sdp {
+		return errors.New("Cannot use nil SessionDescription.")
+	}
 	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
 		return errors.New("SetLocalDescription failed.")
@@ -205,6 +212,9 @@ over the signaling channel, and not a description created locally.
 If the local peer is the answerer, this must be called before CreateAnswer.
 */
 func (pc *PeerConnection) SetRemoteDescription(sdp *SessionDescription) error {
+	if nil == sdp {
+		return errors.New("Cannot use nil SessionDescription.")
+	}
 	r := C.CGO_SetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
 	if 0 != r {
 		return errors.New("SetRemoteDescription failed.")

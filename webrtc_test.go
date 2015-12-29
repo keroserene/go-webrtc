@@ -1,231 +1,216 @@
 package webrtc
 
 import (
-	"fmt"
 	"github.com/keroserene/go-webrtc/data"
+	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
 	"unsafe"
 )
 
-// TODO: Try Gucumber or some potential fancy test framework for go.
-// func checkEnum(t *testing.T, desc string, enum int, expected int) {
-// if enum != expected {
-// t.Error("Mismatched Enum Value -", desc,
-// "\nwas:", enum,
-// "\nexpected:", expected)
-// }
-// }
-//
-/*
-func TestPeerConnectionStateEnums(t *testing.T) {
-	checkEnum(t, "PeerConnectionStateNew",
-		int(PeerConnectionStateNewd), _cgoBundlePolicyBalanced)
-	checkEnum(t, "BundlePolicyMaxCompat",
-		int(BundlePolicyMaxCompat), _cgoBundlePolicyMaxCompat)
-	checkEnum(t, "BundlePolicyMaxBundle",
-		int(BundlePolicyMaxBundle), _cgoBundlePolicyMaxBundle)
-}
-*/
-
 func TestIceGatheringStateEnums(t *testing.T) {
-	checkEnum(t, "IceGatheringStateNew",
-		int(IceGatheringStateNew), _cgoIceGatheringStateNew)
-	checkEnum(t, "IceGatheringStateGathering",
-		int(IceGatheringStateGathering), _cgoIceGatheringStateGathering)
-	checkEnum(t, "IceGatheringStateComplete",
-		int(IceGatheringStateComplete), _cgoIceGatheringStateComplete)
+	Convey(`Enum: IceGatheringState values should match
+C++ webrtc::PeerConnectionInterface values`, t, func() {
+		So(IceGatheringStateNew, ShouldEqual, _cgoIceGatheringStateNew)
+		So(IceGatheringStateGathering, ShouldEqual, _cgoIceGatheringStateGathering)
+		So(IceGatheringStateComplete, ShouldEqual, _cgoIceGatheringStateComplete)
+	})
 }
 
-// These tests create two PeerConnections objects, which allows a loopback test.
-var pcA *PeerConnection
-var pcB *PeerConnection
-var err error
-var sdp *SessionDescription
-var config *Configuration
+func TestPeerConnection(t *testing.T) {
+	SetLoggingVerbosity(0)
 
-func TestCreatePeerConnection(t *testing.T) {
-	config = NewConfiguration()
-	if nil == config {
-		t.Fatal("Unable to create Configuration")
-	}
-	pcA, err = NewPeerConnection(config)
-	if nil != err {
-		t.Fatal(err)
-	}
+	Convey("PeerConnection", t, func() {
+		var offer *SessionDescription
+		var answer *SessionDescription
+		config := NewConfiguration(
+			OptionIceServer("stun:stun.l.google.com:19302, stun:another"))
+		So(config, ShouldNotBeNil)
+
+		Convey("Basic functionality", func() {
+			pc, err := NewPeerConnection(nil)
+			So(pc, ShouldBeNil)
+			So(err, ShouldNotBeNil)
+			// A Configuration is required.
+			pc, err = NewPeerConnection(config)
+			So(pc, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+			So(pc.ConnectionState(), ShouldEqual, PeerConnectionStateNew)
+
+			Convey("Set and Get Configuration", func() {
+				config := NewConfiguration(
+					OptionIceServer("stun:something.else"),
+					OptionIceTransportPolicy(IceTransportPolicyRelay))
+				pc.SetConfiguration(*config)
+				got := pc.GetConfiguration()
+				So(got.IceTransportPolicy, ShouldEqual, IceTransportPolicyRelay)
+			})
+
+			Convey("Callbacks fire correctly", func() {
+
+				Convey("OnSignalingState", func() {
+					success := make(chan SignalingState, 1)
+					pc.OnSignalingStateChange = func(s SignalingState) {
+						success <- s
+					}
+					cgoOnSignalingStateChange(unsafe.Pointer(pc), SignalingStateStable)
+					select {
+					case state := <-success:
+						So(state, ShouldEqual, SignalingStateStable)
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
+				Convey("OnNegotiationNeeded", func() {
+					success := make(chan int, 1)
+					pc.OnNegotiationNeeded = func() {
+						success <- 0
+					}
+					cgoOnNegotiationNeeded(unsafe.Pointer(pc))
+					select {
+					case <-success:
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
+				Convey("OnConnectionStateChange", func() {
+					success := make(chan PeerConnectionState, 1)
+					pc.OnConnectionStateChange = func(state PeerConnectionState) {
+						success <- state
+					}
+					cgoOnConnectionStateChange(unsafe.Pointer(pc),
+						PeerConnectionStateDisconnected)
+					select {
+					case r := <-success:
+						So(r, ShouldEqual, PeerConnectionStateDisconnected)
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
+				// TODO: Find better way to trigger a fake ICE candidate.
+				SkipConvey("OnIceCandidate", func() {
+					success := make(chan IceCandidate, 1)
+					pc.OnIceCandidate = func(ic IceCandidate) {
+						success <- ic
+					}
+					// ice := DeserializeIceCandidate("fake")
+					// cgoOnIceCandidate(unsafe.Pointer(pc), nil)
+					select {
+					case <-success:
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
+				Convey("OnDataChannel", func() {
+					success := make(chan *data.Channel, 1)
+					pc.OnDataChannel = func(dc *data.Channel) {
+						success <- dc
+					}
+					cgoOnDataChannel(unsafe.Pointer(pc), nil)
+					select {
+					case <-success:
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+			}) // Callbacks
+		}) // Basic Functionality
+
+		Convey("Create PeerConnections for Alice and Bob", func() {
+			alice, err := NewPeerConnection(config)
+			So(alice, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+			bob, err := NewPeerConnection(config)
+			So(bob, ShouldNotBeNil)
+			So(err, ShouldBeNil)
+
+			So(alice.SignalingState(), ShouldEqual, SignalingStateStable)
+			So(bob.SignalingState(), ShouldEqual, SignalingStateStable)
+			So(alice.ConnectionState(), ShouldEqual, PeerConnectionStateNew)
+			So(bob.ConnectionState(), ShouldEqual, PeerConnectionStateNew)
+
+			Convey("Alice creates offer", func() {
+				offer, err = alice.CreateOffer()
+				So(offer, ShouldNotBeNil)
+				So(err, ShouldBeNil)
+				So(alice.SignalingState(), ShouldEqual, SignalingStateStable)
+				So(alice.ConnectionState(), ShouldEqual, PeerConnectionStateNew)
+
+				// Shouldn't be able to set nil SDPs.
+				err = alice.SetLocalDescription(nil)
+				So(err, ShouldNotBeNil)
+				err = alice.SetRemoteDescription(nil)
+				So(err, ShouldNotBeNil)
+
+				// Shouldn't be able to CreateAnswer
+				answer, err = alice.CreateAnswer()
+				So(answer, ShouldBeNil)
+				So(err, ShouldNotBeNil)
+
+				err = alice.SetLocalDescription(offer)
+				So(err, ShouldBeNil)
+				So(alice.LocalDescription(), ShouldEqual, offer)
+				So(alice.SignalingState(), ShouldEqual, SignalingStateHaveLocalOffer)
+
+				ic := IceCandidate{"fixme", "", 0}
+				err = alice.AddIceCandidate(ic)
+				So(err, ShouldNotBeNil)
+
+				Convey("Bob receive offer and generates answer", func() {
+					err = bob.SetRemoteDescription(offer)
+					So(err, ShouldBeNil)
+					So(bob.RemoteDescription(), ShouldEqual, offer)
+					So(bob.SignalingState(), ShouldEqual, SignalingStateHaveRemoteOffer)
+
+					answer, err = bob.CreateAnswer()
+					So(answer, ShouldNotBeNil)
+					So(err, ShouldBeNil)
+
+					err = bob.SetLocalDescription(answer)
+					So(err, ShouldBeNil)
+					So(bob.LocalDescription(), ShouldEqual, answer)
+					So(bob.SignalingState(), ShouldEqual, SignalingStateStable)
+
+					Convey("Alice receives Bob's answer", func() {
+						err = alice.SetRemoteDescription(answer)
+						So(err, ShouldBeNil)
+						So(alice.RemoteDescription(), ShouldEqual, answer)
+						So(alice.SignalingState(), ShouldEqual, SignalingStateStable)
+					})
+
+				})
+			})
+
+			Convey("DataChannel", func() {
+				channel, err := alice.CreateDataChannel("test", data.Init{})
+				So(channel, ShouldNotBeNil)
+				So(err, ShouldBeNil)
+				So(channel.Label(), ShouldEqual, "test")
+				channel.Close()
+			})
+
+			Convey("Close PeerConnections.", func() {
+				success := make(chan int, 1)
+				go func() {
+					// err = alice.Close()
+					// So(err, ShouldBeNil)
+					err = bob.Close()
+					// So(err, ShouldBeNil)
+					success <- 1
+				}()
+				// TODO: Check the signaling state.
+				select {
+				case <-success:
+				case <-time.After(time.Second * 2):
+					WARN.Println("Timed out... something's probably amiss.")
+					success <- 0
+				}
+			})
+
+		})
+	})
 }
-
-func TestCreateSecondPeerConnections(t *testing.T) {
-	pcB, err = NewPeerConnection(config)
-	if nil != err {
-		t.Fatal(err)
-	}
-}
-
-func TestCreateOffer(t *testing.T) {
-	fmt.Println("\n== ALICE's PeerConnection ==")
-	sdp, err = pcA.CreateOffer()
-	if nil != err {
-		t.Fatal(err)
-	}
-	fmt.Println("SDP Offer:\n", sdp.Sdp)
-}
-
-func TestOnSignalingStateChangeCallback(t *testing.T) {
-	success := make(chan SignalingState, 1)
-	pcA.OnSignalingStateChange = func(s SignalingState) {
-		success <- s
-	}
-	cgoOnSignalingStateChange(unsafe.Pointer(pcA), SignalingStateStable)
-	select {
-	case state := <-success:
-		if SignalingStateStable != state {
-			t.Error("Unexpected SignalingState:", state)
-		}
-	case <-time.After(time.Second * 1):
-		t.Fatal("Timed out.")
-	}
-}
-
-func TestOnIceCandidateCallback(t *testing.T) {
-	t.SkipNow() // Can't import C in tests
-	success := make(chan IceCandidate, 1)
-	pcA.OnIceCandidate = func(ic IceCandidate) {
-		success <- ic
-	}
-	// cgoOnIceCandidate(unsafe.Pointer(pcA), C.CString("not real"), ...)
-	select {
-	case <-success:
-	case <-time.After(time.Second * 1):
-		t.Fatal("Timed out.")
-	}
-}
-
-func TestSetLocalDescription(t *testing.T) {
-	err = pcA.SetLocalDescription(sdp)
-	if nil != err {
-		t.Fatal(err)
-	}
-
-	// Pretend pcA sends the SDP offer to pcB through some signalling channel.
-	fmt.Print("\n ~~ Signalling Happens here ~~ \n\n")
-}
-
-func TestSetRemoteDescription(t *testing.T) {
-	fmt.Println("\n == BOB's PeerConnection ==")
-	err = pcB.SetRemoteDescription(sdp)
-	if nil != err {
-		t.Fatal(err)
-	}
-}
-
-func TestAddIceCandidate(t *testing.T) {
-	t.SkipNow() // Needs real data
-	ic := IceCandidate{"fixme", "", 0}
-	err = pcB.AddIceCandidate(ic)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestGetSignalingState(t *testing.T) {
-	state := pcB.SignalingState()
-	if SignalingStateHaveRemoteOffer != state {
-		t.Error("Unexected signaling state:", state)
-	}
-	fmt.Println(SignalingStateString[state])
-}
-
-func TestSetAndGetConfiguration(t *testing.T) {
-	config := NewConfiguration(
-		OptionIceServer("stun:something.else"),
-		OptionIceTransportPolicy(IceTransportPolicyRelay))
-	pcA.SetConfiguration(*config)
-	got := pcA.GetConfiguration()
-	if got.IceTransportPolicy != IceTransportPolicyRelay {
-		t.Error("Unexpected Configuration: ",
-			IceTransportPolicyString[got.IceTransportPolicy])
-	}
-}
-
-func TestCreateAnswer(t *testing.T) {
-	sdp, err := pcB.CreateAnswer()
-	if nil != err {
-		t.Fatal(err)
-	}
-	fmt.Println("SDP Answer:\n", sdp.Sdp)
-}
-
-func TestOnNegotiationNeededCallback(t *testing.T) {
-	success := make(chan int, 1)
-	pcA.OnNegotiationNeeded = func() {
-		success <- 0
-	}
-	cgoOnNegotiationNeeded(unsafe.Pointer(pcA))
-	select {
-	case <-success:
-	case <-time.After(time.Second * 1):
-		t.Fatal("Timed out.")
-	}
-}
-
-func TestOnConnectionStateChangeCallback(t *testing.T) {
-	success := make(chan PeerConnectionState, 1)
-	pcA.OnConnectionStateChange = func(state PeerConnectionState) {
-		success <- state
-	}
-	cgoOnConnectionStateChange(unsafe.Pointer(pcA),
-		PeerConnectionStateDisconnected)
-	select {
-	case r := <-success:
-		if PeerConnectionStateDisconnected != r {
-			t.Error("Unexpected PeerConnectionState:", r)
-		}
-	case <-time.After(time.Second * 1):
-		t.Fatal("Timed out.")
-	}
-}
-
-func TestCreateDataChannel(t *testing.T) {
-	channel, err := pcA.CreateDataChannel("test", data.Init{})
-	if nil != err {
-		t.Fatal(err)
-	}
-	fmt.Println("Data channel: ", channel)
-	label := channel.Label()
-	if label != "test" {
-		t.Error("Unexpected label:", label)
-	}
-	channel.Close()
-}
-
-func TestOnDataChannelCallback(t *testing.T) {
-	success := make(chan *data.Channel, 1)
-	pcA.OnDataChannel = func(dc *data.Channel) {
-		success <- dc
-	}
-	cgoOnDataChannel(unsafe.Pointer(pcA), nil)
-	select {
-	case <-success:
-	case <-time.After(time.Second * 1):
-		t.Fatal("Timed out.")
-	}
-}
-
-func TestClose(t *testing.T) {
-	success := make(chan int, 1)
-	go func() {
-		// pcA.Close()
-		pcB.Close()
-		success <- 1
-	}()
-	// TODO: Check the signaling state.
-	select {
-	case <-success:
-	case <-time.After(time.Second * 2):
-		WARN.Println("Timed out... something's probably amiss.")
-		success <- 0
-	}
-}
-
-// TODO: tests for video / audio stream support.

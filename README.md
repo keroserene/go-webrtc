@@ -4,7 +4,7 @@
 
 WebRTC for Golang.
 
-This repository is currently **not ready** and fluctuating a lot.
+This repository is currently fluctuating a lot.
 **Do not rely** on anything in here yet!
 
 This currently only builds on linux, but OSX is in progress.
@@ -12,11 +12,12 @@ Actual documentation is on the way.
 
 ### Current Status:
 
-- The Go code successfully wraps the C++ code.
-- From Go, it is now possible to create a WebRTC PeerConnection, generate SDP
-messages and ICE candidates, and exchange bytes over a real DataChannel.
+- A PeerConnection can be successfully established between two separate machines
+  using this Go library.
+- It is possible to exchange bytes over a real DTLS/SCTP datachannel. (See the
+  chat demo).
 - Video/Audio support from the Media API is not implemented as it's low priority
-  for us -- but pull requests will be gladly taken :)
+  for us -- but pull requests will be gladly taken!
 
 There is still lots of work to do!
 
@@ -69,6 +70,3 @@ TODO(keroserene): More information / provide a real build script for this.
 
 - There is a `.CGO()` method for every Go struct which expects being passed to
   native code.
-
-Current webrtc commit
-

@@ -2,6 +2,8 @@
  * Basic webrtc demo, two local clients speaking over go, to show the most basic
  * usage of webrtc in Go.
  *
+ * For a more real-world example, see the chat demo.
+ *
  * Do: `go run demo.go`
  *
  * TODO: This is in-progress.
@@ -17,7 +19,7 @@ import (
 
 func main() {
 
-	webrtc.SetVerbosity(3)
+	webrtc.SetLoggingVerbosity(3)
 
 	config := webrtc.NewConfiguration(
 		/// There can be as many as you like.
