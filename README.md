@@ -6,8 +6,8 @@ WebRTC for Golang.
 
 ### Current Status:
 
-This repository is currently fluctuating a lot.
-**Do not rely** on anything in here yet!
+This repository is currently fluctuating a lot, and the exposed interfaces will
+change. **Do not rely** on anything in here yet!
 
 - A PeerConnection can be successfully established between two separate machines
   using this Go library.
@@ -21,7 +21,18 @@ There is still lots of work to do!
 
 ### Usage
 
-In .go files that requires WebRTC functionality:
+To immediately see some action, try the chat demo from two machines (or one...)
+
+- `git clone https://github.com/keroserene/go-webrtc`
+- `cd go-webrtc`
+- `go run demo/chat/chat.go`
+
+Type "start" in one of the Peers, and copy the session descriptions.
+(This is the "copy-paste" signalling channel). If ICE negotiation succeeds,
+a really janky chat session should begin.
+
+
+To write Go code which requires WebRTC functionality:
 ```
 import "github.com/keroserene/go-webrtc/"
 ```
@@ -33,6 +44,11 @@ within `demo/*` for real usage examples which show how to prepare a
 PeerConnection and set up the necessary callbacks and signaling.
 
 Also, here are the [GoDocs](https://godoc.org/github.com/keroserene/go-webrtc).
+
+### Dependencies:
+
+- GCC 5+
+- TODO:
 
 #### Package naming
 
@@ -63,7 +79,6 @@ The easy way is to use the pre-built archive I've provided in `lib/`.
 
 Once the archive is ready, cgo takes care of everything, and building
 is as easy as `go build` or `go install`.
-If you'd like to try the chat demo, you can do `go run demo/chat/chat.go`.
 
 TODO(keroserene): More information / provide a real build script to automate
 the hard way so it becomes the easy way.
