@@ -25,7 +25,6 @@ type (
 )
 
 type Configuration struct {
-	// TODO: Implement, and provide as argument to CreatePeerConnection
 	IceServers []IceServer
 	IceTransportPolicy
 	BundlePolicy
