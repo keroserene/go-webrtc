@@ -219,12 +219,12 @@ func start(instigator bool) {
 		signalSend(sdp)
 	}
 	/*
-	pc.OnIceGatheringStateChange = func(state webrtc.IceGatheringState) {
-		fmt.Println("Ice Gathering State:", webrtc.IceGatheringStateString[state])
-		if webrtc.IceGatheringStateComplete == state {
-			// send local description.
+		pc.OnIceGatheringStateChange = func(state webrtc.IceGatheringState) {
+			fmt.Println("Ice Gathering State:", webrtc.IceGatheringStateString[state])
+			if webrtc.IceGatheringStateComplete == state {
+				// send local description.
+			}
 		}
-	}
 	*/
 	// A DataChannel is generated through this callback only when the remote peer
 	// has initiated the creation of the data channel.
@@ -264,7 +264,7 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt)
 	go func() {
-		<- sigs
+		<-sigs
 		fmt.Println("Demo interrupted. Disconnecting...")
 		if nil != dc {
 			dc.Close()

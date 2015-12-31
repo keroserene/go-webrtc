@@ -1,8 +1,8 @@
 package webrtc
 
 import (
-	"testing"
 	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 func TestSessionDescription(t *testing.T) {
