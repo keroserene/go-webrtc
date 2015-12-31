@@ -1,0 +1,15 @@
+language: go
+
+os:
+    - osx
+
+go:
+    - 1.5
+
+install:
+    - go get -u github.com/jstemmer/go-junit-report
+    - go get -u github.com/smartystreets/goconvey
+
+script:
+    - make check
+    - go test
