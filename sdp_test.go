@@ -2,47 +2,32 @@ package webrtc
 
 import (
 	"testing"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestNewSessionDescription(t *testing.T) {
-	r := NewSessionDescription("offer", "fake")
-	if nil == r {
-		t.Fatal("Unable to create new SessionDescription.")
-	}
-	if "offer" != r.Type {
-		t.Error("Unexpected Type:", r.Type)
-	}
-	if "fake" != r.Sdp {
-		t.Error("Unexpected Sdp:", r.Sdp)
-	}
-}
+func TestSessionDescription(t *testing.T) {
+	Convey("SessionDescription", t, func() {
+		r := NewSessionDescription("offer", "fake")
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "offer")
+		So(r.Sdp, ShouldEqual, "fake")
 
-func TestSerializeSessionDescription(t *testing.T) {
-	sdp := NewSessionDescription("answer", "fake")
-	s := sdp.Serialize()
-	expected := `{"type":"answer","sdp":"fake"}`
-	if expected != s {
-		t.Error("Incorrect Serializing of SessionDescription", s)
-	}
-}
+		Convey("Serialize and Deserialize", func() {
+			sdp := NewSessionDescription("answer", "fake")
+			s := sdp.Serialize()
+			So(s, ShouldEqual, `{"type":"answer","sdp":"fake"}`)
 
-func TestDeserializeSessionDescription(t *testing.T) {
-	r := DeserializeSessionDescription(`{"type":"answer","sdp":"fake"}`)
-	if nil == r {
-		t.Fatal("Failed to deserialize SessionDescription.")
-	}
-	if "answer" != r.Type {
-		t.Error("Unexpected type:", r.Type)
-	}
-	if "fake" != r.Sdp {
-		t.Error("Unexpected sdp:", r.Sdp)
-	}
-}
+			r := DeserializeSessionDescription(`{"type":"answer","sdp":"fake"}`)
+			So(r, ShouldNotBeNil)
+			So(r.Type, ShouldEqual, "answer")
+			So(r.Sdp, ShouldEqual, "fake")
 
-func TestRoundtripSerializeDeserialize(t *testing.T) {
-	sdp := NewSessionDescription("pranswer", "not real")
-	r := DeserializeSessionDescription(sdp.Serialize())
-	if r.Type != sdp.Type || r.Sdp != sdp.Sdp {
-		t.Error("Incorrect roundtrip serialize and deserialization.")
-	}
+			Convey("Roundtrip", func() {
+				sdp = NewSessionDescription("pranswer", "not real")
+				r = DeserializeSessionDescription(sdp.Serialize())
+				So(r.Type, ShouldEqual, sdp.Type)
+				So(r.Sdp, ShouldEqual, sdp.Sdp)
+			})
+		})
+	})
 }

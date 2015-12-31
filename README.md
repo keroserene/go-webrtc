@@ -68,7 +68,7 @@ Latest tested native webrtc archive: `a4df27b6713583045e51e20c4eb93718d15ca33e`
 
 There are currently two ways to build gowebrtc: the easy way, and the hard way.
 
-The hard way is to build from scratch, which involves involves Google's
+The hard way is to build from scratch, which involves Google's
 depot_tools and chromium stuff, gclient syncing, which takes a couple
 hours, and possibly many more if you run into problems... along with
 writing a custom ninja file and concatenating archives correctly and such.
