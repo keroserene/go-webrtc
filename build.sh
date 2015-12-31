@@ -59,11 +59,13 @@ do
 done
 popd
 
-# FIXME(arlolra): only .a's from peerconnection_client.ninja
 echo "Concatenating libraries ..."
 pushd $WEBRTC_SRC/out/$CONFIG
 ls *.a > filelist
-libtool -static -o $LIB_DIR/libwebrtc-$OS-$ARCH-magic.a -filelist filelist
+libtool -static -o libwebrtc-magic.a -filelist filelist
+# on osx:
+# strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
+mv libwebrtc-magic.a $LIB_DIR/libwebrtc-$OS-$ARCH-magic.a
 popd
 
 echo "Build complete."
