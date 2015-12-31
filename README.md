@@ -15,7 +15,6 @@ change. **Do not rely** on anything in here yet!
   chat demo)
 - Video/Audio support from the Media API is not implemented as it's low priority
   for us -- but pull requests will be gladly taken!
-- This currently only builds on linux, but OSX is in progress.
 
 There is still lots of work to do!
 
