@@ -82,10 +82,3 @@ is as easy as `go build` or `go install`.
 TODO(keroserene): More information / provide a real build script to automate
 the hard way so it becomes the easy way.
 (See [Issue #23](https://github.com/keroserene/go-webrtc/issues/23))
-
-### Conventions
-
-- Please run `go fmt` before every commit.
-
-- There is a `.CGO()` method for every Go struct which expects being passed to
-  native code.
