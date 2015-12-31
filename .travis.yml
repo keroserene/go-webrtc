@@ -2,14 +2,24 @@ language: go
 
 os:
     - osx
+    - linux
+
+addons:
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+        packages:
+            - g++-5
+            - gcc-5
 
 go:
     - 1.5
 
 install:
-    - go get -u github.com/jstemmer/go-junit-report
+    - if [ "$TRAVIS_OS_NAME" = "linux" ]; then export CXX="g++-5" CC="gcc-5"; fi
     - go get -u github.com/smartystreets/goconvey
 
 script:
     - make check
-    - go test
+    - go test -v ./data
+    - go test -v .

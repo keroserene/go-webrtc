@@ -12,4 +12,5 @@ Libs: \
 	-L${pc}/lib \
 	-lwebrtc-linux-amd64-magic \
 	-ldl \
-	-lX11
+	-lX11 \
+	-lrt
