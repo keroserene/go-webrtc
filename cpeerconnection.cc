@@ -18,6 +18,12 @@
 #define FAILURE -1
 #define TIMEOUT_SECS 3
 
+#define CGO_DBG_ENABLED 0
+#define CGO_DBG_MSG(os, msg) \
+  (os) << endl << "[CGO] " << __func__ << "() - line " << __LINE__ << ": "\
+       << msg << endl
+#define CGO_DBG(msg) if (CGO_DBG_ENABLED) { CGO_DBG_MSG(cout, msg); }
+
 using namespace std;
 using namespace webrtc;
 
@@ -55,8 +61,7 @@ class Peer
       signalling_thread_,
       NULL, NULL, NULL);
     if (!pc_factory.get()) {
-      // TODO: Better logging on the C side
-      cout << "ERROR: Could not create PeerConnectionFactory" << endl;
+      CGO_DBG("Could not create PeerConnectionFactory");
       return false;
     }
 
@@ -81,12 +86,12 @@ class Peer
   // of goroutines. This should be easier and more idiomatic for users.
   //
   void OnSuccess(SDP desc) {
-    // cout << "[C] SDP successfully created at " << desc << endl;
+    CGO_DBG("SDP successfully created.");
     promiseSDP.set_value(desc);
   }
 
   void OnFailure(const std::string& error) {
-    cout << "[C] SDP Failure: " << error << endl;
+    CGO_DBG("SDP Failure: " + error);
     promiseSDP.set_value(NULL);
   }
 
@@ -94,18 +99,20 @@ class Peer
   // PeerConnectionObserver Implementation
   //
   void OnSignalingChange(PeerConnectionInterface::SignalingState state) {
+    CGO_DBG("fired OnSignalingChange");
     cgoOnSignalingStateChange(goPeerConnection, state);
   }
 
   // This is required for the Media API.
   void OnAddStream(webrtc::MediaStreamInterface* stream) {
-    cout << "[C] OnAddStream: " << stream << endl;
+    CGO_DBG("unimplemented OnAddStream");
   }
   void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
-    cout << "[C] OnRemoveStream: " << stream << endl;
+    CGO_DBG("unimplemented OnRemoveStream");
   }
 
   void OnRenegotiationNeeded() {
+    CGO_DBG("fired OnRenegotiationNeeded");
     cgoOnNegotiationNeeded(goPeerConnection);
   }
 
@@ -179,7 +186,7 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
     promiseSet.set_value(0);
   }
   virtual void OnFailure(const std::string& error) {
-    cout << "[C ERROR] SessionDescription: " << error << endl;
+    CGO_DBG("SessionDescription: " + error);
     promiseSet.set_value(-1);
   }
   promise<int> promiseSet = promise<int>();
@@ -249,7 +256,7 @@ int CGO_CreatePeerConnection(CGO_Peer cgoPeer, CGO_Configuration *cgoConfig) {
     );
 
   if (!peer->pc_.get()) {
-    cout << "ERROR: Could not create PeerConnection." << endl;
+    CGO_DBG("Could not create PeerConnection.");
     return FAILURE;
   }
   return SUCCESS;
@@ -268,7 +275,7 @@ CGO_sdp CGO_CreateOffer(CGO_Peer cgoPeer) {
   auto r = peer->promiseSDP.get_future();
   peer->pc_->CreateOffer(peer, peer->constraints);
   if (SDPtimeout(&r, TIMEOUT_SECS)) {
-    cout << "[C] CreateOffer timed out after " << TIMEOUT_SECS << endl;
+    CGO_DBG("CreateOffer timed out after " + TIMEOUT_SECS);
     peer->resetPromise();
     return NULL;
   }
@@ -285,7 +292,7 @@ CGO_sdp CGO_CreateAnswer(CGO_Peer cgoPeer) {
   auto r = peer->promiseSDP.get_future();
   peer->pc_->CreateAnswer(peer, peer->constraints);
   if (SDPtimeout(&r, TIMEOUT_SECS)) {
-    cout << "[C] CreateAnswer timed out after " << TIMEOUT_SECS << endl;
+    CGO_DBG("CreateAnswer timed out after " + TIMEOUT_SECS);
     peer->resetPromise();
     return NULL;
   }
@@ -337,11 +344,11 @@ int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_IceCandidate *cgoIC) {
   IceCandidateInterface *ic = webrtc::CreateIceCandidate(
     string(cgoIC->sdp_mid), cgoIC->sdp_mline_index, string(cgoIC->sdp), error);
   if (error || !ic) {
-    cout << "[C] SDP parse error." << endl;
+    CGO_DBG("SDP parse error");
     return FAILURE;
   }
   if (!cPC->AddIceCandidate(ic)) {
-    cout << "[C] problem adding ICE candidate." << endl;
+    CGO_DBG("Problem adding ICE candidate.");
     return FAILURE;
   }
   return SUCCESS;
@@ -379,6 +386,10 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   DataChannelInit config;
   string *l = new string(label);
   auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
+  if (NULL == channel) {
+    CGO_DBG("Unable to create DataChannel.");
+    return NULL;
+  }
   cPeer->channels.push_back(channel);
   webrtc::DataChannelInterface* c = channel.get();
   return c;
@@ -388,5 +399,5 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
 void CGO_Close(CGO_Peer peer) {
   auto cPeer = (Peer*)peer;
   cPeer->pc_->Close();
-  cout << "[C] Closed PeerConnection." << endl;
+  CGO_DBG("Closed PeerConnection.");
 }
