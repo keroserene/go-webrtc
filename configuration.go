@@ -108,12 +108,12 @@ func NewIceServer(params ...string) (*IceServer, error) {
 		WARN.Printf("IceServer: got %d strings, expect <= 3. Ignoring extras.\n",
 			len(params))
 	}
+	if "" == params[0] {
+		return nil, errors.New("IceServer: requires at least one Url")
+	}
 	urls := strings.Split(params[0], ",")
 	username := ""
 	credential := ""
-	if 0 == len(urls) {
-		return nil, errors.New("IceServer: requires at least one Url")
-	}
 	for i, url := range urls {
 		url = strings.TrimSpace(url)
 		// TODO: Better url validation.

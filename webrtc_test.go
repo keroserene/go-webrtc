@@ -325,6 +325,13 @@ func TestSessionDescription(t *testing.T) {
 			So(r.Type, ShouldEqual, "answer")
 			So(r.Sdp, ShouldEqual, "fake")
 
+			r = DeserializeSessionDescription(`invalid json{{`)
+			So(r, ShouldBeNil)
+			r = DeserializeSessionDescription(`{"sdp":"fake"}`)
+			So(r, ShouldBeNil)
+			r = DeserializeSessionDescription(`{"type":"answer"}`)
+			So(r, ShouldBeNil)
+
 			Convey("Roundtrip", func() {
 				sdp = NewSessionDescription("pranswer", "not real")
 				r = DeserializeSessionDescription(sdp.Serialize())
@@ -353,6 +360,18 @@ func TestIceCandidate(t *testing.T) {
 			So(r.Candidate, ShouldEqual, "still fake")
 			So(r.SdpMid, ShouldEqual, "illusory")
 			So(r.SdpMLineIndex, ShouldEqual, 1337)
+
+			r = DeserializeIceCandidate(`not valid {{{`)
+			So(r, ShouldBeNil)
+
+			// Missing fields should result in errors.
+			r = DeserializeIceCandidate(`{"sdpMid":"foo","sdpMLineIndex":1234}`)
+			So(r, ShouldBeNil)
+			r = DeserializeIceCandidate(`
+				{"candidate":"something","sdpMLineIndex":1234}`)
+			So(r, ShouldBeNil)
+			r = DeserializeIceCandidate(`{"candidate":"something","sdpMid":"bar"}`)
+			So(r, ShouldBeNil)
 
 			Convey("Roundtrip", func() {
 				ice := IceCandidate{
