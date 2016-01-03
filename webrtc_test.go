@@ -214,3 +214,158 @@ func TestPeerConnection(t *testing.T) {
 		})
 	})
 }
+
+func TestConfiguration(t *testing.T) {
+
+	Convey("Go enum values should correspond to native C++ values.", t, func() {
+		// Ensure the Go "enums" generated in the idiomatic iota const way actually
+		// match up with actual int values of the underlying native WebRTC Enums.
+
+		Convey("Enum: BundlePolicy", func() {
+			So(BundlePolicyBalanced, ShouldEqual, _cgoBundlePolicyBalanced)
+			So(BundlePolicyMaxCompat, ShouldEqual, _cgoBundlePolicyMaxCompat)
+			So(BundlePolicyMaxBundle, ShouldEqual, _cgoBundlePolicyMaxBundle)
+		})
+
+		Convey("Enum: IceTransportPolicy", func() {
+			So(IceTransportPolicyNone, ShouldEqual, IceTransportPolicyNone)
+			So(IceTransportPolicyRelay, ShouldEqual, IceTransportPolicyRelay)
+			So(IceTransportPolicyAll, ShouldEqual, IceTransportPolicyAll)
+		})
+
+		Convey("Enum: SignalingState", func() {
+			So(SignalingStateStable, ShouldEqual, _cgoSignalingStateStable)
+			So(SignalingStateHaveLocalOffer, ShouldEqual, _cgoSignalingStateHaveLocalOffer)
+			So(SignalingStateHaveLocalPrAnswer, ShouldEqual, _cgoSignalingStateHaveLocalPrAnswer)
+			So(SignalingStateHaveRemoteOffer, ShouldEqual, _cgoSignalingStateHaveRemoteOffer)
+			So(SignalingStateHaveRemotePrAnswer, ShouldEqual, _cgoSignalingStateHaveRemotePrAnswer)
+			So(SignalingStateClosed, ShouldEqual, _cgoSignalingStateClosed)
+		})
+
+		// TODO: [ED]
+		// SkipConvey("Enum: RtcpMuxPolicy", func() {
+		// So(RtcpMuxPolicyNegotiate, ShouldEqual, _cgoRtcpMuxPolicyNegotiate)
+		// So(RtcpMuxPolicyRequire, ShouldEqual, _cgoRtcpMuxPolicyRequire)
+		// })
+
+	}) // Enums
+
+	Convey("New IceServer", t, func() {
+		s, err := NewIceServer()
+		So(err, ShouldNotBeNil) // 0 params
+		So(s, ShouldBeNil)
+
+		s, err = NewIceServer("")
+		So(err, ShouldNotBeNil) // empty URL
+		So(s, ShouldBeNil)
+
+		s, err = NewIceServer("stun:12345, badurl")
+		So(err, ShouldNotBeNil) // malformed URL
+		So(s, ShouldBeNil)
+
+		s, err = NewIceServer("stun:12345, stun:ok")
+		So(err, ShouldBeNil)
+		So(s, ShouldNotBeNil)
+
+		s, err = NewIceServer("stun:a, turn:b")
+		So(err, ShouldBeNil)
+		So(s, ShouldNotBeNil)
+
+		s, err = NewIceServer("stun:a, turn:b", "alice")
+		So(err, ShouldBeNil)
+		So(s, ShouldNotBeNil)
+
+		s, err = NewIceServer("stun:a, turn:b", "alice", "secret")
+		So(err, ShouldBeNil)
+		So(s, ShouldNotBeNil)
+
+		s, err = NewIceServer("stun:a, turn:b", "alice", "secret", "extra")
+		So(err, ShouldBeNil) // NewIceServer shouldn't fail, only WARN on too many params
+		So(s, ShouldNotBeNil)
+	})
+
+	Convey("New Configuration", t, func() {
+		config := NewConfiguration()
+		So(config, ShouldNotBeNil)
+
+		config = NewConfiguration(OptionIceServer("stun:a"))
+		So(len(config.IceServers), ShouldEqual, 1)
+
+		config = NewConfiguration(
+			OptionIceServer("stun:a"),
+			OptionIceServer("stun:b, turn:c"))
+		So(len(config.IceServers), ShouldEqual, 2)
+
+		config = NewConfiguration(
+			OptionIceServer("stun:d"),
+			OptionIceTransportPolicy(IceTransportPolicyAll))
+		So(config.IceTransportPolicy, ShouldEqual, IceTransportPolicyAll)
+
+		config = NewConfiguration(
+			OptionIceServer("stun:d"),
+			OptionBundlePolicy(BundlePolicyMaxCompat))
+		So(config.BundlePolicy, ShouldEqual, BundlePolicyMaxCompat)
+	})
+}
+
+func TestSessionDescription(t *testing.T) {
+	Convey("SessionDescription", t, func() {
+		r := NewSessionDescription("offer", "fake")
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "offer")
+		So(r.Sdp, ShouldEqual, "fake")
+
+		Convey("Serialize and Deserialize", func() {
+			sdp := NewSessionDescription("answer", "fake")
+			s := sdp.Serialize()
+			So(s, ShouldEqual, `{"type":"answer","sdp":"fake"}`)
+
+			r := DeserializeSessionDescription(`{"type":"answer","sdp":"fake"}`)
+			So(r, ShouldNotBeNil)
+			So(r.Type, ShouldEqual, "answer")
+			So(r.Sdp, ShouldEqual, "fake")
+
+			Convey("Roundtrip", func() {
+				sdp = NewSessionDescription("pranswer", "not real")
+				r = DeserializeSessionDescription(sdp.Serialize())
+				So(r.Type, ShouldEqual, sdp.Type)
+				So(r.Sdp, ShouldEqual, sdp.Sdp)
+			})
+		})
+	})
+}
+
+func TestIceCandidate(t *testing.T) {
+	Convey("IceCandidate", t, func() {
+
+		Convey("Serialize and Deserialize", func() {
+			ice := IceCandidate{
+				"fake",
+				"not real",
+				1337,
+			}
+			expected := `{"candidate":"fake","sdpMid":"not real","sdpMLineIndex":1337}`
+			So(ice.Serialize(), ShouldEqual, expected)
+
+			r := DeserializeIceCandidate(`
+    		{"candidate":"still fake","sdpMid":"illusory","sdpMLineIndex":1337}`)
+			So(r, ShouldNotBeNil)
+			So(r.Candidate, ShouldEqual, "still fake")
+			So(r.SdpMid, ShouldEqual, "illusory")
+			So(r.SdpMLineIndex, ShouldEqual, 1337)
+
+			Convey("Roundtrip", func() {
+				ice := IceCandidate{
+					"totally fake",
+					"fabricated",
+					1337,
+				}
+				r := DeserializeIceCandidate(ice.Serialize())
+				So(r, ShouldNotBeNil)
+				So(r.Candidate, ShouldEqual, ice.Candidate)
+				So(r.SdpMid, ShouldEqual, ice.SdpMid)
+				So(r.SdpMLineIndex, ShouldEqual, ice.SdpMLineIndex)
+			})
+		})
+	})
+}
