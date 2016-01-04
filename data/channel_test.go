@@ -17,8 +17,19 @@ func TestDataStateEnums(t *testing.T) {
 
 	Convey("DataChannel", t, func() {
 
-		c := NewChannel(cgoFakeDataChannel())
+		c := NewChannel(nil)
+		So(c, ShouldBeNil)
+
+		c = NewChannel(cgoFakeDataChannel())
 		So(c, ShouldNotBeNil)
+		So(c.Label(), ShouldEqual, "fake")
+		So(c.Ordered(), ShouldBeFalse)
+		So(c.Protocol(), ShouldEqual, "")
+		So(c.MaxPacketLifeTime(), ShouldEqual, 0)
+		So(c.MaxRetransmits(), ShouldEqual, 0)
+		So(c.Negotiated(), ShouldBeFalse)
+		So(c.ID(), ShouldEqual, 12345)
+		So(c.BufferedAmount(), ShouldEqual, 0)
 
 		// There's not a good way to create a DataChannel without first having an
 		// available PeerConnection object with a valid session, but that's part of
@@ -69,6 +80,11 @@ func TestDataStateEnums(t *testing.T) {
 				case <-time.After(time.Second * 1):
 					t.Fatal("Timed out when waiting for Closed.")
 				}
+
+				// TODO: Unimplemented
+				cgoFakeStateChange(c, DataStateConnecting)
+				cgoFakeStateChange(c, DataStateClosing)
+				cgoFakeStateChange(c, 999)
 			})
 
 			Convey("OnBufferedAmountLow", func() {
@@ -90,6 +106,7 @@ func TestDataStateEnums(t *testing.T) {
 		Convey("Send", func() {
 			messages := make(chan []byte, 1)
 			data := []byte("some data to send")
+			// Fake data channel routes send to its own onmessage.
 			c.OnMessage = func(msg []byte) {
 				messages <- msg
 			}
@@ -100,6 +117,12 @@ func TestDataStateEnums(t *testing.T) {
 				So(recv, ShouldResemble, data)
 			case <-time.After(time.Second * 1):
 				t.Fatal("Timed out.")
+			}
+			c.Send(nil)
+			select {
+			case <-messages:
+				t.Fatal("Unexpected message when sending nil.")
+			case <-time.After(time.Second * 1):
 			}
 		})
 

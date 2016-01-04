@@ -67,12 +67,11 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 	return dc
 }
 
-func (c *Channel) Send(data []byte) error {
+func (c *Channel) Send(data []byte) {
 	if nil == data {
-		return nil
+		return
 	}
 	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)))
-	return nil
 }
 
 func (c *Channel) Close() error {
@@ -157,7 +156,7 @@ func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
 			dc.OnClose()
 		}
 	case DataStateClosing:
-		// fmt.Println("fired data.Channel.Statechange: Closing", dc)
+		fmt.Println("fired data.Channel.Statechange: Closing", dc)
 	default:
 		fmt.Println("fired an un-implemented data.Channel StateChange.", dc)
 	}
