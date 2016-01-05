@@ -48,20 +48,6 @@ func TestPeerConnection(t *testing.T) {
 
 			Convey("Callbacks fire correctly", func() {
 
-				Convey("OnSignalingState", func() {
-					success := make(chan SignalingState, 1)
-					pc.OnSignalingStateChange = func(s SignalingState) {
-						success <- s
-					}
-					cgoOnSignalingStateChange(unsafe.Pointer(pc), SignalingStateStable)
-					select {
-					case state := <-success:
-						So(state, ShouldEqual, SignalingStateStable)
-					case <-time.After(time.Second * 1):
-						t.Fatal("Timed out.")
-					}
-				})
-
 				Convey("OnNegotiationNeeded", func() {
 					success := make(chan int, 1)
 					pc.OnNegotiationNeeded = func() {
@@ -70,21 +56,6 @@ func TestPeerConnection(t *testing.T) {
 					cgoOnNegotiationNeeded(unsafe.Pointer(pc))
 					select {
 					case <-success:
-					case <-time.After(time.Second * 1):
-						t.Fatal("Timed out.")
-					}
-				})
-
-				Convey("OnConnectionStateChange", func() {
-					success := make(chan PeerConnectionState, 1)
-					pc.OnConnectionStateChange = func(state PeerConnectionState) {
-						success <- state
-					}
-					cgoOnConnectionStateChange(unsafe.Pointer(pc),
-						PeerConnectionStateDisconnected)
-					select {
-					case r := <-success:
-						So(r, ShouldEqual, PeerConnectionStateDisconnected)
 					case <-time.After(time.Second * 1):
 						t.Fatal("Timed out.")
 					}
@@ -100,6 +71,48 @@ func TestPeerConnection(t *testing.T) {
 					// cgoOnIceCandidate(unsafe.Pointer(pc), nil)
 					select {
 					case <-success:
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
+				Convey("OnIceCandidateError", func() {
+					success := make(chan int, 1)
+					pc.OnIceCandidateError = func() {
+						success <- 1
+					}
+					cgoFakeIceCandidateError(pc)
+					select {
+					case <-success:
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
+				Convey("OnSignalingState", func() {
+					success := make(chan SignalingState, 1)
+					pc.OnSignalingStateChange = func(s SignalingState) {
+						success <- s
+					}
+					cgoOnSignalingStateChange(unsafe.Pointer(pc), SignalingStateStable)
+					select {
+					case state := <-success:
+						So(state, ShouldEqual, SignalingStateStable)
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
+				Convey("OnConnectionStateChange", func() {
+					success := make(chan PeerConnectionState, 1)
+					pc.OnConnectionStateChange = func(state PeerConnectionState) {
+						success <- state
+					}
+					cgoOnConnectionStateChange(unsafe.Pointer(pc),
+						PeerConnectionStateDisconnected)
+					select {
+					case r := <-success:
+						So(r, ShouldEqual, PeerConnectionStateDisconnected)
 					case <-time.After(time.Second * 1):
 						t.Fatal("Timed out.")
 					}

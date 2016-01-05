@@ -130,6 +130,11 @@ class Peer
 
   void OnIceConnectionChange(
       PeerConnectionInterface::IceConnectionState new_state) {
+    if (PeerConnectionInterface::IceConnectionState::kIceConnectionFailed ==
+        new_state) {
+      cgoOnIceCandidateError(goPeerConnection);
+      return;
+    }
     // TODO: This may need to be slightly more complicated...
     // https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
     cgoOnConnectionStateChange(goPeerConnection, new_state);
@@ -144,8 +149,6 @@ class Peer
     this->channels.push_back(data_channel);
     cgoOnDataChannel(goPeerConnection, data_channel);
   }
-
-  // TODO: Finish last couple callbacks.
 
   // Note that Configuration is where ICE servers are specified.
   PeerConnectionInterface::RTCConfiguration *config;
@@ -400,4 +403,14 @@ void CGO_Close(CGO_Peer peer) {
   auto cPeer = (Peer*)peer;
   cPeer->pc_->Close();
   CGO_DBG("Closed PeerConnection.");
+}
+
+
+//
+// Test helpers which fake native callbacks.
+//
+void CGO_fakeIceCandidateError(CGO_Peer peer) {
+  auto cPeer = (Peer*)peer;
+  cPeer->OnIceConnectionChange(
+      PeerConnectionInterface::IceConnectionState::kIceConnectionFailed);
 }

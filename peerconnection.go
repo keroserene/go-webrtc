@@ -96,11 +96,10 @@ type PeerConnection struct {
 	canTrickleIceCandidates bool
 
 	// Event handlers
-	// TODO: Implement remainder of callbacks.
-	OnIceCandidate      func(IceCandidate)
-	OnIceComplete       func()
-	OnNegotiationNeeded func()
-	// onicecandidateerror
+	OnNegotiationNeeded       func()
+	OnIceCandidate            func(IceCandidate)
+	OnIceCandidateError       func()
+	OnIceComplete             func() // Possibly to be removed.
 	OnSignalingStateChange    func(SignalingState)
 	OnIceGatheringStateChange func(IceGatheringState)
 	OnConnectionStateChange   func(PeerConnectionState)
@@ -345,6 +344,15 @@ func cgoOnIceCandidate(p unsafe.Pointer, cIC C.CGO_IceCandidate) {
 	}
 }
 
+//export cgoOnIceCandidateError
+func cgoOnIceCandidateError(p unsafe.Pointer) {
+	INFO.Println("fired OnIceCandidateError: ", p)
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnIceCandidateError {
+		pc.OnIceCandidateError()
+	}
+}
+
 //export cgoOnConnectionStateChange
 func cgoOnConnectionStateChange(p unsafe.Pointer, state PeerConnectionState) {
 	INFO.Println("fired OnConnectionStateChange: ", p)
@@ -378,6 +386,12 @@ func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 	}
 }
 
+// Test helpers
+//
 var _cgoIceGatheringStateNew = int(C.CGO_IceGatheringStateNew)
 var _cgoIceGatheringStateGathering = int(C.CGO_IceGatheringStateGathering)
 var _cgoIceGatheringStateComplete = int(C.CGO_IceGatheringStateComplete)
+
+func cgoFakeIceCandidateError(pc *PeerConnection) {
+	C.CGO_fakeIceCandidateError(pc.cgoPeer)
+}

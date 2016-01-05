@@ -69,6 +69,9 @@ extern "C" {
 
   void CGO_Close(CGO_Peer cgoPeer);
 
+  // Test helpers
+  void CGO_fakeIceCandidateError(CGO_Peer peer);
+
 #ifdef __cplusplus
 }
 #endif
