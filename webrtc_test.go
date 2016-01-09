@@ -17,6 +17,22 @@ C++ webrtc::PeerConnectionInterface values`, t, func() {
 	})
 }
 
+func TestIceConnectionStateEnums(t *testing.T) {
+	Convey(`Enum: IceConnectionState values should match
+C++ webrtc::PeerConnectionInterface values`, t, func() {
+		So(IceConnectionStateNew, ShouldEqual, _cgoIceConnectionStateNew)
+		So(IceConnectionStateChecking, ShouldEqual, _cgoIceConnectionStateChecking)
+		So(IceConnectionStateConnected, ShouldEqual,
+			_cgoIceConnectionStateConnected)
+		So(IceConnectionStateCompleted, ShouldEqual,
+			_cgoIceConnectionStateCompleted)
+		So(IceConnectionStateFailed, ShouldEqual, _cgoIceConnectionStateFailed)
+		So(IceConnectionStateDisconnected, ShouldEqual,
+			_cgoIceConnectionStateDisconnected)
+		So(IceConnectionStateClosed, ShouldEqual, _cgoIceConnectionStateClosed)
+	})
+}
+
 func TestPeerConnection(t *testing.T) {
 	SetLoggingVerbosity(0)
 
@@ -37,6 +53,7 @@ func TestPeerConnection(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(pc.ConnectionState(), ShouldEqual, PeerConnectionStateNew)
 			So(pc.IceGatheringState(), ShouldEqual, IceGatheringStateNew)
+			So(pc.IceConnectionState(), ShouldEqual, IceConnectionStateNew)
 
 			Convey("Set and Get Configuration", func() {
 				config := NewConfiguration(

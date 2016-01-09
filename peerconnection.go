@@ -53,6 +53,7 @@ func init() {
 type (
 	PeerConnectionState int
 	IceGatheringState   int
+	IceConnectionState  int
 )
 
 const (
@@ -65,6 +66,20 @@ const (
 
 var PeerConnectionStateString = []string{
 	"New", "Connecting", "Connected", "Disconnected", "Failed"}
+
+const (
+	IceConnectionStateNew IceConnectionState = iota
+	IceConnectionStateChecking
+	IceConnectionStateConnected
+	IceConnectionStateCompleted
+	IceConnectionStateFailed
+	IceConnectionStateDisconnected
+	IceConnectionStateClosed
+)
+
+var IceConnectionStateString = []string{
+	"New", "Checking", "Connected", "Completed",
+	"Failed", "Disconnected", "Closed"}
 
 const (
 	IceGatheringStateNew IceGatheringState = iota
@@ -83,15 +98,8 @@ negotiation to setting up Data Channels.
 See: https://w3c.github.io/webrtc-pc/#idl-def-RTCPeerConnection
 */
 type PeerConnection struct {
-	localDescription *SessionDescription
-	// currentLocalDescription
-	// pendingLocalDescription
-
-	remoteDescription *SessionDescription
-	// currentRemoteDescription
-	// pendingRemoteDescription
-
-	// iceConnectionState  IceConnectionState
+	localDescription        *SessionDescription
+	remoteDescription       *SessionDescription
 	canTrickleIceCandidates bool
 
 	// Event handlers
@@ -243,6 +251,11 @@ func (pc *PeerConnection) IceGatheringState() IceGatheringState {
 	return (IceGatheringState)(C.CGO_IceGatheringState(pc.cgoPeer))
 }
 
+// readonly iceconnectionState
+func (pc *PeerConnection) IceConnectionState() IceConnectionState {
+	return (IceConnectionState)(C.CGO_IceConnectionState(pc.cgoPeer))
+}
+
 func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
 	sdpMid := C.CString(ic.SdpMid)
 	defer C.free(unsafe.Pointer(sdpMid))
@@ -392,6 +405,14 @@ func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 
 // Test helpers
 //
+var _cgoIceConnectionStateNew = int(C.CGO_IceConnectionStateNew)
+var _cgoIceConnectionStateChecking = int(C.CGO_IceConnectionStateChecking)
+var _cgoIceConnectionStateConnected = int(C.CGO_IceConnectionStateConnected)
+var _cgoIceConnectionStateCompleted = int(C.CGO_IceConnectionStateCompleted)
+var _cgoIceConnectionStateFailed = int(C.CGO_IceConnectionStateFailed)
+var _cgoIceConnectionStateDisconnected = int(C.CGO_IceConnectionStateDisconnected)
+var _cgoIceConnectionStateClosed = int(C.CGO_IceConnectionStateClosed)
+
 var _cgoIceGatheringStateNew = int(C.CGO_IceGatheringStateNew)
 var _cgoIceGatheringStateGathering = int(C.CGO_IceGatheringStateGathering)
 var _cgoIceGatheringStateComplete = int(C.CGO_IceGatheringStateComplete)

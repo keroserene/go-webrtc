@@ -29,6 +29,14 @@ extern "C" {
   extern const int CGO_SignalingStateHaveRemotePrAnswer;
   extern const int CGO_SignalingStateClosed;
 
+  extern const int CGO_IceConnectionStateNew;
+  extern const int CGO_IceConnectionStateChecking;
+  extern const int CGO_IceConnectionStateConnected;
+  extern const int CGO_IceConnectionStateCompleted;
+  extern const int CGO_IceConnectionStateFailed;
+  extern const int CGO_IceConnectionStateDisconnected;
+  extern const int CGO_IceConnectionStateClosed;
+
   extern const int CGO_IceGatheringStateNew;
   extern const int CGO_IceGatheringStateGathering;
   extern const int CGO_IceGatheringStateComplete;

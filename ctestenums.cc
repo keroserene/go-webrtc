@@ -3,6 +3,11 @@
 
 using namespace webrtc;
 
+/*
+In order to match native enums with Go enum values, it is necessary to
+expose the values to CGO identifiers which Go can access.
+*/
+
 const int CGO_IceTransportPolicyNone =
     PeerConnectionInterface::IceTransportsType::kNone;
 const int CGO_IceTransportPolicyRelay =
@@ -37,6 +42,21 @@ const int CGO_SignalingStateHaveRemotePrAnswer =
     PeerConnectionInterface::SignalingState::kHaveRemotePrAnswer;
 const int CGO_SignalingStateClosed =
     PeerConnectionInterface::SignalingState::kClosed;
+
+const int CGO_IceConnectionStateNew =
+    PeerConnectionInterface::IceConnectionState::kIceConnectionNew;
+const int CGO_IceConnectionStateChecking =
+    PeerConnectionInterface::IceConnectionState::kIceConnectionChecking;
+const int CGO_IceConnectionStateConnected =
+    PeerConnectionInterface::IceConnectionState::kIceConnectionConnected;
+const int CGO_IceConnectionStateCompleted =
+    PeerConnectionInterface::IceConnectionState::kIceConnectionCompleted;
+const int CGO_IceConnectionStateFailed =
+    PeerConnectionInterface::IceConnectionState::kIceConnectionFailed;
+const int CGO_IceConnectionStateDisconnected =
+    PeerConnectionInterface::IceConnectionState::kIceConnectionDisconnected;
+const int CGO_IceConnectionStateClosed =
+    PeerConnectionInterface::IceConnectionState::kIceConnectionClosed;
 
 const int CGO_IceGatheringStateNew =
     PeerConnectionInterface::IceGatheringState::kIceGatheringNew;
