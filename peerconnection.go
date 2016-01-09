@@ -103,14 +103,15 @@ type PeerConnection struct {
 	canTrickleIceCandidates bool
 
 	// Event handlers
-	OnNegotiationNeeded       func()
-	OnIceCandidate            func(IceCandidate)
-	OnIceCandidateError       func()
-	OnIceComplete             func() // Possibly to be removed.
-	OnSignalingStateChange    func(SignalingState)
-	OnIceGatheringStateChange func(IceGatheringState)
-	OnConnectionStateChange   func(PeerConnectionState)
-	OnDataChannel             func(*data.Channel)
+	OnNegotiationNeeded        func()
+	OnIceCandidate             func(IceCandidate)
+	OnIceCandidateError        func()
+	OnIceComplete              func() // Possibly to be removed.
+	OnSignalingStateChange     func(SignalingState)
+	OnIceConnectionStateChange func(IceConnectionState)
+	OnIceGatheringStateChange  func(IceGatheringState)
+	OnConnectionStateChange    func(PeerConnectionState)
+	OnDataChannel              func(*data.Channel)
 
 	config Configuration
 
@@ -376,6 +377,15 @@ func cgoOnConnectionStateChange(p unsafe.Pointer, state PeerConnectionState) {
 	pc := (*PeerConnection)(p)
 	if nil != pc.OnConnectionStateChange {
 		pc.OnConnectionStateChange(state)
+	}
+}
+
+//export cgoOnIceConnectionStateChange
+func cgoOnIceConnectionStateChange(p unsafe.Pointer, state IceConnectionState) {
+	INFO.Println("fired OnIceConnectionStateChange: ", p)
+	pc := (*PeerConnection)(p)
+	if nil != pc.OnIceConnectionStateChange {
+		pc.OnIceConnectionStateChange(state)
 	}
 }
 

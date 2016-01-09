@@ -121,6 +121,21 @@ func TestPeerConnection(t *testing.T) {
 					}
 				})
 
+				Convey("OnIceConnectionStateChange", func() {
+					success := make(chan IceConnectionState, 1)
+					pc.OnIceConnectionStateChange = func(state IceConnectionState) {
+						success <- state
+					}
+					cgoOnIceConnectionStateChange(unsafe.Pointer(pc),
+						IceConnectionStateDisconnected)
+					select {
+					case r := <-success:
+						So(r, ShouldEqual, IceConnectionStateDisconnected)
+					case <-time.After(time.Second * 1):
+						t.Fatal("Timed out.")
+					}
+				})
+
 				Convey("OnConnectionStateChange", func() {
 					success := make(chan PeerConnectionState, 1)
 					pc.OnConnectionStateChange = func(state PeerConnectionState) {
@@ -212,7 +227,6 @@ func TestPeerConnection(t *testing.T) {
 						So(alice.RemoteDescription(), ShouldEqual, answer)
 						So(alice.SignalingState(), ShouldEqual, SignalingStateStable)
 					})
-
 				})
 			})
 

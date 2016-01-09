@@ -135,6 +135,7 @@ class Peer
       cgoOnIceCandidateError(goPeerConnection);
       return;
     }
+    cgoOnIceConnectionStateChange(goPeerConnection, new_state);
     // TODO: This may need to be slightly more complicated...
     // https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
     cgoOnConnectionStateChange(goPeerConnection, new_state);
