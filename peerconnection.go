@@ -91,7 +91,6 @@ type PeerConnection struct {
 	// currentRemoteDescription
 	// pendingRemoteDescription
 
-	// iceGatheringState  IceGatheringState
 	// iceConnectionState  IceConnectionState
 	canTrickleIceCandidates bool
 
@@ -237,6 +236,11 @@ func (pc *PeerConnection) ConnectionState() PeerConnectionState {
 	// TODO: Aggregate states according to:
 	// https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
 	return (PeerConnectionState)(C.CGO_IceConnectionState(pc.cgoPeer))
+}
+
+// readonly icegatheringstatee
+func (pc *PeerConnection) IceGatheringState() IceGatheringState {
+	return (IceGatheringState)(C.CGO_IceGatheringState(pc.cgoPeer))
 }
 
 func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {

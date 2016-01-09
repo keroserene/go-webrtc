@@ -63,11 +63,12 @@ extern "C" {
 
   int CGO_GetSignalingState(CGO_Peer);
   int CGO_IceConnectionState(CGO_Peer);
-  int CGO_SetConfiguration(CGO_Peer pc, CGO_Configuration*);
+  int CGO_IceGatheringState(CGO_Peer);
+  int CGO_SetConfiguration(CGO_Peer, CGO_Configuration*);
 
   CGO_Channel CGO_CreateDataChannel(CGO_Peer, char*, void*);
 
-  void CGO_Close(CGO_Peer cgoPeer);
+  void CGO_Close(CGO_Peer);
 
   // Test helpers
   void CGO_fakeIceCandidateError(CGO_Peer peer);

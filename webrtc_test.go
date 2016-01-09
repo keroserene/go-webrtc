@@ -36,6 +36,7 @@ func TestPeerConnection(t *testing.T) {
 			So(pc, ShouldNotBeNil)
 			So(err, ShouldBeNil)
 			So(pc.ConnectionState(), ShouldEqual, PeerConnectionStateNew)
+			So(pc.IceGatheringState(), ShouldEqual, IceGatheringStateNew)
 
 			Convey("Set and Get Configuration", func() {
 				config := NewConfiguration(

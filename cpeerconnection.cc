@@ -369,6 +369,12 @@ int CGO_IceConnectionState(CGO_Peer cgoPeer) {
   return cPC->ice_connection_state();
 }
 
+// PeerConnection::ice_gathering_state
+int CGO_IceGatheringState(CGO_Peer cgoPeer) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
+  return cPC->ice_gathering_state();
+}
+
 // PeerConnection::SetConfiguration
 int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
