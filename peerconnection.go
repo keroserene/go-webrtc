@@ -31,8 +31,6 @@ package webrtc
 
 /*
 #cgo CXXFLAGS: -std=c++0x
-// rpath to allow deploying same-directory corrected libstd++ in certain distros
-#cgo CFLAGS: -Wl,rpath,$ORIGIN
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
