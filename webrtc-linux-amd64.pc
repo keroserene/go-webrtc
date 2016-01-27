@@ -11,6 +11,8 @@ Cflags: \
 Libs: \
 	-L${pc}/lib \
 	-lwebrtc-linux-amd64-magic \
+	-ljpeg \
+	-lsrtp \
 	-ldl \
 	-lX11 \
 	-lrt
