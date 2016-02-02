@@ -182,12 +182,14 @@ rm -rf out
 make configure_for_go_webrtc )
 
 rm -rf out
+# TODO(infinity0): play around with extra defines to avoid building libs that
+# can be supplied by the system, e.g. see webrtc/webrtc/build/common.gypi
 [ $COMPONENT_BUILD = 1 ] && EXTRA_GYP_DEFINES="component=shared_library"
 CXXFLAGS='-fvisibility=default' EXTRA_GYP_DEFINES="$EXTRA_GYP_DEFINES" \
   make configure_for_go_webrtc
 
 ninja -C out/Release libjingle_peerconnection_internal
-# archive all the headers. TODO: we can probably do less than this
+# TODO(infinity0): play around with reducing the amount of headers to include
 tar cJf out/Release/libjingle_peerconnection_internal.headers.tar.xz $(find talk/ webrtc/ -type f -name '*.h')
 
 if [ $COMPONENT_BUILD = 0 ]; then
