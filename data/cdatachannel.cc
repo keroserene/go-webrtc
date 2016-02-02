@@ -1,5 +1,5 @@
 #include "cdatachannel.h"
-#include "talk/app/webrtc/datachannel.h"
+#include "talk/app/webrtc/datachannelinterface.h"
 #include "talk/app/webrtc/peerconnectioninterface.h"
 #include "talk/app/webrtc/test/fakeconstraints.h"
 #include "webrtc/base/common.h"

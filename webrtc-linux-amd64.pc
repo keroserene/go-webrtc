@@ -1,4 +1,5 @@
 pc=${pcfiledir}
+jingle_peerconnection_internal_libs=-ljingle_peerconnection_internal -lboringssl -lprotobuf_lite
 
 Name: webrtc
 Description: webrtc
@@ -10,7 +11,7 @@ Cflags: \
 
 Libs: \
 	-L${pc}/lib \
-	-lwebrtc-linux-amd64-magic \
+	${jingle_peerconnection_internal_libs} \
 	-ljpeg \
 	-lsrtp \
 	-ldl \

@@ -9,6 +9,7 @@ Cflags: \
 	-DPOSIX
 
 Libs: \
+	-L${pc}/lib \
 	-lwebrtc-darwin-amd64-magic \
 	-framework AppKit \
 	-framework CoreAudio \
