@@ -11,6 +11,7 @@ package data
 #cgo LDFLAGS: -L${SRCDIR}/../lib
 #cgo linux,amd64 pkg-config: webrtc-data-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-data-darwin-amd64.pc
+#include <stdlib.h>  // Needed for C.free
 #include "cdatachannel.h"
 */
 import "C"
@@ -81,6 +82,7 @@ func (c *Channel) Close() error {
 
 func (c *Channel) Label() string {
 	s := C.CGO_Channel_Label(c.cgoChannel)
+	defer C.free(unsafe.Pointer(s))
 	return C.GoString(s)
 }
 
@@ -89,7 +91,9 @@ func (c *Channel) Ordered() bool {
 }
 
 func (c *Channel) Protocol() string {
-	return C.GoString(C.CGO_Channel_Protocol(c.cgoChannel))
+	p := C.CGO_Channel_Protocol(c.cgoChannel)
+	defer C.free(unsafe.Pointer(p))
+	return C.GoString(p)
 }
 
 func (c *Channel) MaxPacketLifeTime() uint {
