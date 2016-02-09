@@ -85,7 +85,7 @@ func TestDataStateEnums(t *testing.T) {
 				cgoFakeStateChange(c, DataStateConnecting)
 				cgoFakeStateChange(c, DataStateClosing)
 
-				So(func(){
+				So(func() {
 					cgoFakeStateChange(c, 999)
 				}, ShouldPanic)
 			})
