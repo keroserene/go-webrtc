@@ -84,7 +84,10 @@ func TestDataStateEnums(t *testing.T) {
 				// TODO: Unimplemented
 				cgoFakeStateChange(c, DataStateConnecting)
 				cgoFakeStateChange(c, DataStateClosing)
-				cgoFakeStateChange(c, 999)
+
+				So(func(){
+					cgoFakeStateChange(c, 999)
+				}, ShouldPanic)
 			})
 
 			Convey("OnBufferedAmountLow", func() {

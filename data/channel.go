@@ -16,7 +16,6 @@ package data
 */
 import "C"
 import (
-	"fmt"
 	"unsafe"
 )
 
@@ -150,7 +149,8 @@ func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
 	switch dc.ReadyState() {
 	// Picks between different Go callbacks...
 	case DataStateConnecting:
-		fmt.Println("fired data.Channel.Statechange: Connecting", dc)
+	case DataStateClosing:
+		// golang switches don't fallthrough
 	case DataStateOpen:
 		if nil != dc.OnOpen {
 			dc.OnOpen()
@@ -159,10 +159,8 @@ func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
 		if nil != dc.OnClose {
 			dc.OnClose()
 		}
-	case DataStateClosing:
-		fmt.Println("fired data.Channel.Statechange: Closing", dc)
 	default:
-		fmt.Println("fired an un-implemented data.Channel StateChange.", dc)
+		panic("fired an un-implemented data.Channel StateChange.")
 	}
 }
 
