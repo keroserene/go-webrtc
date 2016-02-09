@@ -145,6 +145,12 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 // === Session Description Protocol ===
 //
 
+func SerializeSDP(sdp C.CGO_sdp) string {
+	serializedSDP := C.CGO_SerializeSDP(sdp)
+	defer C.free(unsafe.Pointer(serializedSDP))
+	return C.GoString(serializedSDP)
+}
+
 /*
 CreateOffer prepares an SDP "offer" message, which should be set as the local
 description, then sent to the remote peer over a signalling channel. This
@@ -160,7 +166,7 @@ func (pc *PeerConnection) CreateOffer() (*SessionDescription, error) {
 	offer := new(SessionDescription)
 	offer.cgoSdp = sdp
 	offer.Type = "offer"
-	offer.Sdp = C.GoString(C.CGO_SerializeSDP(sdp))
+	offer.Sdp = SerializeSDP(sdp)
 	return offer, nil
 }
 
@@ -180,7 +186,7 @@ func (pc *PeerConnection) CreateAnswer() (*SessionDescription, error) {
 	answer := new(SessionDescription)
 	answer.cgoSdp = sdp
 	answer.Type = "answer"
-	answer.Sdp = C.GoString(C.CGO_SerializeSDP(sdp))
+	answer.Sdp = SerializeSDP(sdp)
 	return answer, nil
 }
 
@@ -204,8 +210,7 @@ func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
 // readonly localDescription
 func (pc *PeerConnection) LocalDescription() (sdp *SessionDescription) {
 	// Refresh SDP; it might have changed by ICE candidate gathering.
-	pc.localDescription.Sdp = C.GoString(C.CGO_SerializeSDP(
-		pc.localDescription.cgoSdp))
+	pc.localDescription.Sdp = SerializeSDP(pc.localDescription.cgoSdp)
 	return pc.localDescription
 }
 
