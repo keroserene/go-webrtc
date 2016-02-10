@@ -15,6 +15,7 @@ include/webrtc/call
 include/webrtc/common_audio
 include/webrtc/examples
 include/webrtc/libjingle
+include/webrtc/modules
 include/webrtc/sound
 include/webrtc/test
 include/webrtc/tools
