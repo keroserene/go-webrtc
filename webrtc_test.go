@@ -37,8 +37,6 @@ func TestPeerConnection(t *testing.T) {
 	SetLoggingVerbosity(0)
 
 	Convey("PeerConnection", t, func() {
-		var offer *SessionDescription
-		var answer *SessionDescription
 		config := NewConfiguration(
 			OptionIceServer("stun:stun.l.google.com:19302, stun:another"))
 		So(config, ShouldNotBeNil)
@@ -180,7 +178,7 @@ func TestPeerConnection(t *testing.T) {
 			So(bob.ConnectionState(), ShouldEqual, PeerConnectionStateNew)
 
 			Convey("Alice creates offer", func() {
-				offer, err = alice.CreateOffer()
+				offer, err := alice.CreateOffer()
 				So(offer, ShouldNotBeNil)
 				So(err, ShouldBeNil)
 				So(alice.SignalingState(), ShouldEqual, SignalingStateStable)
@@ -193,7 +191,7 @@ func TestPeerConnection(t *testing.T) {
 				So(err, ShouldNotBeNil)
 
 				// Shouldn't be able to CreateAnswer
-				answer, err = alice.CreateAnswer()
+				answer, err := alice.CreateAnswer()
 				So(answer, ShouldBeNil)
 				So(err, ShouldNotBeNil)
 
@@ -207,9 +205,10 @@ func TestPeerConnection(t *testing.T) {
 				So(err, ShouldNotBeNil)
 
 				Convey("Bob receive offer and generates answer", func() {
-					err = bob.SetRemoteDescription(offer)
+					sOffer := DeserializeSessionDescription(offer.Serialize())
+					err = bob.SetRemoteDescription(sOffer)
 					So(err, ShouldBeNil)
-					So(bob.RemoteDescription(), ShouldEqual, offer)
+					So(bob.RemoteDescription(), ShouldEqual, sOffer)
 					So(bob.SignalingState(), ShouldEqual, SignalingStateHaveRemoteOffer)
 
 					answer, err = bob.CreateAnswer()
@@ -222,9 +221,10 @@ func TestPeerConnection(t *testing.T) {
 					So(bob.SignalingState(), ShouldEqual, SignalingStateStable)
 
 					Convey("Alice receives Bob's answer", func() {
-						err = alice.SetRemoteDescription(answer)
+						sAnswer := DeserializeSessionDescription(answer.Serialize())
+						err = alice.SetRemoteDescription(sAnswer)
 						So(err, ShouldBeNil)
-						So(alice.RemoteDescription(), ShouldEqual, answer)
+						So(alice.RemoteDescription(), ShouldEqual, sAnswer)
 						So(alice.SignalingState(), ShouldEqual, SignalingStateStable)
 					})
 				})
