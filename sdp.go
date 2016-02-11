@@ -15,16 +15,19 @@ See: https://w3c.github.io/webrtc-pc/#idl-def-RTCSessionDescription
 type SessionDescription struct {
 	Type string `json:"type"`
 	Sdp  string `json:"sdp"`
-
-	// Keep track of internal C++ *webrtc::SessionDescriptionInterface.
-	cgoSdp C.CGO_sdp
 }
 
 // TODO: Turn into Enum.
 var SdpTypes = []string{"offer", "pranswer", "answer", "rollback"}
 
+func CgoSdpToGoString(sdp C.CGO_sdp) string {
+	serializedSDP := C.CGO_SerializeSDP(sdp)
+	defer C.free(unsafe.Pointer(serializedSDP))
+	return C.GoString(serializedSDP)
+}
+
 // Construct a SessionDescription object from a valid msg.
-func NewSessionDescription(sdpType string, msg string) *SessionDescription {
+func NewSessionDescription(sdpType string, cgoSdp C.CGO_sdp) *SessionDescription {
 	in := false
 	for i := 0; i < len(SdpTypes); i++ {
 		if SdpTypes[i] == sdpType {
@@ -35,19 +38,9 @@ func NewSessionDescription(sdpType string, msg string) *SessionDescription {
 		ERROR.Println("Invalid SDP type.")
 		return nil
 	}
-	s := C.CString(sdpType)
-	defer C.free(unsafe.Pointer(s))
-	m := C.CString(msg)
-	defer C.free(unsafe.Pointer(m))
-	cSdp := C.CGO_DeserializeSDP(s, m)
-	if nil == cSdp {
-		ERROR.Println("Invalid SDP string.")
-		return nil
-	}
 	sdp := new(SessionDescription)
-	sdp.cgoSdp = cSdp
 	sdp.Type = sdpType
-	sdp.Sdp = msg
+	sdp.Sdp = CgoSdpToGoString(cgoSdp)
 	return sdp
 }
 
@@ -59,6 +52,14 @@ func (desc *SessionDescription) Serialize() string {
 		return ""
 	}
 	return string(bytes)
+}
+
+func (desc *SessionDescription) GoStringToCgoSdp() C.CGO_sdp {
+	t := C.CString(desc.Type)
+	defer C.free(unsafe.Pointer(t))
+	s := C.CString(desc.Sdp)
+	defer C.free(unsafe.Pointer(s))
+	return C.CGO_DeserializeSDP(t, s)
 }
 
 // Deserialize a received json string into a SessionDescription, if possible.
@@ -77,5 +78,8 @@ func DeserializeSessionDescription(msg string) *SessionDescription {
 		ERROR.Println("Cannot deserialize SessionDescription without sdp field.")
 		return nil
 	}
-	return NewSessionDescription(parsed["type"].(string), parsed["sdp"].(string))
+	return &SessionDescription{
+		Type: parsed["type"].(string),
+		Sdp:  parsed["sdp"].(string),
+	}
 }

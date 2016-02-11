@@ -205,10 +205,9 @@ func TestPeerConnection(t *testing.T) {
 				So(err, ShouldNotBeNil)
 
 				Convey("Bob receive offer and generates answer", func() {
-					sOffer := DeserializeSessionDescription(offer.Serialize())
-					err = bob.SetRemoteDescription(sOffer)
+					err = bob.SetRemoteDescription(offer)
 					So(err, ShouldBeNil)
-					So(bob.RemoteDescription(), ShouldEqual, sOffer)
+					So(bob.RemoteDescription(), ShouldEqual, offer)
 					So(bob.SignalingState(), ShouldEqual, SignalingStateHaveRemoteOffer)
 
 					answer, err = bob.CreateAnswer()
@@ -221,10 +220,9 @@ func TestPeerConnection(t *testing.T) {
 					So(bob.SignalingState(), ShouldEqual, SignalingStateStable)
 
 					Convey("Alice receives Bob's answer", func() {
-						sAnswer := DeserializeSessionDescription(answer.Serialize())
-						err = alice.SetRemoteDescription(sAnswer)
+						err = alice.SetRemoteDescription(answer)
 						So(err, ShouldBeNil)
-						So(alice.RemoteDescription(), ShouldEqual, sAnswer)
+						So(alice.RemoteDescription(), ShouldEqual, answer)
 						So(alice.SignalingState(), ShouldEqual, SignalingStateStable)
 					})
 				})
@@ -355,20 +353,14 @@ func TestConfiguration(t *testing.T) {
 
 func TestSessionDescription(t *testing.T) {
 	Convey("SessionDescription", t, func() {
-		r := NewSessionDescription("offer", "fake")
-		So(r, ShouldNotBeNil)
-		So(r.Type, ShouldEqual, "offer")
-		So(r.Sdp, ShouldEqual, "fake")
-
 		Convey("Serialize and Deserialize", func() {
-			sdp := NewSessionDescription("answer", "fake")
-			s := sdp.Serialize()
-			So(s, ShouldEqual, `{"type":"answer","sdp":"fake"}`)
-
-			r := DeserializeSessionDescription(`{"type":"answer","sdp":"fake"}`)
+			expected := `{"type":"answer","sdp":"fake"}`
+			r := DeserializeSessionDescription(expected)
 			So(r, ShouldNotBeNil)
 			So(r.Type, ShouldEqual, "answer")
 			So(r.Sdp, ShouldEqual, "fake")
+			s := r.Serialize()
+			So(s, ShouldEqual, expected)
 
 			r = DeserializeSessionDescription(`invalid json{{`)
 			So(r, ShouldBeNil)
@@ -378,7 +370,7 @@ func TestSessionDescription(t *testing.T) {
 			So(r, ShouldBeNil)
 
 			Convey("Roundtrip", func() {
-				sdp = NewSessionDescription("pranswer", "not real")
+				sdp := SessionDescription{"pranswer", "not real"}
 				r = DeserializeSessionDescription(sdp.Serialize())
 				So(r.Type, ShouldEqual, sdp.Type)
 				So(r.Sdp, ShouldEqual, sdp.Sdp)

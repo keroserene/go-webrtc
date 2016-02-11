@@ -145,12 +145,6 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 // === Session Description Protocol ===
 //
 
-func SerializeSDP(sdp C.CGO_sdp) string {
-	serializedSDP := C.CGO_SerializeSDP(sdp)
-	defer C.free(unsafe.Pointer(serializedSDP))
-	return C.GoString(serializedSDP)
-}
-
 /*
 CreateOffer prepares an SDP "offer" message, which should be set as the local
 description, then sent to the remote peer over a signalling channel. This
@@ -163,10 +157,10 @@ func (pc *PeerConnection) CreateOffer() (*SessionDescription, error) {
 	if nil == sdp {
 		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
 	}
-	offer := new(SessionDescription)
-	offer.cgoSdp = sdp
-	offer.Type = "offer"
-	offer.Sdp = SerializeSDP(sdp)
+	offer := NewSessionDescription("offer", sdp)
+	if offer == nil {
+		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
+	}
 	return offer, nil
 }
 
@@ -183,10 +177,10 @@ func (pc *PeerConnection) CreateAnswer() (*SessionDescription, error) {
 	if nil == sdp {
 		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
 	}
-	answer := new(SessionDescription)
-	answer.cgoSdp = sdp
-	answer.Type = "answer"
-	answer.Sdp = SerializeSDP(sdp)
+	answer := NewSessionDescription("answer", sdp)
+	if answer == nil {
+		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
+	}
 	return answer, nil
 }
 
@@ -199,7 +193,7 @@ func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
 	if nil == sdp {
 		return errors.New("Cannot use nil SessionDescription.")
 	}
-	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.cgoSdp)
+	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.GoStringToCgoSdp())
 	if 0 != r {
 		return errors.New("SetLocalDescription failed.")
 	}
@@ -210,7 +204,10 @@ func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
 // readonly localDescription
 func (pc *PeerConnection) LocalDescription() (sdp *SessionDescription) {
 	// Refresh SDP; it might have changed by ICE candidate gathering.
-	pc.localDescription.Sdp = SerializeSDP(pc.localDescription.cgoSdp)
+	if pc.localDescription != nil {
+		cgoSdp := C.CGO_GetLocalDescription(pc.cgoPeer)
+		pc.localDescription.Sdp = CgoSdpToGoString(cgoSdp)
+	}
 	return pc.localDescription
 }
 
@@ -225,7 +222,7 @@ func (pc *PeerConnection) SetRemoteDescription(sdp *SessionDescription) error {
 	if nil == sdp {
 		return errors.New("Cannot use nil SessionDescription.")
 	}
-	r := C.CGO_SetRemoteDescription(pc.cgoPeer, sdp.cgoSdp)
+	r := C.CGO_SetRemoteDescription(pc.cgoPeer, sdp.GoStringToCgoSdp())
 	if 0 != r {
 		return errors.New("SetRemoteDescription failed.")
 	}
@@ -235,6 +232,10 @@ func (pc *PeerConnection) SetRemoteDescription(sdp *SessionDescription) error {
 
 // readonly remoteDescription
 func (pc *PeerConnection) RemoteDescription() (sdp *SessionDescription) {
+	if pc.remoteDescription != nil {
+		cgoSdp := C.CGO_GetRemoteDescription(pc.cgoPeer)
+		pc.remoteDescription.Sdp = CgoSdpToGoString(cgoSdp)
+	}
 	return pc.remoteDescription
 }
 

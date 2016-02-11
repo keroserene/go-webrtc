@@ -334,6 +334,12 @@ int CGO_SetLocalDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   return r.get();
 }
 
+// PeerConnection::GetLocalDescription
+CGO_sdp CGO_GetLocalDescription(CGO_Peer cgoPeer) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
+  return (CGO_sdp)cPC->local_description();
+}
+
 // PeerConnection::SetRemoteDescription
 int CGO_SetRemoteDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   PC cPC = ((Peer*)cgoPeer)->pc_;
@@ -341,6 +347,12 @@ int CGO_SetRemoteDescription(CGO_Peer cgoPeer, CGO_sdp sdp) {
   auto r = obs->promiseSet.get_future();
   cPC->SetRemoteDescription(obs, (SDP)sdp);
   return r.get();
+}
+
+// PeerConnection::GetRemoteDescription
+CGO_sdp CGO_GetRemoteDescription(CGO_Peer cgoPeer) {
+  PC cPC = ((Peer*)cgoPeer)->pc_;
+  return (CGO_sdp)cPC->remote_description();
 }
 
 // PeerConnection::AddIceCandidate
