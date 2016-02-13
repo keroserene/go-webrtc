@@ -184,9 +184,9 @@ CGO_Channel CGO_getFakeDataChannel() {
 }
 
 void CGO_fakeMessage(CGO_Channel channel, void *data, int size) {
-  auto bytes = new rtc::Buffer((char*)data, size);
+  auto bytes = rtc::Buffer((char*)data, size);
   auto dc = (webrtc::DataChannelInterface*)channel;
-  auto buffer = DataBuffer(*bytes, true);
+  auto buffer = DataBuffer(bytes, true);
   dc->Send(buffer);
 }
 
