@@ -7,8 +7,7 @@ See: https://w3c.github.io/webrtc-pc/#idl-def-RTCDataChannel
 package data
 
 /*
-#cgo CXXFLAGS: -std=c++0x
-#cgo LDFLAGS: -L${SRCDIR}/../lib
+#cgo CXXFLAGS: -std=c++11
 #cgo linux,amd64 pkg-config: webrtc-data-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-data-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
