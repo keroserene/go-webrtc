@@ -62,7 +62,7 @@ void CGO_Channel_Close(CGO_Channel channel) {
 const char *CGO_Channel_Label(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  char *cstr = new char[dc->label().length()+1];
+  char *cstr = (char *)malloc(dc->label().length()+1 * sizeof(char));
   std::strcpy(cstr, dc->label().c_str());
   return cstr;
 }
@@ -88,7 +88,7 @@ int CGO_Channel_MaxRetransmits(CGO_Channel channel) {
 const char *CGO_Channel_Protocol(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  char *cstr = new char[dc->protocol().length()+1];
+  char *cstr = (char *)malloc(dc->protocol().length()+1 * sizeof(char));
   std::strcpy(cstr, dc->protocol().c_str());
   return cstr;
 }

@@ -310,7 +310,7 @@ CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
   auto s = new string();
   SDP cSDP = (SDP)sdp;
   cSDP->ToString(s);
-  char *cstr = new char[s->length()+1];
+  char *cstr = (char *)malloc(s->length()+1 * sizeof(char));
   std::strcpy(cstr, s->c_str());
   return (CGO_sdpString)cstr;
 }
