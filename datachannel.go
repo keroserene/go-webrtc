@@ -51,20 +51,17 @@ type DataChannel struct {
 }
 
 // Create a Go Channel struct, and prepare internal CGO references / observers.
-// Expects cDC to be a pointer to a CGO_Channel object, which ultimately points
-// to a DataChannelInterface*.
 // The most reasonable place for this to be created is from PeerConnection,
 // which is not available in the subpackage.
-func NewDataChannel(cDC unsafe.Pointer) *DataChannel {
-	if nil == cDC {
+func NewDataChannel(o unsafe.Pointer) *DataChannel {
+	if o == nil {
 		return nil
 	}
-	dc := new(DataChannel)
-	dc.cgoChannel = (C.CGO_Channel)(cDC)
-	dc.BinaryType = "blob"
-	// "Observer" is required for attaching callbacks correctly.
-	C.CGO_Channel_RegisterObserver(dc.cgoChannel, unsafe.Pointer(dc))
-	return dc
+	c := new(DataChannel)
+	c.BinaryType = "blob"
+	cgoChannel := C.CGO_Channel_RegisterObserver(o, unsafe.Pointer(c))
+	c.cgoChannel = (C.CGO_Channel)(cgoChannel)
+	return c
 }
 
 func (c *DataChannel) Send(data []byte) {

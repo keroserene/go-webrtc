@@ -4,15 +4,14 @@
  * ultimately be exposed in Go.
  */
 #include "cpeerconnection.h"
-#include "_cgo_export.h"  // Allow calling certain Go functions.
-
-#include "talk/app/webrtc/peerconnectioninterface.h"
-#include "talk/app/webrtc/test/fakeconstraints.h"
-#include "talk/app/webrtc/jsepsessiondescription.h"
-#include "talk/app/webrtc/webrtcsdp.h"
+#include "datachannel.h"
 
 #include <iostream>
 #include <future>
+
+#include "talk/app/webrtc/test/fakeconstraints.h"
+#include "talk/app/webrtc/jsepsessiondescription.h"
+#include "talk/app/webrtc/webrtcsdp.h"
 
 #define SUCCESS 0
 #define FAILURE -1
@@ -29,7 +28,7 @@ using namespace webrtc;
 
 typedef rtc::scoped_refptr<webrtc::PeerConnectionInterface> PC;
 typedef SessionDescriptionInterface* SDP;
-typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
+typedef rtc::scoped_refptr<CGoDataChannelObserver> DCObserver;
 
 // Peer acts as the glue between Go PeerConnection and the native
 // webrtc::PeerConnectionInterface. However, it's not directly accessible
@@ -146,9 +145,12 @@ class Peer
     cgoOnIceGatheringStateChange(goPeerConnection, new_state);
   }
 
-  void OnDataChannel(DataChannelInterface* data_channel) {
-    this->channels.push_back(data_channel);
-    cgoOnDataChannel(goPeerConnection, data_channel);
+  void OnDataChannel(DataChannelInterface* channel) {
+    DCObserver obs = new rtc::RefCountedObject<CGoDataChannelObserver>(channel);
+    this->observers.push_back(obs);
+    auto o = obs.get();
+    channel->RegisterObserver(o);
+    cgoOnDataChannel(goPeerConnection, (void *)o);
   }
 
   // Note that Configuration is where ICE servers are specified.
@@ -169,7 +171,7 @@ class Peer
 
   // Prevent deallocation of created DataChannels, since they are ref_ptr,
   // by keeping track of them in a vector.
-  vector<DataChannel> channels;
+  vector<DCObserver> observers;
 
  private:
   rtc::Thread *signalling_thread_;
@@ -403,7 +405,7 @@ int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
 }
 
 // PeerConnection::CreateDataChannel
-CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
+void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   auto cPeer = (Peer*)cgoPeer;
   DataChannelInit *r = (DataChannelInit*)dict;
   // TODO: a real DataChannelInit config with correct fields.
@@ -414,9 +416,11 @@ CGO_Channel CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
     CGO_DBG("Unable to create DataChannel.");
     return NULL;
   }
-  cPeer->channels.push_back(channel);
-  webrtc::DataChannelInterface* c = channel.get();
-  return c;
+  DCObserver obs = new rtc::RefCountedObject<CGoDataChannelObserver>(channel);
+  cPeer->observers.push_back(obs);
+  auto o = obs.get();
+  channel->RegisterObserver(o);
+  return (void *)o;
 }
 
 // PeerConnection::Close

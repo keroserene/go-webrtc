@@ -3,8 +3,6 @@
 
 #define WEBRTC_POSIX 1
 
-#include "cdatachannel.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -68,7 +66,7 @@ extern "C" {
   int CGO_IceGatheringState(CGO_Peer);
   int CGO_SetConfiguration(CGO_Peer, CGO_Configuration*);
 
-  CGO_Channel CGO_CreateDataChannel(CGO_Peer, char*, void*);
+  void* CGO_CreateDataChannel(CGO_Peer, char*, void*);
 
   void CGO_Close(CGO_Peer);
 

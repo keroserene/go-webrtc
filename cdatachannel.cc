@@ -1,49 +1,18 @@
 #include "cdatachannel.h"
-#include "talk/app/webrtc/datachannel.h"
-#include "talk/app/webrtc/peerconnectioninterface.h"
+#include "datachannel.h"
+
+#include <stdbool.h>
+
 #include "talk/app/webrtc/test/fakeconstraints.h"
 #include "webrtc/base/common.h"
-#include <iostream>
-#include <stdbool.h>
-#include "_cgo_export.h"
 
-using namespace std;
 using namespace webrtc;
 
-class CGoDataChannelObserver : public DataChannelObserver {
- public:
-  CGoDataChannelObserver(void *goPtr) : goChannel(goPtr) {
-    assert(NULL != goChannel);
-  }
-
-  void OnStateChange() {
-    cgoChannelOnStateChange(goChannel);
-  }
-
-  void OnMessage(const DataBuffer& buffer) {
-    auto data = (uint8_t*)buffer.data.data();
-    cgoChannelOnMessage(goChannel, (void *)data, buffer.size());
-  }
-
-  void OnBufferedAmountChange(uint64_t previous_amount) {
-    cgoChannelOnBufferedAmountChange(goChannel, previous_amount);
-  }
-
- protected:
-
-  // Reference to external Go data.Channel required for callbacks.
-  void *goChannel;
-
-  ~CGoDataChannelObserver() {
-    cout << "[C] CgoDataChannelObserver destructing." << endl;
-  }
-};  // class DoDataChannelObserver
-
 // Create and register a new DataChannelObserver.
-void CGO_Channel_RegisterObserver(CGO_Channel channel, void *goChannel) {
-  auto dc = (webrtc::DataChannelInterface*)channel;
-  auto obs = new CGoDataChannelObserver(goChannel);
-  dc->RegisterObserver(obs);
+CGO_Channel CGO_Channel_RegisterObserver(void *o, void *goChannel) {
+  auto obs = (CGoDataChannelObserver*)o;
+  obs->goChannel = goChannel;
+  return obs->dc.get();
 }
 
 void CGO_Channel_Send(CGO_Channel channel, void *data, int size) {
@@ -176,26 +145,32 @@ class FakeDataChannel : public DataChannelInterface {
   DataChannelObserver* obs_;
   DataState state_ = DataState::kClosed;
 };
-rtc::scoped_refptr<FakeDataChannel> test_dc;
 
-CGO_Channel CGO_getFakeDataChannel() {
-  test_dc = new rtc::RefCountedObject<FakeDataChannel>();
-  return (void *)test_dc;
+rtc::scoped_refptr<CGoDataChannelObserver> test_observer;
+
+void* CGO_getFakeDataChannel() {
+  rtc::scoped_refptr<FakeDataChannel> test_dc = new rtc::RefCountedObject<FakeDataChannel>();
+  test_observer = new rtc::RefCountedObject<CGoDataChannelObserver>(test_dc);
+  auto o = test_observer.get();
+  test_dc->RegisterObserver(o);
+  return (void *)o;
 }
 
 void CGO_fakeMessage(CGO_Channel channel, void *data, int size) {
-  auto dc = (webrtc::DataChannelInterface*)channel;
+  auto dc = (FakeDataChannel*)channel;
   auto bytes = rtc::Buffer((char*)data, size);
   auto buffer = DataBuffer(bytes, true);
   dc->Send(buffer);
 }
 
 void CGO_fakeStateChange(CGO_Channel channel, int state) {
-  test_dc->SetState((DataChannelInterface::DataState)state);
+  auto dc = (FakeDataChannel*)channel;
+  dc->SetState((DataChannelInterface::DataState)state);
 }
 
 void CGO_fakeBufferAmount(CGO_Channel channel, int amount) {
-  test_dc->SetBufferedAmount(amount);
+  auto dc = (FakeDataChannel*)channel;
+  dc->SetBufferedAmount(amount);
 }
 
 const int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting;

@@ -408,10 +408,10 @@ func cgoOnIceGatheringStateChange(p unsafe.Pointer, state IceGatheringState) {
 }
 
 //export cgoOnDataChannel
-func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
-	INFO.Println("fired OnDataChannel: ", p, cDC)
+func cgoOnDataChannel(p unsafe.Pointer, o unsafe.Pointer) {
+	INFO.Println("fired OnDataChannel: ", p, o)
 	pc := (*PeerConnection)(p)
-	dc := NewDataChannel(unsafe.Pointer(cDC))
+	dc := NewDataChannel(o)
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)
 	}
