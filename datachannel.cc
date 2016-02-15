@@ -1,5 +1,5 @@
-#include "cdatachannel.h"
 #include "datachannel.h"
+#include "datachannel.hpp"
 
 #include <stdbool.h>
 

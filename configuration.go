@@ -1,13 +1,12 @@
 package webrtc
 
-// #include "cpeerconnection.h"
+// #include "peerconnection.h"
 // #include "ctestenums.h"
 import "C"
 import (
 	"errors"
 	"fmt"
 	"strings"
-	// "encoding/json"
 )
 
 // Working draft spec: http://www.w3.org/TR/webrtc/#idl-def-Configuration

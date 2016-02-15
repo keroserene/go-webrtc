@@ -3,8 +3,8 @@
  * allows compatibility with CGO's requirements so that everything may
  * ultimately be exposed in Go.
  */
-#include "cpeerconnection.h"
-#include "datachannel.h"
+#include "peerconnection.h"
+#include "datachannel.hpp"
 
 #include <iostream>
 #include <future>

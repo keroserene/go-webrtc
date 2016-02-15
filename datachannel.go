@@ -12,7 +12,7 @@ package webrtc
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
-#include "cdatachannel.h"
+#include "datachannel.h"
 */
 import "C"
 import (

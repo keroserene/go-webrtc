@@ -1,43 +1,48 @@
-#ifndef _DATACHANNEL_H_
-#define _DATACHANNEL_H_
+#ifndef _C_DATACHANNEL_H_
+#define _C_DATACHANNEL_H_
 
-#include "_cgo_export.h"  // Allow calling certain Go functions.
+#define WEBRTC_POSIX 1
 
-#include "talk/app/webrtc/peerconnectioninterface.h"
-#include "talk/app/webrtc/datachannelinterface.h"
+#include <stdbool.h>
 
-using namespace std;
-using namespace webrtc;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
+  // In order to present an interface cgo is happy with, nothing in this file
+  // can directly reference header files from libwebrtc / C++ world. All the
+  // casting must be hidden in the .cc file.
 
-class CGoDataChannelObserver
-  : public DataChannelObserver,
-    public rtc::RefCountInterface {
- public:
-  CGoDataChannelObserver(DataChannel dc) : dc(dc) {
-    assert(NULL != dc);
-  }
+  typedef void* CGO_Channel;
 
-  void OnStateChange() {
-    cgoChannelOnStateChange(goChannel);
-  }
+  CGO_Channel CGO_Channel_RegisterObserver(void *obs, void *goChannel);
 
-  void OnMessage(const DataBuffer& buffer) {
-    auto data = (uint8_t*)buffer.data.data();
-    cgoChannelOnMessage(goChannel, (void *)data, buffer.size());
-  }
+  void CGO_Channel_Send(CGO_Channel channel, void *data, int size);
+  void CGO_Channel_Close(CGO_Channel channel);
 
-  void OnBufferedAmountChange(uint64_t previous_amount) {
-    cgoChannelOnBufferedAmountChange(goChannel, previous_amount);
-  }
+  const char *CGO_Channel_Label(CGO_Channel);
+  const bool CGO_Channel_Ordered(CGO_Channel);
+  int CGO_Channel_MaxRetransmitTime(CGO_Channel channel);
+  int CGO_Channel_MaxRetransmits(CGO_Channel channel);
+  const char *CGO_Channel_Protocol(CGO_Channel);
+  const bool CGO_Channel_Negotiated(CGO_Channel channel);
+  int CGO_Channel_ID(CGO_Channel channel);
+  int CGO_Channel_ReadyState(CGO_Channel);
+  int CGO_Channel_BufferedAmount(CGO_Channel channel);
 
-  // Reference to external Go data.Channel required for callbacks.
-  void *goChannel;
-  DataChannel dc;
+  extern const int CGO_DataStateConnecting;
+  extern const int CGO_DataStateOpen;
+  extern const int CGO_DataStateClosing;
+  extern const int CGO_DataStateClosed;
 
- protected:
-  ~CGoDataChannelObserver() {}
-};  // class DoDataChannelObserver
+  // Testing helpers:
+  CGO_Channel CGO_getFakeDataChannel();
+  void CGO_fakeMessage(CGO_Channel channel, void *data, int size);
+  void CGO_fakeStateChange(CGO_Channel channel, int state);
+  void CGO_fakeBufferAmount(CGO_Channel channel, int amount);
 
-#endif  // _DATACHANNEL_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif  // _C_DATACHANNEL_H

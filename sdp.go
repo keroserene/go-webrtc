@@ -1,6 +1,6 @@
 package webrtc
 
-// #include "cpeerconnection.h"
+// #include "peerconnection.h"
 // #include <stdlib.h>  // Needed for C.free
 import "C"
 import (
