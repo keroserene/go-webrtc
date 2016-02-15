@@ -1,4 +1,4 @@
-package data
+package webrtc
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
@@ -17,10 +17,10 @@ func TestDataStateEnums(t *testing.T) {
 
 	Convey("DataChannel", t, func() {
 
-		c := NewChannel(nil)
+		c := NewDataChannel(nil)
 		So(c, ShouldBeNil)
 
-		c = NewChannel(cgoFakeDataChannel())
+		c = NewDataChannel(cgoFakeDataChannel())
 		So(c, ShouldNotBeNil)
 		So(c.Label(), ShouldEqual, "fake")
 		So(c.Ordered(), ShouldBeFalse)

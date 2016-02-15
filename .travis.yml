@@ -21,5 +21,4 @@ install:
 
 script:
     - make check
-    - go test -v -race ./data
     - go test -v -race .

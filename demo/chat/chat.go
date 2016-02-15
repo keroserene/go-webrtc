@@ -13,14 +13,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/keroserene/go-webrtc"
-	"github.com/keroserene/go-webrtc/data"
 	"os"
 	"os/signal"
 	"strings"
 )
 
 var pc *webrtc.PeerConnection
-var dc *data.Channel
+var dc *webrtc.DataChannel
 var mode Mode
 var err error
 var username = "Alice"
@@ -124,7 +123,7 @@ func signalReceive(msg string) {
 // In this demo, only one data channel is expected, and is only used for chat.
 // But it is possible to send any sort of bytes over a data channel, for many
 // more interesting purposes.
-func prepareDataChannel(channel *data.Channel) {
+func prepareDataChannel(channel *webrtc.DataChannel) {
 	channel.OnOpen = func() {
 		fmt.Println("Data Channel Opened!")
 		startChat()
@@ -228,7 +227,7 @@ func start(instigator bool) {
 	*/
 	// A DataChannel is generated through this callback only when the remote peer
 	// has initiated the creation of the data channel.
-	pc.OnDataChannel = func(channel *data.Channel) {
+	pc.OnDataChannel = func(channel *webrtc.DataChannel) {
 		fmt.Println("Datachannel established by remote... ", channel.Label())
 		dc = channel
 		prepareDataChannel(channel)
@@ -237,9 +236,9 @@ func start(instigator bool) {
 	if instigator {
 		// Attempting to create the first datachannel triggers ICE.
 		fmt.Println("Initializing datachannel....")
-		dc, err = pc.CreateDataChannel("test", data.Init{})
+		dc, err = pc.CreateDataChannel("test", webrtc.Init{})
 		if nil != err {
-			fmt.Println("Unexpected failure creating data.Channel.")
+			fmt.Println("Unexpected failure creating Channel.")
 			return
 		}
 		prepareDataChannel(dc)

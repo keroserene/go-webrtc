@@ -1,7 +1,6 @@
 package webrtc
 
 import (
-	"github.com/keroserene/go-webrtc/data"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
@@ -150,8 +149,8 @@ func TestPeerConnection(t *testing.T) {
 				})
 
 				Convey("OnDataChannel", func() {
-					success := make(chan *data.Channel, 1)
-					pc.OnDataChannel = func(dc *data.Channel) {
+					success := make(chan *DataChannel, 1)
+					pc.OnDataChannel = func(dc *DataChannel) {
 						success <- dc
 					}
 					cgoOnDataChannel(unsafe.Pointer(pc), nil)
@@ -229,7 +228,7 @@ func TestPeerConnection(t *testing.T) {
 			})
 
 			Convey("DataChannel", func() {
-				channel, err := alice.CreateDataChannel("test", data.Init{})
+				channel, err := alice.CreateDataChannel("test", Init{})
 				So(channel, ShouldNotBeNil)
 				So(err, ShouldBeNil)
 				So(channel.Label(), ShouldEqual, "test")

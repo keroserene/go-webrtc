@@ -31,6 +31,7 @@ package webrtc
 
 /*
 #cgo CXXFLAGS: -std=c++0x
+#cgo LDFLAGS: -L${SRCDIR}/lib
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
@@ -40,7 +41,6 @@ package webrtc
 import "C"
 import (
 	"errors"
-	"github.com/keroserene/go-webrtc/data"
 	"unsafe"
 )
 
@@ -109,7 +109,7 @@ type PeerConnection struct {
 	OnIceConnectionStateChange func(IceConnectionState)
 	OnIceGatheringStateChange  func(IceGatheringState)
 	OnConnectionStateChange    func(PeerConnectionState)
-	OnDataChannel              func(*data.Channel)
+	OnDataChannel              func(*DataChannel)
 
 	config Configuration
 
@@ -311,8 +311,8 @@ exchange data.
 
 TODO: Implement the "negotiated" flag?
 */
-func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
-	*data.Channel, error) {
+func (pc *PeerConnection) CreateDataChannel(label string, dict Init) (
+	*DataChannel, error) {
 	l := C.CString(label)
 	defer C.free(unsafe.Pointer(l))
 	cDataChannel := C.CGO_CreateDataChannel(pc.cgoPeer, l, unsafe.Pointer(&dict))
@@ -320,7 +320,7 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict data.Init) (
 		return nil, errors.New("Failed to CreateDataChannel")
 	}
 	// Provide internal Data Channel as reference to create the Go wrapper.
-	dc := data.NewChannel(unsafe.Pointer(cDataChannel))
+	dc := NewDataChannel(unsafe.Pointer(cDataChannel))
 	return dc, nil
 }
 
@@ -411,7 +411,7 @@ func cgoOnIceGatheringStateChange(p unsafe.Pointer, state IceGatheringState) {
 func cgoOnDataChannel(p unsafe.Pointer, cDC C.CGO_Channel) {
 	INFO.Println("fired OnDataChannel: ", p, cDC)
 	pc := (*PeerConnection)(p)
-	dc := data.NewChannel(unsafe.Pointer(cDC))
+	dc := NewDataChannel(unsafe.Pointer(cDC))
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)
 	}

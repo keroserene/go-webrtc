@@ -4,13 +4,13 @@ portion of WebRTC spec.
 
 See: https://w3c.github.io/webrtc-pc/#idl-def-RTCDataChannel
 */
-package data
+package webrtc
 
 /*
 #cgo CXXFLAGS: -std=c++0x
-#cgo LDFLAGS: -L${SRCDIR}/../lib
-#cgo linux,amd64 pkg-config: webrtc-data-linux-amd64.pc
-#cgo darwin,amd64 pkg-config: webrtc-data-darwin-amd64.pc
+#cgo LDFLAGS: -L${SRCDIR}/lib
+#cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
+#cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
 #include "cdatachannel.h"
 */
@@ -37,7 +37,7 @@ always returns true as specified for SCTP, there is no reasonable
 exposure of other specific errors from the native code, and OnClose
 already covers the bases.
 */
-type Channel struct {
+type DataChannel struct {
 	BufferedAmountLowThreshold int
 	BinaryType                 string
 
@@ -55,11 +55,11 @@ type Channel struct {
 // to a DataChannelInterface*.
 // The most reasonable place for this to be created is from PeerConnection,
 // which is not available in the subpackage.
-func NewChannel(cDC unsafe.Pointer) *Channel {
+func NewDataChannel(cDC unsafe.Pointer) *DataChannel {
 	if nil == cDC {
 		return nil
 	}
-	dc := new(Channel)
+	dc := new(DataChannel)
 	dc.cgoChannel = (C.CGO_Channel)(cDC)
 	dc.BinaryType = "blob"
 	// "Observer" is required for attaching callbacks correctly.
@@ -67,55 +67,55 @@ func NewChannel(cDC unsafe.Pointer) *Channel {
 	return dc
 }
 
-func (c *Channel) Send(data []byte) {
+func (c *DataChannel) Send(data []byte) {
 	if nil == data {
 		return
 	}
 	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)))
 }
 
-func (c *Channel) Close() error {
+func (c *DataChannel) Close() error {
 	C.CGO_Channel_Close(c.cgoChannel)
 	return nil
 }
 
-func (c *Channel) Label() string {
+func (c *DataChannel) Label() string {
 	s := C.CGO_Channel_Label(c.cgoChannel)
 	defer C.free(unsafe.Pointer(s))
 	return C.GoString(s)
 }
 
-func (c *Channel) Ordered() bool {
+func (c *DataChannel) Ordered() bool {
 	return bool(C.CGO_Channel_Ordered(c.cgoChannel))
 }
 
-func (c *Channel) Protocol() string {
+func (c *DataChannel) Protocol() string {
 	p := C.CGO_Channel_Protocol(c.cgoChannel)
 	defer C.free(unsafe.Pointer(p))
 	return C.GoString(p)
 }
 
-func (c *Channel) MaxPacketLifeTime() uint {
+func (c *DataChannel) MaxPacketLifeTime() uint {
 	return uint(C.CGO_Channel_MaxRetransmitTime(c.cgoChannel))
 }
 
-func (c *Channel) MaxRetransmits() uint {
+func (c *DataChannel) MaxRetransmits() uint {
 	return uint(C.CGO_Channel_MaxRetransmits(c.cgoChannel))
 }
 
-func (c *Channel) Negotiated() bool {
+func (c *DataChannel) Negotiated() bool {
 	return bool(C.CGO_Channel_Negotiated(c.cgoChannel))
 }
 
-func (c *Channel) ID() int {
+func (c *DataChannel) ID() int {
 	return int(C.CGO_Channel_ID(c.cgoChannel))
 }
 
-func (c *Channel) ReadyState() DataState {
+func (c *DataChannel) ReadyState() DataState {
 	return (DataState)(C.CGO_Channel_ReadyState(c.cgoChannel))
 }
 
-func (c *Channel) BufferedAmount() int {
+func (c *DataChannel) BufferedAmount() int {
 	return int(C.CGO_Channel_BufferedAmount(c.cgoChannel))
 }
 
@@ -137,7 +137,7 @@ type Init struct {
 //export cgoChannelOnMessage
 func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size int) {
 	bytes := C.GoBytes(cBytes, C.int(size))
-	dc := (*Channel)(goChannel)
+	dc := (*DataChannel)(goChannel)
 	if nil != dc.OnMessage {
 		dc.OnMessage(bytes)
 	}
@@ -145,7 +145,7 @@ func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size i
 
 //export cgoChannelOnStateChange
 func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
-	dc := (*Channel)(goChannel)
+	dc := (*DataChannel)(goChannel)
 	switch dc.ReadyState() {
 	// Picks between different Go callbacks...
 	case DataStateConnecting:
@@ -166,7 +166,7 @@ func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
 
 //export cgoChannelOnBufferedAmountChange
 func cgoChannelOnBufferedAmountChange(goChannel unsafe.Pointer, amount int) {
-	dc := (*Channel)(goChannel)
+	dc := (*DataChannel)(goChannel)
 	if nil != dc.OnBufferedAmountLow {
 		if amount <= dc.BufferedAmountLowThreshold {
 			dc.OnBufferedAmountLow()
@@ -185,15 +185,15 @@ func cgoFakeDataChannel() unsafe.Pointer {
 	return unsafe.Pointer(C.CGO_getFakeDataChannel())
 }
 
-func cgoFakeMessage(c *Channel, b []byte, size int) {
+func cgoFakeMessage(c *DataChannel, b []byte, size int) {
 	C.CGO_fakeMessage((C.CGO_Channel)(c.cgoChannel),
 		unsafe.Pointer(&b[0]), C.int(size))
 }
 
-func cgoFakeStateChange(c *Channel, s DataState) {
+func cgoFakeStateChange(c *DataChannel, s DataState) {
 	C.CGO_fakeStateChange((C.CGO_Channel)(c.cgoChannel), (C.int)(s))
 }
 
-func cgoFakeBufferAmount(c *Channel, amount int) {
+func cgoFakeBufferAmount(c *DataChannel, amount int) {
 	C.CGO_fakeBufferAmount((C.CGO_Channel)(c.cgoChannel), (C.int)(amount))
 }

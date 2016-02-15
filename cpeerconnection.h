@@ -3,7 +3,7 @@
 
 #define WEBRTC_POSIX 1
 
-#include "data/cdatachannel.h"
+#include "cdatachannel.h"
 
 #ifdef __cplusplus
 extern "C" {
