@@ -12,6 +12,7 @@
 #include "talk/app/webrtc/test/fakeconstraints.h"
 #include "talk/app/webrtc/jsepsessiondescription.h"
 #include "talk/app/webrtc/webrtcsdp.h"
+#include "webrtc/base/stringutils.h"
 
 #define SUCCESS 0
 #define FAILURE -1
@@ -312,8 +313,9 @@ CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
   auto s = new string();
   SDP cSDP = (SDP)sdp;
   cSDP->ToString(s);
-  char *cstr = (char *)malloc(s->length()+1 * sizeof(char));
-  std::strcpy(cstr, s->c_str());
+  size_t l = s->length() + 1;
+  char *cstr = (char *)malloc(l * sizeof(char));
+  rtc::strcpyn(cstr, l, s->c_str());
   return (CGO_sdpString)cstr;
 }
 

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "talk/app/webrtc/test/fakeconstraints.h"
+#include "webrtc/base/stringutils.h"
 #include "webrtc/base/common.h"
 
 using namespace webrtc;
@@ -31,8 +32,9 @@ void CGO_Channel_Close(CGO_Channel channel) {
 const char *CGO_Channel_Label(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  char *cstr = (char *)malloc(dc->label().length()+1 * sizeof(char));
-  std::strcpy(cstr, dc->label().c_str());
+  size_t l = dc->label().length() + 1;
+  char *cstr = (char *)malloc(l * sizeof(char));
+  rtc::strcpyn(cstr, l, dc->label().c_str());
   return cstr;
 }
 
@@ -57,8 +59,9 @@ int CGO_Channel_MaxRetransmits(CGO_Channel channel) {
 const char *CGO_Channel_Protocol(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  char *cstr = (char *)malloc(dc->protocol().length()+1 * sizeof(char));
-  std::strcpy(cstr, dc->protocol().c_str());
+  size_t l = dc->protocol().length() + 1;
+  char *cstr = (char *)malloc(l * sizeof(char));
+  rtc::strcpyn(cstr, l, dc->protocol().c_str());
   return cstr;
 }
 
