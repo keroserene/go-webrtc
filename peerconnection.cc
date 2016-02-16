@@ -57,9 +57,7 @@ class Peer
     signalling_thread_->Start();  // Must start before being passed to
     worker_thread_->Start();      // PeerConnectionFactory.
 
-    // TODO: rebuild the archive and this should solve the segfault.
-    // this->fake_audio_ = FakeAudioCaptureModule::Create();
-    this->fake_audio_ = NULL;
+    this->fake_audio_ = FakeAudioCaptureModule::Create();
     pc_factory = CreatePeerConnectionFactory(
       worker_thread_,
       signalling_thread_,
@@ -181,7 +179,7 @@ class Peer
  private:
   rtc::Thread *signalling_thread_;
   rtc::Thread *worker_thread_;
-  AudioDeviceModule *fake_audio_;
+  rtc::scoped_refptr<AudioDeviceModule> fake_audio_;
 
 };  // class Peer
 
