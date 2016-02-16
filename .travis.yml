@@ -1,4 +1,7 @@
 language: go
+osx_image: xcode7
+sudo: required
+dist: trusty
 
 os:
     - osx
@@ -17,6 +20,7 @@ go:
 
 install:
     - if [ "$TRAVIS_OS_NAME" = "linux" ]; then export CXX="g++-5" CC="gcc-5"; fi
+    - export CGO_CFLAGS="-fsanitize=address" CGO_LDFLAGS="-fsanitize=address" CGO_CXXFLAGS="-Wno-inconsistent-missing-override"
     - go get -u github.com/smartystreets/goconvey
 
 script:
