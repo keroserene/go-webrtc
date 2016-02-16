@@ -1,8 +1,7 @@
 language: go
 
-os:
-    - osx
-    - linux
+go:
+    - 1.5
 
 addons:
     apt:
@@ -12,11 +11,18 @@ addons:
             - g++-5
             - gcc-5
 
-go:
-    - 1.5
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+      env: CC="gcc-5" CXX="g++-5" ASAN_OPTIONS="detect_leaks=0"
+    - os: osx
+      osx_image: xcode7.2
+      env: CGO_CXXFLAGS="-Wno-inconsistent-missing-override"
 
 install:
-    - if [ "$TRAVIS_OS_NAME" = "linux" ]; then export CXX="g++-5" CC="gcc-5"; fi
+    - export CGO_CFLAGS="-fsanitize=address" CGO_LDFLAGS="-fsanitize=address"
     - go get -u github.com/smartystreets/goconvey
 
 script:
