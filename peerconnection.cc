@@ -10,6 +10,7 @@
 #include <future>
 
 #include "talk/app/webrtc/test/fakeconstraints.h"
+#include "talk/app/webrtc/test/fakeaudiocapturemodule.h"
 #include "talk/app/webrtc/jsepsessiondescription.h"
 #include "talk/app/webrtc/webrtcsdp.h"
 #include "webrtc/base/stringutils.h"
@@ -56,10 +57,13 @@ class Peer
     signalling_thread_->Start();  // Must start before being passed to
     worker_thread_->Start();      // PeerConnectionFactory.
 
+    // TODO: rebuild the archive and this should solve the segfault.
+    // this->fake_audio_ = FakeAudioCaptureModule::Create();
+    this->fake_audio_ = NULL;
     pc_factory = CreatePeerConnectionFactory(
       worker_thread_,
       signalling_thread_,
-      NULL, NULL, NULL);
+      this->fake_audio_, NULL, NULL);
     if (!pc_factory.get()) {
       CGO_DBG("Could not create PeerConnectionFactory");
       return false;
@@ -177,6 +181,7 @@ class Peer
  private:
   rtc::Thread *signalling_thread_;
   rtc::Thread *worker_thread_;
+  AudioDeviceModule *fake_audio_;
 
 };  // class Peer
 
