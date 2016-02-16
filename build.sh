@@ -61,10 +61,12 @@ popd
 
 echo "Concatenating libraries ..."
 pushd $WEBRTC_SRC/out/$CONFIG
-ls *.a > filelist
-libtool -static -o libwebrtc-magic.a -filelist filelist
 # on osx:
+# ls *.a > filelist
+# libtool -static -o libwebrtc-magic.a -filelist filelist
 # strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
+# on linux:
+# ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 mv libwebrtc-magic.a $LIB_DIR/libwebrtc-$OS-$ARCH-magic.a
 popd
 
