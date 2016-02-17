@@ -1,8 +1,5 @@
 language: go
 
-go:
-    - 1.5
-
 addons:
     apt:
         sources:
@@ -12,14 +9,16 @@ addons:
             - gcc-5
 
 matrix:
-  include:
-    - os: linux
-      dist: trusty
-      sudo: required
-      env: CC="gcc-5" CXX="g++-5" ASAN_OPTIONS="detect_leaks=0"
-    - os: osx
-      osx_image: xcode7.2
-      env: CGO_CXXFLAGS="-Wno-inconsistent-missing-override"
+    include:
+        - os: linux
+          dist: trusty
+          sudo: required
+          go: 1.5
+          env: CC="gcc-5" CXX="g++-5" ASAN_OPTIONS="detect_leaks=0"
+        - os: osx
+          osx_image: xcode7.2
+          go: 1.5
+          env: CGO_CXXFLAGS="-Wno-inconsistent-missing-override"
 
 install:
     - export CGO_CFLAGS="-fsanitize=address" CGO_LDFLAGS="-fsanitize=address"
