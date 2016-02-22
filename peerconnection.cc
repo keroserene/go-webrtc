@@ -323,8 +323,8 @@ CGO_sdp CGO_DeserializeSDP(const char *type, const char *msg) {
   // TODO: Maybe use an enum instead of string for type.
   auto jsep_sdp = new JsepSessionDescription(type);
   SdpParseError err;
-  auto msg_str = new string(msg);
-  SdpDeserialize(*msg_str, jsep_sdp, &err);
+  std::string msg_str(msg);
+  SdpDeserialize(msg_str, jsep_sdp, &err);
   return (CGO_sdp)jsep_sdp;
 }
 
