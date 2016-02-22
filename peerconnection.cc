@@ -411,8 +411,8 @@ void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   DataChannelInit *r = (DataChannelInit*)dict;
   // TODO: a real DataChannelInit config with correct fields.
   DataChannelInit config;
-  string *l = new string(label);
-  auto channel = cPeer->pc_->CreateDataChannel(*l, &config);
+  std::string l(label);
+  auto channel = cPeer->pc_->CreateDataChannel(l, &config);
   if (NULL == channel) {
     CGO_DBG("Unable to create DataChannel.");
     return NULL;
