@@ -157,7 +157,7 @@ class Peer
 
   // Note that Configuration is where ICE servers are specified.
   PeerConnectionInterface::RTCConfiguration *config;
-  const MediaConstraintsInterface* constraints;
+  const FakeConstraints* constraints;
 
   PC pc_;                  // Pointer to webrtc::PeerConnectionInterface.
   void *goPeerConnection;  // Pointer to external Go PeerConnection struct,
@@ -179,6 +179,8 @@ class Peer
   ~Peer() {
     if (config)
       delete config;
+    if (constraints)
+      delete constraints;
   }
 
  private:
