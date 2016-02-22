@@ -312,10 +312,10 @@ CGO_sdp CGO_CreateAnswer(CGO_Peer cgoPeer) {
 
 // Serialize SDP message to a string Go can use.
 CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
-  auto s = new string();
   SDP cSDP = (SDP)sdp;
-  cSDP->ToString(s);
-  return (CGO_sdpString)strdup(s->c_str());
+  std::string s;
+  cSDP->ToString(&s);
+  return (CGO_sdpString)strdup(s.c_str());
 }
 
 // Given a fully serialized SDP string |msg|, return a CGO sdp object.
