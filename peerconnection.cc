@@ -175,11 +175,16 @@ class Peer
   // by keeping track of them in a vector.
   vector<DCObserver> observers;
 
+ protected:
+  ~Peer() {
+    if (config)
+      delete config;
+  }
+
  private:
   rtc::Thread *signalling_thread_;
   rtc::Thread *worker_thread_;
   rtc::scoped_refptr<AudioDeviceModule> fake_audio_;
-
 };  // class Peer
 
 // Keep track of Peers in global scope to prevent deallocation, due to the
