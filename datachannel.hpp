@@ -1,21 +1,18 @@
 #ifndef _DATACHANNEL_H_
 #define _DATACHANNEL_H_
 
-#include "_cgo_export.h"  // Allow calling certain Go functions.
+#include <_cgo_export.h>  // Allow calling certain Go functions.
 
 #include "talk/app/webrtc/peerconnectioninterface.h"
 #include "talk/app/webrtc/datachannelinterface.h"
 
-using namespace std;
-using namespace webrtc;
-
-typedef rtc::scoped_refptr<DataChannelInterface> DataChannel;
+typedef rtc::scoped_refptr<webrtc::DataChannelInterface> DataChannel;
 
 class CGoDataChannelObserver
-  : public DataChannelObserver,
+  : public webrtc::DataChannelObserver,
     public rtc::RefCountInterface {
  public:
-  CGoDataChannelObserver(DataChannel dc) : dc(dc) {
+  explicit CGoDataChannelObserver(DataChannel dc) : dc(dc) {
     assert(NULL != dc);
   }
 
@@ -23,9 +20,10 @@ class CGoDataChannelObserver
     cgoChannelOnStateChange(goChannel);
   }
 
-  void OnMessage(const DataBuffer& buffer) {
-    auto data = (uint8_t*)buffer.data.data();
-    cgoChannelOnMessage(goChannel, (void *)data, buffer.size());
+  void OnMessage(const webrtc::DataBuffer& buffer) {
+    auto data = reinterpret_cast<void*>(const_cast<unsigned char*>(
+                                        buffer.data.data()));
+    cgoChannelOnMessage(goChannel, data, buffer.size());
   }
 
   void OnBufferedAmountChange(uint64_t previous_amount) {
