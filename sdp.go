@@ -27,7 +27,8 @@ func CgoSdpToGoString(sdp C.CGO_sdp) string {
 }
 
 // Construct a SessionDescription object from a valid msg.
-func NewSessionDescription(sdpType string, cgoSdp C.CGO_sdp) *SessionDescription {
+func NewSessionDescription(sdpType string, serializedSDP C.CGO_sdpString) *SessionDescription {
+	defer C.free(unsafe.Pointer(serializedSDP))
 	in := false
 	for i := 0; i < len(SdpTypes); i++ {
 		if SdpTypes[i] == sdpType {
@@ -40,7 +41,7 @@ func NewSessionDescription(sdpType string, cgoSdp C.CGO_sdp) *SessionDescription
 	}
 	sdp := new(SessionDescription)
 	sdp.Type = sdpType
-	sdp.Sdp = CgoSdpToGoString(cgoSdp)
+	sdp.Sdp = C.GoString(serializedSDP)
 	return sdp
 }
 

@@ -286,7 +286,7 @@ bool SDPtimeout(future<SDP> *f, int seconds) {
 // PeerConnection::CreateOffer
 // Blocks until libwebrtc succeeds in generating the SDP offer,
 // @returns SDP (pointer), or NULL on timeeout.
-CGO_sdp CGO_CreateOffer(CGO_Peer cgoPeer) {
+CGO_sdpString CGO_CreateOffer(CGO_Peer cgoPeer) {
   Peer* peer = (Peer*)cgoPeer;
   auto r = peer->promiseSDP.get_future();
   peer->pc_->CreateOffer(peer, peer->constraints);
@@ -297,13 +297,17 @@ CGO_sdp CGO_CreateOffer(CGO_Peer cgoPeer) {
   }
   SDP sdp = r.get();  // blocking
   peer->resetPromise();
-  return (CGO_sdp)sdp;
+  if (!sdp)
+    return NULL;
+  auto s = CGO_SerializeSDP(sdp);
+  delete sdp;
+  return s;
 }
 
 // PeerConnection::CreateAnswer
 // Blocks until libwebrtc succeeds in generating the SDP answer.
 // @returns SDP, or NULL on timeout.
-CGO_sdp CGO_CreateAnswer(CGO_Peer cgoPeer) {
+CGO_sdpString CGO_CreateAnswer(CGO_Peer cgoPeer) {
   Peer *peer = (Peer*)cgoPeer;
   auto r = peer->promiseSDP.get_future();
   peer->pc_->CreateAnswer(peer, peer->constraints);
@@ -314,7 +318,11 @@ CGO_sdp CGO_CreateAnswer(CGO_Peer cgoPeer) {
   }
   SDP sdp = r.get();  // blocking
   peer->resetPromise();
-  return (CGO_sdp)sdp;
+  if (!sdp)
+    return NULL;
+  auto s = CGO_SerializeSDP(sdp);
+  delete sdp;
+  return s;
 }
 
 // Serialize SDP message to a string Go can use.

@@ -49,8 +49,8 @@ extern "C" {
 
   int CGO_CreatePeerConnection(CGO_Peer, CGO_Configuration*);
 
-  CGO_sdp CGO_CreateOffer(CGO_Peer);
-  CGO_sdp CGO_CreateAnswer(CGO_Peer);
+  CGO_sdpString CGO_CreateOffer(CGO_Peer);
+  CGO_sdpString CGO_CreateAnswer(CGO_Peer);
 
   CGO_sdpString CGO_SerializeSDP(CGO_sdp);
   CGO_sdp CGO_DeserializeSDP(const char *type, const char *msg);
