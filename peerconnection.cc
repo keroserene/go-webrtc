@@ -155,9 +155,15 @@ class Peer
     cgoOnDataChannel(goPeerConnection, (void *)o);
   }
 
+  void SetConfig(PeerConnectionInterface::RTCConfiguration *c) {
+    if (config)
+      delete config;
+    config = c;
+  }
+
   // Note that Configuration is where ICE servers are specified.
-  PeerConnectionInterface::RTCConfiguration *config;
-  const FakeConstraints* constraints;
+  PeerConnectionInterface::RTCConfiguration *config = NULL;
+  const FakeConstraints* constraints = NULL;
 
   PC pc_;                  // Pointer to webrtc::PeerConnectionInterface.
   void *goPeerConnection;  // Pointer to external Go PeerConnection struct,
@@ -177,8 +183,7 @@ class Peer
 
  protected:
   ~Peer() {
-    if (config)
-      delete config;
+    SetConfig(NULL);
     if (constraints)
       delete constraints;
   }
@@ -262,7 +267,7 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
 // Returns 0 on Success.
 int CGO_CreatePeerConnection(CGO_Peer cgoPeer, CGO_Configuration *cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
-  peer->config = castConfig_(cgoConfig);
+  peer->SetConfig(castConfig_(cgoConfig));
   peer->pc_ = peer->pc_factory->CreatePeerConnection(
     *peer->config,
     peer->constraints,
@@ -414,7 +419,7 @@ int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
   auto cConfig = castConfig_(cgoConfig);
   bool success = peer->pc_->SetConfiguration(*cConfig);
   if (success) {
-    peer->config = cConfig;
+    peer->SetConfig(cConfig);
     return SUCCESS;
   }
   return FAILURE;
