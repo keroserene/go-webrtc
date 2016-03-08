@@ -43,7 +43,7 @@ extern "C" {
     const char *sdp;
   } CGO_IceCandidate;
 
-  CGO_Peer CGO_InitializePeer(void *pc);
+  CGO_Peer CGO_InitializePeer(int pc);
 
   // Below are "C methods" for the Peer class, which must be hidden from cgo.
 

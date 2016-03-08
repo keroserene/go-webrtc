@@ -15,7 +15,7 @@ extern "C" {
 
   typedef void* CGO_Channel;
 
-  CGO_Channel CGO_Channel_RegisterObserver(void *obs, void *goChannel);
+  CGO_Channel CGO_Channel_RegisterObserver(void *obs, int goChannel);
 
   void CGO_Channel_Send(CGO_Channel channel, void *data, int size);
   void CGO_Channel_Close(CGO_Channel channel);

@@ -88,6 +88,8 @@ const (
 var IceGatheringStateString = []string{
 	"New", "Gathering", "Complete"}
 
+var PCMap = NewCGOMap()
+
 /* WebRTC PeerConnection
 
 This is the main container of WebRTC functionality - from handling the ICE
@@ -114,6 +116,7 @@ type PeerConnection struct {
 	config Configuration
 
 	cgoPeer C.CGO_Peer // Native code internals
+	index   int        // Index into the PCMap
 }
 
 /* Construct a WebRTC PeerConnection.
@@ -126,9 +129,9 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 		return nil, errors.New("PeerConnection requires a Configuration.")
 	}
 	pc := new(PeerConnection)
-	// INFO.Println("PC at ", unsafe.Pointer(pc))
+	pc.index = PCMap.Set(pc)
 	// Internal CGO Peer wraps the native webrtc::PeerConnectionInterface.
-	pc.cgoPeer = C.CGO_InitializePeer(unsafe.Pointer(pc))
+	pc.cgoPeer = C.CGO_InitializePeer(C.int(pc.index))
 	if nil == pc.cgoPeer {
 		return pc, errors.New("PeerConnection: failed to initialize.")
 	}
@@ -336,69 +339,69 @@ func (pc *PeerConnection) Close() error {
 //
 
 //export cgoOnSignalingStateChange
-func cgoOnSignalingStateChange(p unsafe.Pointer, s SignalingState) {
+func cgoOnSignalingStateChange(p int, s SignalingState) {
 	INFO.Println("fired OnSignalingStateChange: ", p,
 		s, SignalingStateString[s])
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnSignalingStateChange {
 		pc.OnSignalingStateChange(s)
 	}
 }
 
 //export cgoOnNegotiationNeeded
-func cgoOnNegotiationNeeded(p unsafe.Pointer) {
+func cgoOnNegotiationNeeded(p int) {
 	INFO.Println("fired OnNegotiationNeeded: ", p)
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnNegotiationNeeded {
 		pc.OnNegotiationNeeded()
 	}
 }
 
 //export cgoOnIceCandidate
-func cgoOnIceCandidate(p unsafe.Pointer, cIC C.CGO_IceCandidate) {
+func cgoOnIceCandidate(p int, cIC C.CGO_IceCandidate) {
 	ic := IceCandidate{
 		C.GoString(cIC.sdp),
 		C.GoString(cIC.sdp_mid),
 		int(cIC.sdp_mline_index),
 	}
 	INFO.Println("fired OnIceCandidate: ", p, ic.Candidate)
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnIceCandidate {
 		pc.OnIceCandidate(ic)
 	}
 }
 
 //export cgoOnIceCandidateError
-func cgoOnIceCandidateError(p unsafe.Pointer) {
+func cgoOnIceCandidateError(p int) {
 	INFO.Println("fired OnIceCandidateError: ", p)
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnIceCandidateError {
 		pc.OnIceCandidateError()
 	}
 }
 
 //export cgoOnConnectionStateChange
-func cgoOnConnectionStateChange(p unsafe.Pointer, state PeerConnectionState) {
+func cgoOnConnectionStateChange(p int, state PeerConnectionState) {
 	INFO.Println("fired OnConnectionStateChange: ", p)
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnConnectionStateChange {
 		pc.OnConnectionStateChange(state)
 	}
 }
 
 //export cgoOnIceConnectionStateChange
-func cgoOnIceConnectionStateChange(p unsafe.Pointer, state IceConnectionState) {
+func cgoOnIceConnectionStateChange(p int, state IceConnectionState) {
 	INFO.Println("fired OnIceConnectionStateChange: ", p)
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnIceConnectionStateChange {
 		pc.OnIceConnectionStateChange(state)
 	}
 }
 
 //export cgoOnIceGatheringStateChange
-func cgoOnIceGatheringStateChange(p unsafe.Pointer, state IceGatheringState) {
+func cgoOnIceGatheringStateChange(p int, state IceGatheringState) {
 	INFO.Println("fired OnIceGatheringStateChange:", p)
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnIceGatheringStateChange {
 		pc.OnIceGatheringStateChange(state)
 	}
@@ -410,9 +413,9 @@ func cgoOnIceGatheringStateChange(p unsafe.Pointer, state IceGatheringState) {
 }
 
 //export cgoOnDataChannel
-func cgoOnDataChannel(p unsafe.Pointer, o unsafe.Pointer) {
+func cgoOnDataChannel(p int, o unsafe.Pointer) {
 	INFO.Println("fired OnDataChannel: ", p, o)
-	pc := (*PeerConnection)(p)
+	pc := PCMap.Get(p).(*PeerConnection)
 	dc := NewDataChannel(o)
 	if nil != pc.OnDataChannel {
 		pc.OnDataChannel(dc)

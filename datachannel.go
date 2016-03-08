@@ -30,6 +30,8 @@ const (
 
 var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
 
+var DCMap = NewCGOMap()
+
 /* DataChannel
 
 OnError - is not implemented because the underlying Send
@@ -48,6 +50,7 @@ type DataChannel struct {
 	OnBufferedAmountLow func()
 
 	cgoChannel C.CGO_Channel // Internal DataChannel functionality.
+	index      int           // Index into the DCMap
 }
 
 // Create a Go Channel struct, and prepare internal CGO references / observers.
@@ -58,8 +61,9 @@ func NewDataChannel(o unsafe.Pointer) *DataChannel {
 		return nil
 	}
 	c := new(DataChannel)
+	c.index = DCMap.Set(c)
 	c.BinaryType = "blob"
-	cgoChannel := C.CGO_Channel_RegisterObserver(o, unsafe.Pointer(c))
+	cgoChannel := C.CGO_Channel_RegisterObserver(o, C.int(c.index))
 	c.cgoChannel = (C.CGO_Channel)(cgoChannel)
 	return c
 }
@@ -132,17 +136,17 @@ type Init struct {
 //
 
 //export cgoChannelOnMessage
-func cgoChannelOnMessage(goChannel unsafe.Pointer, cBytes unsafe.Pointer, size int) {
+func cgoChannelOnMessage(goChannel int, cBytes unsafe.Pointer, size int) {
 	bytes := C.GoBytes(cBytes, C.int(size))
-	dc := (*DataChannel)(goChannel)
+	dc := DCMap.Get(goChannel).(*DataChannel)
 	if nil != dc.OnMessage {
 		dc.OnMessage(bytes)
 	}
 }
 
 //export cgoChannelOnStateChange
-func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
-	dc := (*DataChannel)(goChannel)
+func cgoChannelOnStateChange(goChannel int) {
+	dc := DCMap.Get(goChannel).(*DataChannel)
 	switch dc.ReadyState() {
 	// Picks between different Go callbacks...
 	case DataStateConnecting:
@@ -162,8 +166,8 @@ func cgoChannelOnStateChange(goChannel unsafe.Pointer) {
 }
 
 //export cgoChannelOnBufferedAmountChange
-func cgoChannelOnBufferedAmountChange(goChannel unsafe.Pointer, amount int) {
-	dc := (*DataChannel)(goChannel)
+func cgoChannelOnBufferedAmountChange(goChannel int, amount int) {
+	dc := DCMap.Get(goChannel).(*DataChannel)
 	if nil != dc.OnBufferedAmountLow {
 		if amount <= dc.BufferedAmountLowThreshold {
 			dc.OnBufferedAmountLow()

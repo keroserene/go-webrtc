@@ -4,7 +4,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
-	"unsafe"
 )
 
 func TestIceGatheringStateEnums(t *testing.T) {
@@ -68,7 +67,7 @@ func TestPeerConnection(t *testing.T) {
 					pc.OnNegotiationNeeded = func() {
 						success <- 0
 					}
-					cgoOnNegotiationNeeded(unsafe.Pointer(pc))
+					cgoOnNegotiationNeeded(pc.index)
 					select {
 					case <-success:
 					case <-time.After(time.Second * 1):
@@ -109,7 +108,7 @@ func TestPeerConnection(t *testing.T) {
 					pc.OnSignalingStateChange = func(s SignalingState) {
 						success <- s
 					}
-					cgoOnSignalingStateChange(unsafe.Pointer(pc), SignalingStateStable)
+					cgoOnSignalingStateChange(pc.index, SignalingStateStable)
 					select {
 					case state := <-success:
 						So(state, ShouldEqual, SignalingStateStable)
@@ -123,7 +122,7 @@ func TestPeerConnection(t *testing.T) {
 					pc.OnIceConnectionStateChange = func(state IceConnectionState) {
 						success <- state
 					}
-					cgoOnIceConnectionStateChange(unsafe.Pointer(pc),
+					cgoOnIceConnectionStateChange(pc.index,
 						IceConnectionStateDisconnected)
 					select {
 					case r := <-success:
@@ -138,7 +137,7 @@ func TestPeerConnection(t *testing.T) {
 					pc.OnConnectionStateChange = func(state PeerConnectionState) {
 						success <- state
 					}
-					cgoOnConnectionStateChange(unsafe.Pointer(pc),
+					cgoOnConnectionStateChange(pc.index,
 						PeerConnectionStateDisconnected)
 					select {
 					case r := <-success:
@@ -153,7 +152,7 @@ func TestPeerConnection(t *testing.T) {
 					pc.OnDataChannel = func(dc *DataChannel) {
 						success <- dc
 					}
-					cgoOnDataChannel(unsafe.Pointer(pc), nil)
+					cgoOnDataChannel(pc.index, nil)
 					select {
 					case <-success:
 					case <-time.After(time.Second * 1):

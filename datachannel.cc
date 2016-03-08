@@ -9,7 +9,7 @@
 using namespace webrtc;
 
 // Create and register a new DataChannelObserver.
-CGO_Channel CGO_Channel_RegisterObserver(void *o, void *goChannel) {
+CGO_Channel CGO_Channel_RegisterObserver(void *o, int goChannel) {
   auto obs = (CGoDataChannelObserver*)o;
   obs->goChannel = goChannel;
   return obs->dc.get();

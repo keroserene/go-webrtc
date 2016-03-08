@@ -31,7 +31,7 @@ class CGoDataChannelObserver
   }
 
   // Reference to external Go data.Channel required for callbacks.
-  void *goChannel;
+  int goChannel;
   DataChannel dc;
 
  protected:

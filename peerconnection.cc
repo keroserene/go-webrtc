@@ -166,7 +166,7 @@ class Peer
   const FakeConstraints* constraints = NULL;
 
   PC pc_;                  // Pointer to webrtc::PeerConnectionInterface.
-  void *goPeerConnection;  // Pointer to external Go PeerConnection struct,
+  int goPeerConnection;    // Pointer to external Go PeerConnection struct,
                            // which is required to fire callbacks correctly.
 
   // Pass SDPs through promises instead of callbacks, to allow benefits as
@@ -224,7 +224,7 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
 
 // Create and return the Peer object, which provides initial native code
 // glue for the PeerConnection constructor.
-CGO_Peer CGO_InitializePeer(void *goPc) {
+CGO_Peer CGO_InitializePeer(int goPc) {
   rtc::scoped_refptr<Peer> localPeer = new rtc::RefCountedObject<Peer>();
   localPeer->Initialize();
   localPeers.push_back(localPeer);
