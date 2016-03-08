@@ -134,6 +134,7 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	}
 	pc.config = *config
 	cConfig := config._CGO()
+	defer freeConfig(cConfig)
 	if 0 != C.CGO_CreatePeerConnection(pc.cgoPeer, &cConfig) {
 		return nil, errors.New("PeerConnection: could not create from config.")
 	}
@@ -287,6 +288,7 @@ func (pc *PeerConnection) GetConfiguration() Configuration {
 
 func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 	cConfig := config._CGO()
+	defer freeConfig(cConfig)
 	if 0 != C.CGO_SetConfiguration(pc.cgoPeer, &cConfig) {
 		return errors.New("PeerConnection: could not set configuration.")
 	}

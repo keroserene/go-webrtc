@@ -1,5 +1,6 @@
 package webrtc
 
+// #include <stdlib.h>
 // #include "peerconnection.h"
 // #include "ctestenums.h"
 import "C"
@@ -7,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unsafe"
 )
 
 // Working draft spec: http://www.w3.org/TR/webrtc/#idl-def-Configuration
@@ -33,8 +35,6 @@ type Configuration struct {
 	// This would allow key continuity.
 	// [ED] Certificates         []string
 	// [ED] IceCandidatePoolSize int
-
-	cgoConfig *C.CGO_Configuration // Native code internals
 }
 
 // These "Enum" consts must match order in: peerconnectioninterface.h
@@ -198,18 +198,34 @@ func (config *Configuration) AddIceServer(params ...string) error {
 // Helpers which prepare Go-side of cast to eventual C++ Configuration struct.
 func (server *IceServer) _CGO() C.CGO_IceServer {
 	cServer := new(C.CGO_IceServer)
-	cServer.numUrls = C.int(len(server.Urls))
-	total := C.int(len(server.Urls))
+	total := len(server.Urls)
 	// TODO: Make this conversion nicer.
-	cUrls := make([](*C.char), total)
-	for i, url := range server.Urls {
-		cUrls[i] = C.CString(url)
+	if total > 0 {
+		cUrls := make([](*C.char), total)
+		for i, url := range server.Urls {
+			cUrls[i] = C.CString(url)
+		}
+		cServer.urls = &cUrls[0]
 	}
-	cServer.urls = &cUrls[0]
-	cServer.numUrls = total
+	cServer.numUrls = C.int(total)
 	cServer.username = C.CString(server.Username)
 	cServer.credential = C.CString(server.Credential)
 	return *cServer
+}
+
+const maxUrls = 1 << 30
+
+func freeIceServer(cServer C.CGO_IceServer) {
+	total := int(cServer.numUrls)
+	if total > maxUrls {
+		panic("Too many urls. Something went wrong.")
+	}
+	cUrls := (*[maxUrls](*C.char))(unsafe.Pointer(cServer.urls))
+	for i := 0; i < total; i++ {
+		C.free(unsafe.Pointer(cUrls[i]))
+	}
+	C.free(unsafe.Pointer(cServer.username))
+	C.free(unsafe.Pointer(cServer.credential))
 }
 
 // The C side of things will still need to allocate memory, due to the slices.
@@ -236,8 +252,21 @@ func (config *Configuration) _CGO() C.CGO_Configuration {
 	c.peerIdentity = C.CString(config.PeerIdentity)
 	// [ED] c.Certificates = config.Certificates
 	// [ED] c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
-	config.cgoConfig = c
 	return *c
+}
+
+const maxIceServers = 1 << 30
+
+func freeConfig(cConfig C.CGO_Configuration) {
+	total := int(cConfig.numIceServers)
+	if total > maxIceServers {
+		panic("Too many ice servers. Something went wrong.")
+	}
+	cServers := (*[maxIceServers]C.CGO_IceServer)(unsafe.Pointer(cConfig.iceServers))
+	for i := 0; i < total; i++ {
+		freeIceServer(cServers[i])
+	}
+	C.free(unsafe.Pointer(cConfig.peerIdentity))
 }
 
 /*
