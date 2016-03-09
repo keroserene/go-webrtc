@@ -7,10 +7,10 @@ import (
 )
 
 var (
-	INFO  log.Logger
-	WARN  log.Logger
-	ERROR log.Logger
-	TRACE log.Logger
+	INFO  *log.Logger
+	WARN  *log.Logger
+	ERROR *log.Logger
+	TRACE *log.Logger
 )
 
 // Logging verbosity level, from 0 (nothing) upwards.
@@ -35,17 +35,17 @@ func SetLoggingVerbosity(level int) {
 		traceOut = os.Stdout
 	}
 
-	INFO = *log.New(infoOut,
+	INFO = log.New(infoOut,
 		"INFO: ",
 		// log.Ldate|log.Ltime|log.Lshortfile)
 		log.Lshortfile)
-	WARN = *log.New(warnOut,
+	WARN = log.New(warnOut,
 		"WARNING: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
-	ERROR = *log.New(errOut,
+	ERROR = log.New(errOut,
 		"ERROR: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
-	TRACE = *log.New(traceOut,
+	TRACE = log.New(traceOut,
 		"TRACE: ",
 		log.Ldate|log.Ltime|log.Lshortfile)
 }
