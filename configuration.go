@@ -198,15 +198,20 @@ func (config *Configuration) AddIceServer(params ...string) error {
 // Helpers which prepare Go-side of cast to eventual C++ Configuration struct.
 func (server *IceServer) _CGO() C.CGO_IceServer {
 	cServer := new(C.CGO_IceServer)
-	total := len(server.Urls)
+
 	// TODO: Make this conversion nicer.
+	total := len(server.Urls)
 	if total > 0 {
-		cUrls := make([](*C.char), total)
-		for i, url := range server.Urls {
-			cUrls[i] = C.CString(url)
+		sizeof := unsafe.Sizeof(uintptr(0)) // FIXME(arlolra): sizeof *void
+		cUrls := unsafe.Pointer(C.malloc(C.size_t(sizeof * uintptr(total))))
+		ptr := uintptr(cUrls)
+		for _, url := range server.Urls {
+			*(**C.char)(unsafe.Pointer(ptr)) = C.CString(url)
+			ptr += sizeof
 		}
-		cServer.urls = &cUrls[0]
+		cServer.urls = (**C.char)(cUrls)
 	}
+
 	cServer.numUrls = C.int(total)
 	cServer.username = C.CString(server.Username)
 	cServer.credential = C.CString(server.Credential)
@@ -226,22 +231,27 @@ func freeIceServer(cServer C.CGO_IceServer) {
 	}
 	C.free(unsafe.Pointer(cServer.username))
 	C.free(unsafe.Pointer(cServer.credential))
+	C.free(unsafe.Pointer(cServer.urls))
 }
 
 // The C side of things will still need to allocate memory, due to the slices.
 // Assumes Configuration is valid.
-func (config *Configuration) _CGO() C.CGO_Configuration {
+func (config *Configuration) _CGO() *C.CGO_Configuration {
 	INFO.Println("Converting Config: ", config)
-	c := new(C.CGO_Configuration)
+	size := C.size_t(unsafe.Sizeof(C.CGO_Configuration{}))
+	c := (*C.CGO_Configuration)(C.malloc(size))
 
 	// Need to convert each IceServer struct individually.
 	total := len(config.IceServers)
 	if total > 0 {
-		cServers := make([]C.CGO_IceServer, total)
-		for i, server := range config.IceServers {
-			cServers[i] = server._CGO()
+		sizeof := unsafe.Sizeof(C.CGO_IceServer{})
+		cServers := unsafe.Pointer(C.malloc(C.size_t(sizeof * uintptr(total))))
+		ptr := uintptr(cServers)
+		for _, server := range config.IceServers {
+			*(*C.CGO_IceServer)(unsafe.Pointer(ptr)) = server._CGO()
+			ptr += sizeof
 		}
-		c.iceServers = &cServers[0]
+		c.iceServers = (*C.CGO_IceServer)(cServers)
 	}
 	c.numIceServers = C.int(total)
 
@@ -252,12 +262,12 @@ func (config *Configuration) _CGO() C.CGO_Configuration {
 	c.peerIdentity = C.CString(config.PeerIdentity)
 	// [ED] c.Certificates = config.Certificates
 	// [ED] c.IceCandidatePoolSize = C.int(config.IceCandidatePoolSize)
-	return *c
+	return c
 }
 
 const maxIceServers = 1 << 30
 
-func freeConfig(cConfig C.CGO_Configuration) {
+func freeConfig(cConfig *C.CGO_Configuration) {
 	total := int(cConfig.numIceServers)
 	if total > maxIceServers {
 		panic("Too many ice servers. Something went wrong.")
@@ -267,6 +277,8 @@ func freeConfig(cConfig C.CGO_Configuration) {
 		freeIceServer(cServers[i])
 	}
 	C.free(unsafe.Pointer(cConfig.peerIdentity))
+	C.free(unsafe.Pointer(cConfig.iceServers))
+	C.free(unsafe.Pointer(cConfig))
 }
 
 /*
