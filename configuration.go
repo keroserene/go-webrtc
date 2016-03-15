@@ -271,13 +271,14 @@ func freeConfig(cConfig *C.CGO_Configuration) {
 	total := int(cConfig.numIceServers)
 	if total > maxIceServers {
 		panic("Too many ice servers. Something went wrong.")
-	}
-	cServers := (*[maxIceServers]C.CGO_IceServer)(unsafe.Pointer(cConfig.iceServers))
-	for i := 0; i < total; i++ {
-		freeIceServer(cServers[i])
+	} else if total > 0 {
+		cServers := (*[maxIceServers]C.CGO_IceServer)(unsafe.Pointer(cConfig.iceServers))
+		for i := 0; i < total; i++ {
+			freeIceServer(cServers[i])
+		}
+		C.free(unsafe.Pointer(cConfig.iceServers))
 	}
 	C.free(unsafe.Pointer(cConfig.peerIdentity))
-	C.free(unsafe.Pointer(cConfig.iceServers))
 	C.free(unsafe.Pointer(cConfig))
 }
 
