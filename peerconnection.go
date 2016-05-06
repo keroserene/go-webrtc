@@ -32,6 +32,7 @@ package webrtc
 /*
 #cgo CXXFLAGS: -std=c++0x
 #cgo LDFLAGS: -L${SRCDIR}/lib
+#cgo linux,386 pkg-config: webrtc-linux-386.pc
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
