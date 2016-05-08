@@ -218,7 +218,7 @@ func (server *IceServer) _CGO() C.CGO_IceServer {
 	return *cServer
 }
 
-const maxUrls = 1 << 30
+const maxUrls = 1 << 24
 
 func freeIceServer(cServer C.CGO_IceServer) {
 	total := int(cServer.numUrls)
@@ -265,7 +265,7 @@ func (config *Configuration) _CGO() *C.CGO_Configuration {
 	return c
 }
 
-const maxIceServers = 1 << 30
+const maxIceServers = 1 << 24
 
 func freeConfig(cConfig *C.CGO_Configuration) {
 	total := int(cConfig.numIceServers)
