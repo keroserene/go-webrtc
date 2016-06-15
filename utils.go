@@ -15,7 +15,7 @@ func NewCGOMap() CGOMap {
 	return m
 }
 
-func (m CGOMap) Get(index int) interface{} {
+func (m *CGOMap) Get(index int) interface{} {
 	p := m.pointers[index]
 	if p == nil {
 		panic("couldn't retrieve the pointer")
@@ -23,12 +23,12 @@ func (m CGOMap) Get(index int) interface{} {
 	return p
 }
 
-func (m CGOMap) Set(p interface{}) int {
+func (m *CGOMap) Set(p interface{}) int {
 	m.index += 1
 	m.pointers[m.index] = p
 	return m.index
 }
 
-func (m CGOMap) Delete(index int) {
+func (m *CGOMap) Delete(index int) {
 	delete(m.pointers, index)
 }
