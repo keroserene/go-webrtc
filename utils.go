@@ -16,8 +16,8 @@ func NewCGOMap() CGOMap {
 }
 
 func (m *CGOMap) Get(index int) interface{} {
-	p := m.pointers[index]
-	if p == nil {
+	p, ok := m.pointers[index]
+	if p == nil || !ok {
 		panic("couldn't retrieve the pointer")
 	}
 	return p
