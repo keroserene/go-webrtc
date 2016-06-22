@@ -3,8 +3,8 @@
 
 #include <_cgo_export.h>  // Allow calling certain Go functions.
 
-#include "talk/app/webrtc/peerconnectioninterface.h"
-#include "talk/app/webrtc/datachannelinterface.h"
+#include "webrtc/api/peerconnectioninterface.h"
+#include "webrtc/api/datachannelinterface.h"
 
 typedef rtc::scoped_refptr<webrtc::DataChannelInterface> DataChannel;
 

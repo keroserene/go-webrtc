@@ -8,7 +8,7 @@ WEBRTC_SRC="$WEBRTC_DIR/src"
 OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
 CONFIG="Debug"
-COMMIT="bd7d8f7e2b824a887aa12236cb6185d446d7da61"
+COMMIT="f33698296719f956497d2dbff81b5080864a8804"  # branch-heads/52
 
 INCLUDE_DIR="$PROJECT_DIR/include"
 LIB_DIR="$PROJECT_DIR/lib"
@@ -52,7 +52,7 @@ popd
 
 echo "Copying headers ..."
 pushd $WEBRTC_SRC
-for h in $(find talk/ webrtc/ -type f -name '*.h')
+for h in $(find webrtc/ -type f -name '*.h')
 do
 	mkdir -p "$INCLUDE_DIR/$(dirname $h)"
 	cp $h "$INCLUDE_DIR/$h"

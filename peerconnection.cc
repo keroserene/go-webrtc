@@ -9,10 +9,10 @@
 #include <iostream>
 #include <future>
 
-#include "talk/app/webrtc/test/fakeconstraints.h"
-#include "talk/app/webrtc/test/fakeaudiocapturemodule.h"
-#include "talk/app/webrtc/jsepsessiondescription.h"
-#include "talk/app/webrtc/webrtcsdp.h"
+#include "webrtc/api/test/fakeconstraints.h"
+#include "webrtc/api/test/fakeaudiocapturemodule.h"
+#include "webrtc/api/jsepsessiondescription.h"
+#include "webrtc/api/webrtcsdp.h"
 
 #define SUCCESS 0
 #define FAILURE -1

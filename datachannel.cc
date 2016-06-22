@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "talk/app/webrtc/test/fakeconstraints.h"
+#include "webrtc/api/test/fakeconstraints.h"
 #include "webrtc/base/common.h"
 
 using namespace webrtc;
@@ -17,7 +17,7 @@ CGO_Channel CGO_Channel_RegisterObserver(void *o, int goChannel) {
 
 void CGO_Channel_Send(CGO_Channel channel, void *data, int size) {
   auto dc = (webrtc::DataChannelInterface*)channel;
-  auto bytes = rtc::Buffer((uint8_t*)data, size);
+  auto bytes = rtc::CopyOnWriteBuffer((uint8_t*)data, size);
   auto buffer = DataBuffer(bytes, true);
   dc->Send(buffer);
 }
@@ -154,7 +154,7 @@ void* CGO_getFakeDataChannel() {
 
 void CGO_fakeMessage(CGO_Channel channel, void *data, int size) {
   auto dc = (FakeDataChannel*)channel;
-  auto bytes = rtc::Buffer((char*)data, size);
+  auto bytes = rtc::CopyOnWriteBuffer((char*)data, size);
   auto buffer = DataBuffer(bytes, true);
   dc->Send(buffer);
 }
