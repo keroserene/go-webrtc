@@ -11,12 +11,16 @@
 #ifndef WEBRTC_AUDIO_AUDIO_RECEIVE_STREAM_H_
 #define WEBRTC_AUDIO_AUDIO_RECEIVE_STREAM_H_
 
+#include <memory>
+
 #include "webrtc/audio_receive_stream.h"
 #include "webrtc/audio_state.h"
+#include "webrtc/base/constructormagic.h"
 #include "webrtc/base/thread_checker.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_header_parser.h"
 
 namespace webrtc {
+class CongestionController;
 class RemoteBitrateEstimator;
 
 namespace voe {
@@ -27,36 +31,33 @@ namespace internal {
 
 class AudioReceiveStream final : public webrtc::AudioReceiveStream {
  public:
-  AudioReceiveStream(RemoteBitrateEstimator* remote_bitrate_estimator,
+  AudioReceiveStream(CongestionController* congestion_controller,
                      const webrtc::AudioReceiveStream::Config& config,
                      const rtc::scoped_refptr<webrtc::AudioState>& audio_state);
   ~AudioReceiveStream() override;
 
-  // webrtc::ReceiveStream implementation.
+  // webrtc::AudioReceiveStream implementation.
   void Start() override;
   void Stop() override;
-  void SignalNetworkState(NetworkState state) override;
-  bool DeliverRtcp(const uint8_t* packet, size_t length) override;
+  webrtc::AudioReceiveStream::Stats GetStats() const override;
+  void SetSink(std::unique_ptr<AudioSinkInterface> sink) override;
+
+  void SignalNetworkState(NetworkState state);
+  bool DeliverRtcp(const uint8_t* packet, size_t length);
   bool DeliverRtp(const uint8_t* packet,
                   size_t length,
-                  const PacketTime& packet_time) override;
-
-  // webrtc::AudioReceiveStream implementation.
-  webrtc::AudioReceiveStream::Stats GetStats() const override;
-
-  void SetSink(rtc::scoped_ptr<AudioSinkInterface> sink) override;
-
+                  const PacketTime& packet_time);
   const webrtc::AudioReceiveStream::Config& config() const;
 
  private:
   VoiceEngine* voice_engine() const;
 
   rtc::ThreadChecker thread_checker_;
-  RemoteBitrateEstimator* const remote_bitrate_estimator_;
+  RemoteBitrateEstimator* remote_bitrate_estimator_ = nullptr;
   const webrtc::AudioReceiveStream::Config config_;
   rtc::scoped_refptr<webrtc::AudioState> audio_state_;
-  rtc::scoped_ptr<RtpHeaderParser> rtp_header_parser_;
-  rtc::scoped_ptr<voe::ChannelProxy> channel_proxy_;
+  std::unique_ptr<RtpHeaderParser> rtp_header_parser_;
+  std::unique_ptr<voe::ChannelProxy> channel_proxy_;
 
   RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(AudioReceiveStream);
 };

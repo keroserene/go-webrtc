@@ -21,6 +21,8 @@ namespace cricket {
 
 class StunRequest;
 
+const int kAllRequests = 0;
+
 // Manages a set of STUN requests, sending and resending until we receive a
 // response or determine that the request has timed out.
 class StunRequestManager {
@@ -32,8 +34,14 @@ class StunRequestManager {
   void Send(StunRequest* request);
   void SendDelayed(StunRequest* request, int delay);
 
-  // Sends all pending requests right away. Only for testing.
-  void Flush();
+  // If |msg_type| is kAllRequests, sends all pending requests right away.
+  // Otherwise, sends those that have a matching type right away.
+  // Only for testing.
+  void Flush(int msg_type);
+
+  // Returns true if at least one request with |msg_type| is scheduled for
+  // transmission. For testing only.
+  bool HasRequest(int msg_type);
 
   // Removes a stun request that was added previously.  This will happen
   // automatically when a request succeeds, fails, or times out.
@@ -93,7 +101,7 @@ class StunRequest : public rtc::MessageHandler {
   const StunMessage* msg() const;
 
   // Time elapsed since last send (in ms)
-  uint32_t Elapsed() const;
+  int Elapsed() const;
 
  protected:
   int count_;
@@ -121,7 +129,7 @@ class StunRequest : public rtc::MessageHandler {
 
   StunRequestManager* manager_;
   StunMessage* msg_;
-  uint32_t tstamp_;
+  int64_t tstamp_;
 
   friend class StunRequestManager;
 };

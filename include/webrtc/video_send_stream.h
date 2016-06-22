@@ -15,23 +15,16 @@
 #include <string>
 
 #include "webrtc/common_types.h"
+#include "webrtc/common_video/include/frame_callback.h"
 #include "webrtc/config.h"
-#include "webrtc/frame_callback.h"
-#include "webrtc/stream.h"
+#include "webrtc/media/base/videosinkinterface.h"
 #include "webrtc/transport.h"
-#include "webrtc/video_renderer.h"
+#include "webrtc/media/base/videosinkinterface.h"
 
 namespace webrtc {
 
 class LoadObserver;
 class VideoEncoder;
-
-class EncodingTimeObserver {
- public:
-  virtual ~EncodingTimeObserver() {}
-
-  virtual void OnReportEncodedTime(int64_t ntp_time_ms, int encode_time_ms) = 0;
-};
 
 // Class to deliver captured frame to the video send stream.
 class VideoCaptureInput {
@@ -45,7 +38,7 @@ class VideoCaptureInput {
   virtual ~VideoCaptureInput() {}
 };
 
-class VideoSendStream : public SendStream {
+class VideoSendStream {
  public:
   struct StreamStats {
     FrameCounts frame_counts;
@@ -90,6 +83,11 @@ class VideoSendStream : public SendStream {
       // TODO(sophiechang): Delete this field when no one is using internal
       // sources anymore.
       bool internal_source = false;
+
+      // Allow 100% encoder utilization. Used for HW encoders where CPU isn't
+      // expected to be the limiting factor, but a chip could be running at
+      // 30fps (for example) exactly.
+      bool full_overuse_time = false;
 
       // Uninitialized VideoEncoder instance to be used for encoding. Will be
       // initialized from inside the VideoSendStream.
@@ -141,15 +139,17 @@ class VideoSendStream : public SendStream {
 
     // Called for each I420 frame before encoding the frame. Can be used for
     // effects, snapshots etc. 'nullptr' disables the callback.
-    I420FrameCallback* pre_encode_callback = nullptr;
+    rtc::VideoSinkInterface<VideoFrame>* pre_encode_callback = nullptr;
 
     // Called for each encoded frame, e.g. used for file storage. 'nullptr'
-    // disables the callback.
+    // disables the callback. Also measures timing and passes the time
+    // spent on encoding. This timing will not fire if encoding takes longer
+    // than the measuring window, since the sample data will have been dropped.
     EncodedFrameObserver* post_encode_callback = nullptr;
 
     // Renderer for local preview. The local renderer will be called even if
     // sending hasn't started. 'nullptr' disables local rendering.
-    VideoRenderer* local_renderer = nullptr;
+    rtc::VideoSinkInterface<VideoFrame>* local_renderer = nullptr;
 
     // Expected delay needed by the renderer, i.e. the frame will be delivered
     // this many milliseconds, if possible, earlier than expected render time.
@@ -164,12 +164,14 @@ class VideoSendStream : public SendStream {
     // below the minimum configured bitrate. If this variable is false, the
     // stream may send at a rate higher than the estimated available bitrate.
     bool suspend_below_min_bitrate = false;
-
-    // Called for each encoded frame. Passes the total time spent on encoding.
-    // TODO(ivica): Consolidate with post_encode_callback:
-    // https://code.google.com/p/webrtc/issues/detail?id=5042
-    EncodingTimeObserver* encoding_time_observer = nullptr;
   };
+
+  // Starts stream activity.
+  // When a stream is active, it can receive, process and deliver packets.
+  virtual void Start() = 0;
+  // Stops stream activity.
+  // When a stream is stopped, it can't receive, process or deliver packets.
+  virtual void Stop() = 0;
 
   // Gets interface used to insert captured frames. Valid as long as the
   // VideoSendStream is valid.
@@ -178,9 +180,12 @@ class VideoSendStream : public SendStream {
   // Set which streams to send. Must have at least as many SSRCs as configured
   // in the config. Encoder settings are passed on to the encoder instance along
   // with the VideoStream settings.
-  virtual bool ReconfigureVideoEncoder(const VideoEncoderConfig& config) = 0;
+  virtual void ReconfigureVideoEncoder(const VideoEncoderConfig& config) = 0;
 
   virtual Stats GetStats() = 0;
+
+ protected:
+  virtual ~VideoSendStream() {}
 };
 
 }  // namespace webrtc

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "webrtc/base/common.h"
+#include "webrtc/base/constructormagic.h"
 
 namespace rtc {
 
@@ -56,7 +57,7 @@ class RollingAccumulator {
       // Remove oldest sample.
       T sample_to_remove = samples_[next_index_];
       sum_ -= sample_to_remove;
-      sum_2_ -= sample_to_remove * sample_to_remove;
+      sum_2_ -= static_cast<double>(sample_to_remove) * sample_to_remove;
       if (sample_to_remove >= max_) {
         max_stale_ = true;
       }
@@ -70,7 +71,7 @@ class RollingAccumulator {
     // Add new sample.
     samples_[next_index_] = sample;
     sum_ += sample;
-    sum_2_ += sample * sample;
+    sum_2_ += static_cast<double>(sample) * sample;
     if (count_ == 1 || sample >= max_) {
       max_ = sample;
       max_stale_ = false;

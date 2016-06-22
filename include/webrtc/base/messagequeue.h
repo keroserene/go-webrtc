@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <list>
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -22,11 +23,12 @@
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/base/criticalsection.h"
 #include "webrtc/base/messagehandler.h"
-#include "webrtc/base/scoped_ptr.h"
 #include "webrtc/base/scoped_ref_ptr.h"
+#include "webrtc/base/sharedexclusivelock.h"
 #include "webrtc/base/sigslot.h"
 #include "webrtc/base/socketserver.h"
 #include "webrtc/base/timeutils.h"
+#include "webrtc/base/thread_annotations.h"
 
 namespace rtc {
 
@@ -87,10 +89,11 @@ template <class T>
 class ScopedMessageData : public MessageData {
  public:
   explicit ScopedMessageData(T* data) : data_(data) { }
-  const scoped_ptr<T>& data() const { return data_; }
-  scoped_ptr<T>& data() { return data_; }
+  const std::unique_ptr<T>& data() const { return data_; }
+  std::unique_ptr<T>& data() { return data_; }
+
  private:
-  scoped_ptr<T> data_;
+  std::unique_ptr<T> data_;
 };
 
 // Like ScopedMessageData, but for reference counted pointers.
@@ -139,7 +142,7 @@ struct Message {
   MessageHandler *phandler;
   uint32_t message_id;
   MessageData *pdata;
-  uint32_t ts_sensitive;
+  int64_t ts_sensitive;
 };
 
 typedef std::list<Message> MessageList;
@@ -149,7 +152,7 @@ typedef std::list<Message> MessageList;
 
 class DelayedMessage {
  public:
-  DelayedMessage(int delay, uint32_t trigger, uint32_t num, const Message& msg)
+  DelayedMessage(int delay, int64_t trigger, uint32_t num, const Message& msg)
       : cmsDelay_(delay), msTrigger_(trigger), num_(num), msg_(msg) {}
 
   bool operator< (const DelayedMessage& dmsg) const {
@@ -158,7 +161,7 @@ class DelayedMessage {
   }
 
   int cmsDelay_;  // for debugging
-  uint32_t msTrigger_;
+  int64_t msTrigger_;
   uint32_t num_;
   Message msg_;
 };
@@ -167,10 +170,21 @@ class MessageQueue {
  public:
   static const int kForever = -1;
 
-  explicit MessageQueue(SocketServer* ss = NULL);
+  // Create a new MessageQueue and optionally assign it to the passed
+  // SocketServer. Subclasses that override Clear should pass false for
+  // init_queue and call DoInit() from their constructor to prevent races
+  // with the MessageQueueManager using the object while the vtable is still
+  // being created.
+  MessageQueue(SocketServer* ss, bool init_queue);
+  MessageQueue(std::unique_ptr<SocketServer> ss, bool init_queue);
+
+  // NOTE: SUBCLASSES OF MessageQueue THAT OVERRIDE Clear MUST CALL
+  // DoDestroy() IN THEIR DESTRUCTORS! This is required to avoid a data race
+  // between the destructor modifying the vtable, and the MessageQueueManager
+  // calling Clear on the object from a different thread.
   virtual ~MessageQueue();
 
-  SocketServer* socketserver() { return ss_; }
+  SocketServer* socketserver();
   void set_socketserver(SocketServer* ss);
 
   // Note: The behavior of MessageQueue has changed.  When a MQ is stopped,
@@ -198,6 +212,11 @@ class MessageQueue {
                            MessageHandler* phandler,
                            uint32_t id = 0,
                            MessageData* pdata = NULL);
+  virtual void PostAt(int64_t tstamp,
+                      MessageHandler* phandler,
+                      uint32_t id = 0,
+                      MessageData* pdata = NULL);
+  // TODO(honghaiz): Remove this when all the dependencies are removed.
   virtual void PostAt(uint32_t tstamp,
                       MessageHandler* phandler,
                       uint32_t id = 0,
@@ -236,25 +255,39 @@ class MessageQueue {
   };
 
   void DoDelayPost(int cmsDelay,
-                   uint32_t tstamp,
+                   int64_t tstamp,
                    MessageHandler* phandler,
                    uint32_t id,
                    MessageData* pdata);
 
-  // The SocketServer is not owned by MessageQueue.
-  SocketServer* ss_;
-  // If a server isn't supplied in the constructor, use this one.
-  scoped_ptr<SocketServer> default_ss_;
+  // Perform initialization, subclasses must call this from their constructor
+  // if false was passed as init_queue to the MessageQueue constructor.
+  void DoInit();
+
+  // Perform cleanup, subclasses that override Clear must call this from the
+  // destructor.
+  void DoDestroy();
+
+  void WakeUpSocketServer();
+
   bool fStop_;
   bool fPeekKeep_;
   Message msgPeek_;
-  MessageList msgq_;
-  PriorityQueue dmsgq_;
-  uint32_t dmsgq_next_num_;
-  mutable CriticalSection crit_;
+  MessageList msgq_ GUARDED_BY(crit_);
+  PriorityQueue dmsgq_ GUARDED_BY(crit_);
+  uint32_t dmsgq_next_num_ GUARDED_BY(crit_);
+  CriticalSection crit_;
+  bool fInitialized_;
+  bool fDestroyed_;
 
  private:
-  RTC_DISALLOW_COPY_AND_ASSIGN(MessageQueue);
+  // The SocketServer might not be owned by MessageQueue.
+  SocketServer* ss_ GUARDED_BY(ss_lock_);
+  // Used if SocketServer ownership lies with |this|.
+  std::unique_ptr<SocketServer> own_ss_;
+  SharedExclusiveLock ss_lock_;
+
+  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(MessageQueue);
 };
 
 }  // namespace rtc

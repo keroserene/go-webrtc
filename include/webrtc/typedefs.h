@@ -57,8 +57,7 @@
 
 // TODO(zhongwei.yao): WEBRTC_CPU_DETECTION is only used in one place; we should
 // probably just remove it.
-#if (defined(WEBRTC_ARCH_X86_FAMILY) && !defined(__SSE2__)) || \
-    defined(WEBRTC_DETECT_NEON)
+#if (defined(WEBRTC_ARCH_X86_FAMILY) && !defined(__SSE2__))
 #define WEBRTC_CPU_DETECTION
 #endif
 
@@ -73,7 +72,7 @@
 // libjingle are merged.
 #if !defined(WARN_UNUSED_RESULT)
 #if defined(__GNUC__) || defined(__clang__)
-#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#define WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
 #else
 #define WARN_UNUSED_RESULT
 #endif
@@ -84,7 +83,7 @@
 //   assert(result == 17);
 #ifndef ATTRIBUTE_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
-#define ATTRIBUTE_UNUSED __attribute__((unused))
+#define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
 #else
 #define ATTRIBUTE_UNUSED
 #endif
@@ -104,7 +103,7 @@
 #if defined(_MSC_VER)
 #define NO_RETURN __declspec(noreturn)
 #elif defined(__GNUC__)
-#define NO_RETURN __attribute__((noreturn))
+#define NO_RETURN __attribute__ ((__noreturn__))
 #else
 #define NO_RETURN
 #endif

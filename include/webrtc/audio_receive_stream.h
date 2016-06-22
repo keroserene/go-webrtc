@@ -12,12 +12,12 @@
 #define WEBRTC_AUDIO_RECEIVE_STREAM_H_
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
-#include "webrtc/base/scoped_ptr.h"
+#include "webrtc/common_types.h"
 #include "webrtc/config.h"
-#include "webrtc/stream.h"
 #include "webrtc/transport.h"
 #include "webrtc/typedefs.h"
 
@@ -31,7 +31,7 @@ class AudioSinkInterface;
 // of WebRtc/Libjingle. Please use the VoiceEngine API instead.
 // See: https://bugs.chromium.org/p/webrtc/issues/detail?id=4690
 
-class AudioReceiveStream : public ReceiveStream {
+class AudioReceiveStream {
  public:
   struct Stats {
     uint32_t remote_ssrc = 0;
@@ -73,11 +73,16 @@ class AudioReceiveStream : public ReceiveStream {
       // Sender SSRC used for sending RTCP (such as receiver reports).
       uint32_t local_ssrc = 0;
 
+      // Enable feedback for send side bandwidth estimation.
+      // See
+      // https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions
+      // for details.
+      bool transport_cc = false;
+
       // RTP header extensions used for the received stream.
       std::vector<RtpExtension> extensions;
     } rtp;
 
-    Transport* receive_transport = nullptr;
     Transport* rtcp_send_transport = nullptr;
 
     // Underlying VoiceEngine handle, used to map AudioReceiveStream to lower-
@@ -96,22 +101,29 @@ class AudioReceiveStream : public ReceiveStream {
     // Call::CreateReceiveStream().
     // TODO(solenberg): Use unique_ptr<> once our std lib fully supports C++11.
     std::map<uint8_t, AudioDecoder*> decoder_map;
-
-    // TODO(pbos): Remove config option once combined A/V BWE is always on.
-    bool combined_audio_video_bwe = false;
   };
+
+  // Starts stream activity.
+  // When a stream is active, it can receive, process and deliver packets.
+  virtual void Start() = 0;
+  // Stops stream activity.
+  // When a stream is stopped, it can't receive, process or deliver packets.
+  virtual void Stop() = 0;
 
   virtual Stats GetStats() const = 0;
 
   // Sets an audio sink that receives unmixed audio from the receive stream.
   // Ownership of the sink is passed to the stream and can be used by the
   // caller to do lifetime management (i.e. when the sink's dtor is called).
-  // Only one sink can be set and passing a null sink, clears an existing one.
+  // Only one sink can be set and passing a null sink clears an existing one.
   // NOTE: Audio must still somehow be pulled through AudioTransport for audio
   // to stream through this sink. In practice, this happens if mixed audio
   // is being pulled+rendered and/or if audio is being pulled for the purposes
   // of feeding to the AEC.
-  virtual void SetSink(rtc::scoped_ptr<AudioSinkInterface> sink) = 0;
+  virtual void SetSink(std::unique_ptr<AudioSinkInterface> sink) = 0;
+
+ protected:
+  virtual ~AudioReceiveStream() {}
 };
 }  // namespace webrtc
 

@@ -94,18 +94,17 @@ class TurnPort : public Port {
   virtual int GetOption(rtc::Socket::Option opt, int* value);
   virtual int GetError();
 
-  virtual bool HandleIncomingPacket(
-      rtc::AsyncPacketSocket* socket, const char* data, size_t size,
-      const rtc::SocketAddress& remote_addr,
-      const rtc::PacketTime& packet_time) {
-    OnReadPacket(socket, data, size, remote_addr, packet_time);
-    return true;
-  }
+  virtual bool HandleIncomingPacket(rtc::AsyncPacketSocket* socket,
+                                    const char* data, size_t size,
+                                    const rtc::SocketAddress& remote_addr,
+                                    const rtc::PacketTime& packet_time);
   virtual void OnReadPacket(rtc::AsyncPacketSocket* socket,
                             const char* data, size_t size,
                             const rtc::SocketAddress& remote_addr,
                             const rtc::PacketTime& packet_time);
 
+  virtual void OnSentPacket(rtc::AsyncPacketSocket* socket,
+                            const rtc::SentPacket& sent_packet);
   virtual void OnReadyToSend(rtc::AsyncPacketSocket* socket);
   virtual bool SupportsProtocol(const std::string& protocol) const {
     // Turn port only connects to UDP candidates.
@@ -141,13 +140,17 @@ class TurnPort : public Port {
   sigslot::signal2<TurnPort*, int> SignalTurnRefreshResult;
   sigslot::signal3<TurnPort*, const rtc::SocketAddress&, int>
       SignalCreatePermissionResult;
-  void FlushRequests() { request_manager_.Flush(); }
+  void FlushRequests(int msg_type) { request_manager_.Flush(msg_type); }
+  bool HasRequests() { return !request_manager_.empty(); }
   void set_credentials(RelayCredentials& credentials) {
     credentials_ = credentials;
   }
   // Finds the turn entry with |address| and sets its channel id.
   // Returns true if the entry is found.
   bool SetEntryChannelId(const rtc::SocketAddress& address, int channel_id);
+  // Visible for testing.
+  // Shuts down the turn port, usually because of some fatal errors.
+  void Close();
 
  protected:
   TurnPort(rtc::Thread* thread,
@@ -178,7 +181,8 @@ class TurnPort : public Port {
   enum {
     MSG_ALLOCATE_ERROR = MSG_FIRST_AVAILABLE,
     MSG_ALLOCATE_MISMATCH,
-    MSG_TRY_ALTERNATE_SERVER
+    MSG_TRY_ALTERNATE_SERVER,
+    MSG_REFRESH_ERROR
   };
 
   typedef std::list<TurnEntry*> EntryList;
@@ -197,9 +201,7 @@ class TurnPort : public Port {
     }
   }
 
-  // Shuts down the turn port, usually because of some fatal errors.
-  void Close();
-  void OnTurnRefreshError() { Close(); }
+  void OnTurnRefreshError();
   bool SetAlternateServer(const rtc::SocketAddress& address);
   void ResolveTurnAddress(const rtc::SocketAddress& address);
   void OnResolveResult(rtc::AsyncResolverInterface* resolver);
@@ -228,6 +230,7 @@ class TurnPort : public Port {
            const rtc::PacketOptions& options);
   void UpdateHash();
   bool UpdateNonce(StunMessage* response);
+  void ResetNonce();
 
   bool HasPermission(const rtc::IPAddress& ipaddr) const;
   TurnEntry* FindEntry(const rtc::SocketAddress& address) const;
@@ -237,7 +240,7 @@ class TurnPort : public Port {
   void DestroyEntry(TurnEntry* entry);
   // Destroys the entry only if |timestamp| matches the destruction timestamp
   // in |entry|.
-  void DestroyEntryIfNotCancelled(TurnEntry* entry, uint32_t timestamp);
+  void DestroyEntryIfNotCancelled(TurnEntry* entry, int64_t timestamp);
   void ScheduleEntryDestruction(TurnEntry* entry);
   void CancelEntryDestruction(TurnEntry* entry);
   void OnConnectionDestroyed(Connection* conn);

@@ -11,6 +11,7 @@
 #ifndef WEBRTC_P2P_BASE_STUNPORT_H_
 #define WEBRTC_P2P_BASE_STUNPORT_H_
 
+#include <memory>
 #include <string>
 
 #include "webrtc/p2p/base/port.h"
@@ -104,6 +105,16 @@ class UDPPort : public Port {
   }
   int stun_keepalive_delay() const {
     return stun_keepalive_delay_;
+  }
+
+  // Visible for testing.
+  int stun_keepalive_lifetime() const { return stun_keepalive_lifetime_; }
+  void set_stun_keepalive_lifetime(int lifetime) {
+    stun_keepalive_lifetime_ = lifetime;
+  }
+  // Returns true if there is a pending request with type |msg_type|.
+  bool HasPendingRequest(int msg_type) {
+    return requests_.HasRequest(msg_type);
   }
 
  protected:
@@ -214,9 +225,10 @@ class UDPPort : public Port {
   StunRequestManager requests_;
   rtc::AsyncPacketSocket* socket_;
   int error_;
-  rtc::scoped_ptr<AddressResolver> resolver_;
+  std::unique_ptr<AddressResolver> resolver_;
   bool ready_;
   int stun_keepalive_delay_;
+  int stun_keepalive_lifetime_;
 
   // This is true by default and false when
   // PORTALLOCATOR_DISABLE_DEFAULT_LOCAL_CANDIDATE is specified.
