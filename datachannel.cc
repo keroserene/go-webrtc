@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 
-#include "webrtc/api/test/fakeconstraints.h"
-#include "webrtc/base/common.h"
-
 using namespace webrtc;
 
 // Create and register a new DataChannelObserver.
