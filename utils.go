@@ -1,6 +1,9 @@
 package webrtc
 
-import "sync"
+import (
+	"strconv"
+	"sync"
+)
 
 // A general map that stores pointers by an unique int index, since we can't
 // keep Go pointers in C land.  This is a little workaround suggested in the
@@ -39,4 +42,14 @@ func (m *CGOMap) Delete(index int) {
 	m.lock.Lock()
 	delete(m.pointers, index)
 	m.lock.Unlock()
+}
+
+// Return a string value for an integer enum from a mapping array
+// or the integer string if the integer it outside the expected range.
+func EnumToStringSafe(value int, valueStrings []string) string {
+	if value >= 0 && value < len(valueStrings) {
+		return valueStrings[value]
+	} else {
+		return strconv.Itoa(value)
+	}
 }
