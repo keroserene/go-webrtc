@@ -134,17 +134,29 @@ func TestPeerConnection(t *testing.T) {
 
 				Convey("OnConnectionStateChange", func() {
 					success := make(chan PeerConnectionState, 1)
+					expectPeerConnectionState := func (state PeerConnectionState) {
+						select {
+						case r := <-success:
+							So(r, ShouldEqual, state)
+						case <-time.After(time.Second * 1):
+							t.Fatal("Timed out.")
+						}
+					}
 					pc.OnConnectionStateChange = func(state PeerConnectionState) {
 						success <- state
 					}
 					cgoOnConnectionStateChange(pc.index,
-						PeerConnectionStateDisconnected)
-					select {
-					case r := <-success:
-						So(r, ShouldEqual, PeerConnectionStateDisconnected)
-					case <-time.After(time.Second * 1):
-						t.Fatal("Timed out.")
-					}
+						IceConnectionStateNew)
+					expectPeerConnectionState(PeerConnectionStateNew)
+					cgoOnConnectionStateChange(pc.index,
+						IceConnectionStateConnected)
+					expectPeerConnectionState(PeerConnectionStateConnected)
+					cgoOnConnectionStateChange(pc.index,
+						IceConnectionStateFailed)
+					expectPeerConnectionState(PeerConnectionStateFailed)
+					cgoOnConnectionStateChange(pc.index,
+						IceConnectionStateDisconnected)
+					expectPeerConnectionState(PeerConnectionStateDisconnected)
 				})
 
 				Convey("OnDataChannel", func() {

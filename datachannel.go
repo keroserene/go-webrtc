@@ -31,6 +31,10 @@ const (
 
 var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
 
+func (s DataState) String() string {
+	return EnumToStringSafe(int(s), DataStateString)
+}
+
 var DCMap = NewCGOMap()
 
 /* DataChannel

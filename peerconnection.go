@@ -66,6 +66,10 @@ const (
 var PeerConnectionStateString = []string{
 	"New", "Connecting", "Connected", "Disconnected", "Failed"}
 
+func (s PeerConnectionState) String() string {
+	return EnumToStringSafe(int(s), PeerConnectionStateString)
+}
+
 const (
 	IceConnectionStateNew IceConnectionState = iota
 	IceConnectionStateChecking
@@ -80,6 +84,10 @@ var IceConnectionStateString = []string{
 	"New", "Checking", "Connected", "Completed",
 	"Failed", "Disconnected", "Closed"}
 
+func (s IceConnectionState) String() string {
+	return EnumToStringSafe(int(s), IceConnectionStateString)
+}
+
 const (
 	IceGatheringStateNew IceGatheringState = iota
 	IceGatheringStateGathering
@@ -88,6 +96,10 @@ const (
 
 var IceGatheringStateString = []string{
 	"New", "Gathering", "Complete"}
+
+func (s IceGatheringState) String() string {
+	return EnumToStringSafe(int(s), IceGatheringStateString)
+}
 
 var PCMap = NewCGOMap()
 
@@ -382,7 +394,25 @@ func cgoOnIceCandidateError(p int) {
 }
 
 //export cgoOnConnectionStateChange
-func cgoOnConnectionStateChange(p int, state PeerConnectionState) {
+func cgoOnConnectionStateChange(p int, iceState IceConnectionState) {
+	// TODO: This may need to be slightly more complicated...
+	// https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
+	var state PeerConnectionState
+	switch iceState {
+	case IceConnectionStateNew:
+		state = PeerConnectionStateNew
+	case IceConnectionStateChecking:
+		state = PeerConnectionStateConnecting
+	case IceConnectionStateConnected:
+		state = PeerConnectionStateConnected
+	case IceConnectionStateFailed:
+		state = PeerConnectionStateFailed
+	case IceConnectionStateDisconnected:
+		state = PeerConnectionStateDisconnected
+	default:
+		return
+	}
+
 	INFO.Println("fired OnConnectionStateChange: ", p)
 	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnConnectionStateChange {

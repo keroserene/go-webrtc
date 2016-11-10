@@ -19,6 +19,10 @@ const (
 
 var IceProtocolString = []string{"udp", "tcp"}
 
+func (p IceProtocol) String() string {
+	return EnumToStringSafe(int(p), IceProtocolString)
+}
+
 const (
 	IceCandidateTypeHost IceCandidateType = iota
 	IceCandidateTypeSrflx
@@ -28,6 +32,10 @@ const (
 
 var IceCandidateTypeString = []string{"host", "srflx", "prflx", "relay"}
 
+func (t IceCandidateType) String() string {
+	return EnumToStringSafe(int(t), IceCandidateTypeString)
+}
+
 const (
 	IceTcpCandidateTypeActive IceTcpCandidateType = iota
 	IceTcpCandidateTypePassive
@@ -35,6 +43,10 @@ const (
 )
 
 var IceTcpCandidateTypeString = []string{"active", "passive", "so"}
+
+func (t IceTcpCandidateType) String() string {
+	return EnumToStringSafe(int(t), IceTcpCandidateTypeString)
+}
 
 type IceCandidate struct {
 	Candidate     string `json:"candidate"`

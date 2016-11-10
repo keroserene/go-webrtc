@@ -48,6 +48,10 @@ const (
 
 var BundlePolicyString = []string{"Balanced", "MaxBundle", "MaxCompat"}
 
+func (p BundlePolicy) String() string {
+	return EnumToStringSafe(int(p), BundlePolicyString)
+}
+
 const (
 	IceTransportPolicyNone IceTransportPolicy = iota
 	IceTransportPolicyRelay
@@ -59,6 +63,10 @@ const (
 )
 
 var IceTransportPolicyString = []string{"None", "Relay", "NoHost", "All"}
+
+func (p IceTransportPolicy) String() string {
+	return EnumToStringSafe(int(p), IceTransportPolicyString)
+}
 
 const (
 	SignalingStateStable SignalingState = iota
@@ -73,6 +81,10 @@ var SignalingStateString = []string{"Stable",
 	"HaveLocalOffer", "HaveLocalPrAnswer",
 	"HaveRemoteOffer", "HaveRemotePrAnswer",
 	"Closed"}
+
+func (s SignalingState) String() string {
+	return EnumToStringSafe(int(s), SignalingStateString)
+}
 
 // TODO: [ED]
 /* const (

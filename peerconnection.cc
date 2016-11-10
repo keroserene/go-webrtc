@@ -137,8 +137,8 @@ class Peer
       return;
     }
     cgoOnIceConnectionStateChange(goPeerConnection, new_state);
-    // TODO: This may need to be slightly more complicated...
-    // https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
+    // The ice connection state is sent to the go callback
+    // which then translates it into RTCPeerConnectionState
     cgoOnConnectionStateChange(goPeerConnection, new_state);
   }
 
