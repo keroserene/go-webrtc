@@ -169,10 +169,8 @@ func parseCommands(input string) bool {
 		dc.Close()
 	case "status":
 		fmt.Println("WebRTC PeerConnection Configuration:\n", pc.GetConfiguration())
-		fmt.Println("Signaling State: ",
-			webrtc.SignalingStateString[pc.SignalingState()])
-		fmt.Println("Connection State: ",
-			webrtc.PeerConnectionStateString[pc.ConnectionState()])
+		fmt.Println("Signaling State: ", pc.SignalingState().String())
+		fmt.Println("Connection State: ", pc.ConnectionState().String())
 	case "help":
 		showCommands()
 	default:

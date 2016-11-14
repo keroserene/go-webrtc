@@ -353,8 +353,7 @@ func (pc *PeerConnection) Close() error {
 
 //export cgoOnSignalingStateChange
 func cgoOnSignalingStateChange(p int, s SignalingState) {
-	INFO.Println("fired OnSignalingStateChange: ", p,
-		s, SignalingStateString[s])
+	INFO.Println("fired OnSignalingStateChange: ", p, s, s.String())
 	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnSignalingStateChange {
 		pc.OnSignalingStateChange(s)
