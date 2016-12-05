@@ -12,7 +12,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/keroserene/go-webrtc"
+	"../../../go-webrtc"
 	"os"
 	"os/signal"
 	"strings"

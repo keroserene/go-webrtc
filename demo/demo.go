@@ -14,7 +14,7 @@ package main
 import "C"
 import (
 	"fmt"
-	"github.com/keroserene/go-webrtc"
+	"../../go-webrtc"
 )
 
 func main() {
