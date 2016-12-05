@@ -1,0 +1,51 @@
+From 79dda9f4fedd0df439f496b244a226167086cb61 Mon Sep 17 00:00:00 2001
+From: Cant Stop The Signal <cantstopthesignals@gmail.com>
+Date: Sun, 4 Dec 2016 16:01:43 -0800
+Subject: [PATCH] Add patches to get webrtc to build from webrtc
+ branch-heads/52
+
+webrtc commit f33698296719f956497d2dbff81b5080864a8804
+---
+ webrtc/api/api.gyp           |  3 +++
+ webrtc/api/fakefieldtrial.cc | 15 +++++++++++++++
+ 2 files changed, 18 insertions(+)
+ create mode 100644 webrtc/api/fakefieldtrial.cc
+
+diff --git a/webrtc/api/api.gyp b/webrtc/api/api.gyp
+index 377ef8f..01b16bc 100644
+--- a/webrtc/api/api.gyp
++++ b/webrtc/api/api.gyp
+@@ -199,6 +199,9 @@
+         'webrtcsession.h',
+         'webrtcsessiondescriptionfactory.cc',
+         'webrtcsessiondescriptionfactory.h',
++        'test/fakeaudiocapturemodule.cc',
++        'test/fakeaudiocapturemodule.h',
++        'fakefieldtrial.cc',
+       ],
+       # TODO(kjellander): Make the code compile without disabling these flags.
+       # See https://bugs.chromium.org/p/webrtc/issues/detail?id=3307
+diff --git a/webrtc/api/fakefieldtrial.cc b/webrtc/api/fakefieldtrial.cc
+new file mode 100644
+index 0000000..24c7ecc
+--- /dev/null
++++ b/webrtc/api/fakefieldtrial.cc
+@@ -0,0 +1,15 @@
++// Copyright 2015 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include <string>
++
++// Define webrtc::field_trial::FindFullName to provide webrtc with a field trial
++// implementation.
++namespace webrtc {
++namespace field_trial {
++std::string FindFullName(const std::string& trial_name) {
++  return std::string();
++}
++}  // namespace field_trial
++}  // namespace webrtc
+-- 
+2.8.0.rc3.226.g39d4020
+
