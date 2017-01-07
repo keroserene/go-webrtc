@@ -102,7 +102,7 @@ if [ "$OS" = "darwin" ]; then
 	libtool -static -o libwebrtc-magic.a -filelist filelist
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
 else
-	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o' -not -name 'dump_syms_regtest.o')
+	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 fi
 OUT_LIBRARY=$LIB_DIR/libwebrtc-$OS-$ARCH-magic.a
 mv libwebrtc-magic.a ${OUT_LIBRARY}
