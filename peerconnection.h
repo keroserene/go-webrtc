@@ -19,8 +19,11 @@ extern "C" {
 
   typedef struct {
     int ordered;
-    int maxRetransmitTime;
+    int maxPacketLifeTime;
     int maxRetransmits;
+    char *protocol;
+    int negotiated;
+    int id;
   } CGO_DataChannelInit;
 
   typedef struct {

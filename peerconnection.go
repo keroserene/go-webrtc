@@ -340,21 +340,43 @@ exchange data.
 
 TODO: Implement the "negotiated" flag?
 */
-func (pc *PeerConnection) CreateDataChannel(label string, dict Init) (
+
+func Ordered(ordered bool) func(*DataChannelInit) {
+	return func(i *DataChannelInit) {
+		i.Ordered = ordered
+	}
+}
+
+func MaxRetransmits(maxRetransmits int) func(*DataChannelInit) {
+	return func(i *DataChannelInit) {
+		i.MaxRetransmits = maxRetransmits
+	}
+}
+
+func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataChannelInit)) (
 	*DataChannel, error) {
 	l := C.CString(label)
 	defer C.free(unsafe.Pointer(l))
 
-	cfg := C.CGO_DataChannelInit{
-		ordered:        0,
-		maxRetransmits: -1,
+	init := DataChannelInit{
+		Ordered:           true,
+		MaxPacketLifeTime: -1,
+		MaxRetransmits:    -1,
+		Negotiated:        false,
+		ID:                -1,
 	}
 
-	if dict.Ordered {
+	for _, option := range options {
+		option(&init)
+	}
+
+	cfg := C.CGO_DataChannelInit{}
+
+	if init.Ordered {
 		cfg.ordered = C.int(1)
 	}
 
-	cfg.maxRetransmits = C.int(dict.MaxRetransmits)
+	cfg.maxRetransmits = C.int(init.MaxRetransmits)
 
 	cDataChannel := C.CGO_CreateDataChannel(pc.cgoPeer, l, cfg)
 	if nil == cDataChannel {
