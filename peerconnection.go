@@ -344,7 +344,19 @@ func (pc *PeerConnection) CreateDataChannel(label string, dict Init) (
 	*DataChannel, error) {
 	l := C.CString(label)
 	defer C.free(unsafe.Pointer(l))
-	cDataChannel := C.CGO_CreateDataChannel(pc.cgoPeer, l, unsafe.Pointer(&dict))
+
+	cfg := C.CGO_DataChannelInit{
+		ordered:        0,
+		maxRetransmits: -1,
+	}
+
+	if dict.Ordered {
+		cfg.ordered = C.int(1)
+	}
+
+	cfg.maxRetransmits = C.int(dict.MaxRetransmits)
+
+	cDataChannel := C.CGO_CreateDataChannel(pc.cgoPeer, l, cfg)
 	if nil == cDataChannel {
 		return nil, errors.New("Failed to CreateDataChannel")
 	}

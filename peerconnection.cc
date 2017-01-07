@@ -427,11 +427,15 @@ int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
 }
 
 // PeerConnection::CreateDataChannel
-void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
+void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, CGO_DataChannelInit dict) {
   auto cPeer = (Peer*)cgoPeer;
-  DataChannelInit *r = (DataChannelInit*)dict;
+  /* DataChannelInit *r = (DataChannelInit*)dict; */
   // TODO: a real DataChannelInit config with correct fields.
   DataChannelInit config;
+  config.ordered = dict.ordered > 0;
+  /* config.maxRetransmitTime = dict.maxRetransmitTime; */
+  config.maxRetransmits = dict.maxRetransmits;
+
   std::string l(label);
   auto channel = cPeer->pc_->CreateDataChannel(l, &config);
   if (NULL == channel) {

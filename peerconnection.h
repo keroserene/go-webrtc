@@ -18,6 +18,12 @@ extern "C" {
   typedef const char* CGO_sdpString;
 
   typedef struct {
+    int ordered;
+    int maxRetransmitTime;
+    int maxRetransmits;
+  } CGO_DataChannelInit;
+
+  typedef struct {
     char **urls;
     int   numUrls;
 
@@ -66,7 +72,7 @@ extern "C" {
   int CGO_IceGatheringState(CGO_Peer);
   int CGO_SetConfiguration(CGO_Peer, CGO_Configuration*);
 
-  void* CGO_CreateDataChannel(CGO_Peer, char*, void*);
+  void* CGO_CreateDataChannel(CGO_Peer, char*, CGO_DataChannelInit);
 
   void CGO_Close(CGO_Peer);
 
