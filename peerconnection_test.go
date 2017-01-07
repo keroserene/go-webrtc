@@ -1,9 +1,10 @@
 package webrtc
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestIceGatheringStateEnums(t *testing.T) {
@@ -239,7 +240,7 @@ func TestPeerConnection(t *testing.T) {
 			})
 
 			Convey("DataChannel", func() {
-				channel, err := alice.CreateDataChannel("test", Init{})
+				channel, err := alice.CreateDataChannel("test")
 				So(channel, ShouldNotBeNil)
 				So(err, ShouldBeNil)
 				So(channel.Label(), ShouldEqual, "test")

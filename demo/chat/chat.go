@@ -12,10 +12,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/keroserene/go-webrtc"
 	"os"
 	"os/signal"
 	"strings"
+
+	"github.com/keroserene/go-webrtc"
 )
 
 var pc *webrtc.PeerConnection
@@ -234,7 +235,7 @@ func start(instigator bool) {
 	if instigator {
 		// Attempting to create the first datachannel triggers ICE.
 		fmt.Println("Initializing datachannel....")
-		dc, err = pc.CreateDataChannel("test", webrtc.Init{})
+		dc, err = pc.CreateDataChannel("test")
 		if nil != err {
 			fmt.Println("Unexpected failure creating Channel.")
 			return
