@@ -17,7 +17,7 @@ extern "C" {
 
   CGO_Channel CGO_Channel_RegisterObserver(void *obs, int goChannel);
 
-  void CGO_Channel_Send(CGO_Channel channel, void *data, int size);
+  void CGO_Channel_Send(CGO_Channel channel, void *data, int size, bool binary);
   void CGO_Channel_Close(CGO_Channel channel);
 
   const char *CGO_Channel_Label(CGO_Channel);

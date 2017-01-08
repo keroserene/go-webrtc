@@ -11,10 +11,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/keroserene/go-webrtc"
 	"os"
 	"os/signal"
 	"strings"
+
+	"github.com/keroserene/go-webrtc"
 )
 
 var pc *webrtc.PeerConnection
@@ -149,7 +150,7 @@ func endChat() {
 func sendChat(msg string) {
 	line := username + ": " + msg
 	fmt.Println("[sent]")
-	dc.Send([]byte(line))
+	dc.SendText([]byte(line))
 }
 
 func receiveChat(msg string) {
