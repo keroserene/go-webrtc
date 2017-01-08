@@ -76,11 +76,23 @@ func NewDataChannel(o unsafe.Pointer) *DataChannel {
 	return c
 }
 
+// Send a message over a DataChannel in binary mode.
 func (c *DataChannel) Send(data []byte) {
+	c.sendInternal(data, true)
+}
+
+// SendText sends a message over the DataChannel in text mode.
+func (c *DataChannel) SendText(text string) {
+	if len(text) > 0 {
+		c.sendInternal([]byte(text), false)
+	}
+}
+
+func (c *DataChannel) sendInternal(data []byte, binary bool) {
 	if nil == data {
 		return
 	}
-	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)))
+	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)), C.bool(binary))
 }
 
 func (c *DataChannel) Close() error {
