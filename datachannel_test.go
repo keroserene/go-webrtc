@@ -1,9 +1,10 @@
 package webrtc
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestDataStateEnums(t *testing.T) {
@@ -25,7 +26,7 @@ func TestDataStateEnums(t *testing.T) {
 		So(c.Label(), ShouldEqual, "fake")
 		So(c.Ordered(), ShouldBeFalse)
 		So(c.Protocol(), ShouldEqual, "")
-		So(c.MaxPacketLifeTime(), ShouldEqual, 0)
+		So(c.MaxRetransmitTime(), ShouldEqual, 0)
 		So(c.MaxRetransmits(), ShouldEqual, 0)
 		So(c.Negotiated(), ShouldBeFalse)
 		So(c.ID(), ShouldEqual, 12345)

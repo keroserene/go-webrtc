@@ -335,10 +335,10 @@ func Ordered(ordered bool) func(*DataChannelInit) {
 	}
 }
 
-// MaxPacketLifeTime configures a DataChannels 'maxRetransmitTime' option.
-func MaxPacketLifeTime(maxPacketLifeTime int) func(*DataChannelInit) {
+// MaxRetransmitTime configures a DataChannels 'maxRetransmitTime' option.
+func MaxRetransmitTime(maxRetransmitTime int) func(*DataChannelInit) {
 	return func(i *DataChannelInit) {
-		i.MaxPacketLifeTime = maxPacketLifeTime
+		i.MaxRetransmitTime = maxRetransmitTime
 	}
 }
 
@@ -362,7 +362,7 @@ func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataC
 	// These are the defaults taken from include/webrtc/api/datachannelinterface.h
 	init := DataChannelInit{
 		Ordered:           true,
-		MaxPacketLifeTime: -1,
+		MaxRetransmitTime: -1,
 		MaxRetransmits:    -1,
 		Negotiated:        false,
 		ID:                -1,
@@ -383,7 +383,7 @@ func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataC
 	}
 	cfg.id = C.int(init.ID)
 	cfg.maxRetransmits = C.int(init.MaxRetransmits)
-	cfg.maxPacketLifeTime = C.int(init.MaxPacketLifeTime)
+	cfg.maxRetransmitTime = C.int(init.MaxRetransmitTime)
 
 	l := C.CString(label)
 	defer C.free(unsafe.Pointer(l))

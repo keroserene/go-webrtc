@@ -101,7 +101,7 @@ func (c *DataChannel) Protocol() string {
 	return C.GoString(p)
 }
 
-func (c *DataChannel) MaxPacketLifeTime() uint {
+func (c *DataChannel) MaxRetransmitTime() uint {
 	return uint(C.CGO_Channel_MaxRetransmitTime(c.cgoChannel))
 }
 
@@ -127,7 +127,7 @@ func (c *DataChannel) BufferedAmount() int {
 
 type DataChannelInit struct {
 	Ordered           bool
-	MaxPacketLifeTime int
+	MaxRetransmitTime int
 	MaxRetransmits    int
 	Protocol          string
 	Negotiated        bool

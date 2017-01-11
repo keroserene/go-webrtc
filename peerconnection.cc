@@ -430,7 +430,7 @@ void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, CGO_DataChannelInit d
   DataChannelInit config;
   config.ordered = dict.ordered;
   config.maxRetransmits = dict.maxRetransmits;
-  config.maxRetransmitTime = dict.maxPacketLifeTime;
+  config.maxRetransmitTime = dict.maxRetransmitTime;
   config.negotiated = dict.negotiated;
   config.id = dict.id;
 

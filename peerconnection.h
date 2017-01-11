@@ -19,7 +19,7 @@ extern "C" {
 
   typedef struct {
     int ordered;
-    int maxPacketLifeTime;
+    int maxRetransmitTime;
     int maxRetransmits;
     char *protocol;
     int negotiated;
