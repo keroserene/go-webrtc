@@ -326,27 +326,40 @@ Once the connection succeeds, .OnDataChannel should trigger on the remote peer's
 |PeerConnection|, while .OnOpen should trigger on the local DataChannel returned
 by this method. Both DataChannel references should then be open and ready to
 exchange data.
-
-TODO: Implement the "negotiated" flag?
 */
 
+// Ordered configures a DataChannels 'ordered' option.
 func Ordered(ordered bool) func(*DataChannelInit) {
 	return func(i *DataChannelInit) {
 		i.Ordered = ordered
 	}
 }
 
+// MaxPacketLifeTime configures a DataChannels 'maxRetransmitTime' option.
+func MaxPacketLifeTime(maxPacketLifeTime int) func(*DataChannelInit) {
+	return func(i *DataChannelInit) {
+		i.MaxPacketLifeTime = maxPacketLifeTime
+	}
+}
+
+// MaxRetransmits configures a DataChannels 'maxRetransmits' option.
 func MaxRetransmits(maxRetransmits int) func(*DataChannelInit) {
 	return func(i *DataChannelInit) {
 		i.MaxRetransmits = maxRetransmits
 	}
 }
 
+// Negotiated configures a DataChannels 'negotiated' option.
+func Negotiated(negotiated bool) func(*DataChannelInit) {
+	return func(i *DataChannelInit) {
+		i.Negotiated = negotiated
+	}
+}
+
 func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataChannelInit)) (
 	*DataChannel, error) {
-	l := C.CString(label)
-	defer C.free(unsafe.Pointer(l))
 
+	// These are the defaults taken from include/webrtc/api/datachannelinterface.h
 	init := DataChannelInit{
 		Ordered:           true,
 		MaxPacketLifeTime: -1,
@@ -360,13 +373,20 @@ func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataC
 	}
 
 	cfg := C.CGO_DataChannelInit{}
-
-	if init.Ordered {
-		cfg.ordered = C.int(1)
+	cfg.ordered = 1
+	if init.Ordered == false {
+		cfg.ordered = 0
 	}
-
+	cfg.negotiated = 0
+	if init.Negotiated == true {
+		cfg.negotiated = 1
+	}
+	cfg.id = C.int(init.ID)
 	cfg.maxRetransmits = C.int(init.MaxRetransmits)
+	cfg.maxPacketLifeTime = C.int(init.MaxPacketLifeTime)
 
+	l := C.CString(label)
+	defer C.free(unsafe.Pointer(l))
 	cDataChannel := C.CGO_CreateDataChannel(pc.cgoPeer, l, cfg)
 	if nil == cDataChannel {
 		return nil, errors.New("Failed to CreateDataChannel")
