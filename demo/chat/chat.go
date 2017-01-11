@@ -150,7 +150,7 @@ func endChat() {
 func sendChat(msg string) {
 	line := username + ": " + msg
 	fmt.Println("[sent]")
-	dc.SendText([]byte(line))
+	dc.SendText(line)
 }
 
 func receiveChat(msg string) {

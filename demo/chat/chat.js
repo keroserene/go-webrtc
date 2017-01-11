@@ -213,21 +213,7 @@ function prepareDataChannel(channel) {
   channel.onmessage = function(msg) {
     var recv = msg.data;
     console.log(msg);
-    // Go sends only raw bytes.
-    if ("[object ArrayBuffer]" == recv.toString()) {
-      var bytes = new Uint8Array(recv);
-      line = String.fromCharCode.apply(null, bytes);
-    } else if ("[object Blob]" == recv.toString()) {
-      var reader = new FileReader();
-      reader.addEventListener("loadend", function() {
-        log(reader.result.trim());
-      });
-      reader.readAsText(recv);
-      return;
-    } else {
-      line = recv;
-    }
-    line = line.trim();
+    var line = recv.trim();
     log(line);
   }
 }
