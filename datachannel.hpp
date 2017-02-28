@@ -2,6 +2,7 @@
 #define _DATACHANNEL_H_
 
 #include <_cgo_export.h>  // Allow calling certain Go functions.
+#include <assert.h>
 
 #include "webrtc/api/peerconnectioninterface.h"
 #include "webrtc/api/datachannelinterface.h"

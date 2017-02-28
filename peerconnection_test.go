@@ -55,7 +55,10 @@ func TestPeerConnection(t *testing.T) {
 				config := NewConfiguration(
 					OptionIceServer("stun:something.else"),
 					OptionIceTransportPolicy(IceTransportPolicyRelay))
-				pc.SetConfiguration(*config)
+				So(config.IceTransportPolicy, ShouldEqual, IceTransportPolicyRelay)
+				// FIXME: Should be calling SetConfiguration here
+				pc, err = NewPeerConnection(config)
+				So(err, ShouldBeNil)
 				got := pc.GetConfiguration()
 				So(got.IceTransportPolicy, ShouldEqual, IceTransportPolicyRelay)
 			})

@@ -29,7 +29,7 @@ func TestDataStateEnums(t *testing.T) {
 		So(c.MaxRetransmits(), ShouldEqual, 0)
 		So(c.Negotiated(), ShouldBeFalse)
 		So(c.ID(), ShouldEqual, 12345)
-		So(c.BufferedAmount(), ShouldEqual, 0)
+		So(c.BufferedAmount(), ShouldEqual, 1234)
 
 		// There's not a good way to create a DataChannel without first having an
 		// available PeerConnection object with a valid session, but that's part of
