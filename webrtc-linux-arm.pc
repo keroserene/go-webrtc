@@ -1,0 +1,17 @@
+pc=${pcfiledir}
+
+Name: webrtc
+Description: webrtc
+Version: 1
+
+Cflags: \
+	-I${pc}/include \
+	-D_GLIBCXX_USE_CXX11_ABI=0 \
+	-DPOSIX
+
+Libs: \
+	-L${pc}/lib \
+	-lwebrtc-linux-arm-magic \
+	-ldl \
+	-lX11 \
+	-lrt
