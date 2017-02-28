@@ -57,6 +57,13 @@ else
 	popd
 fi
 
+if [ "$ARCH" = "arm" ]; then
+    echo "Manually fetching arm sysroot"
+    pushd $WEBRTC_SRC || exit 1
+    ./build/linux/sysroot_scripts/install-sysroot.py --arch=arm || exit 1
+    popd
+fi
+
 echo "Checking out latest tested / compatible version of webrtc ..."
 pushd $WEBRTC_SRC
 git checkout $COMMIT
@@ -78,7 +85,7 @@ popd
 echo "Building webrtc ..."
 pushd $WEBRTC_SRC
 export GYP_DEFINES="include_tests=0 include_examples=0"
-python webrtc/build/gyp_webrtc webrtc/api/api.gyp || exit 1
+python webrtc/build/gyp_webrtc -Dtarget_os="$OS" -Dtarget_arch="$ARCH" webrtc/api/api.gyp || exit 1
 ninja -C out/$CONFIG || exit 1
 popd
 
@@ -101,6 +108,8 @@ if [ "$OS" = "darwin" ]; then
 	ls *.a > filelist
 	libtool -static -o libwebrtc-magic.a -filelist filelist
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
+elif [ "$ARCH" = "arm" ]; then
+    arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 else
 	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 fi
