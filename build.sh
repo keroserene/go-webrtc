@@ -113,7 +113,7 @@ if [ "$OS" = "darwin" ]; then
 	libtool -static -o libwebrtc-magic.a -filelist filelist
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
 elif [ "$ARCH" = "arm" ]; then
-    arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o' -not -path './clang_x64/*')
+    arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 else
 	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 fi
