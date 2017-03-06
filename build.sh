@@ -86,7 +86,7 @@ echo "Building webrtc ..."
 pushd $WEBRTC_SRC
 export GYP_DEFINES="include_tests=0 include_examples=0"
 if [ "$ARCH" = "arm" ]; then
-    python webrtc/build/gyp_webrtc -Dtarget_os="$OS" -Dtarget_arch="$ARCH" webrtc/api/api.gyp || exit 1
+    gn gen out/$CONFIG --args='target_os="linux" target_cpu="arm" is_debug=false' || exit 1
 else
     python webrtc/build/gyp_webrtc webrtc/api/api.gyp || exit 1
 fi
@@ -113,7 +113,7 @@ if [ "$OS" = "darwin" ]; then
 	libtool -static -o libwebrtc-magic.a -filelist filelist
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
 elif [ "$ARCH" = "arm" ]; then
-    arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
+    arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o' -not -path './clang_x64/*')
 else
 	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 fi
