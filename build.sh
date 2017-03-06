@@ -85,7 +85,11 @@ popd
 echo "Building webrtc ..."
 pushd $WEBRTC_SRC
 export GYP_DEFINES="include_tests=0 include_examples=0"
-python webrtc/build/gyp_webrtc -Dtarget_os="$OS" -Dtarget_arch="$ARCH" webrtc/api/api.gyp || exit 1
+if [ "$ARCH" = "arm" ]; then
+    python webrtc/build/gyp_webrtc -Dtarget_os="$OS" -Dtarget_arch="$ARCH" webrtc/api/api.gyp || exit 1
+else
+    python webrtc/build/gyp_webrtc webrtc/api/api.gyp || exit 1
+fi
 ninja -C out/$CONFIG || exit 1
 popd
 
