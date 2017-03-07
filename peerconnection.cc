@@ -12,7 +12,7 @@
 #include "webrtc/api/test/fakeconstraints.h"
 #include "webrtc/pc/test/fakeaudiocapturemodule.h"
 #include "webrtc/api/jsepsessiondescription.h"
-#include "webrtc/api/webrtcsdp.h"
+#include "webrtc/pc/webrtcsdp.h"
 
 #define SUCCESS 0
 #define FAILURE -1
