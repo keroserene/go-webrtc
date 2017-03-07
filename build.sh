@@ -82,7 +82,7 @@ if [ "$ARCH" = "arm" ]; then
 else
     gn gen out/$CONFIG --args='is_debug=false' || exit 1
 fi
-ninja -C out/$CONFIG || exit 1
+ninja -C out/$CONFIG webrtc webrtc/test webrtc/pc:pc_test_utils || exit 1
 popd
 
 echo "Copying headers ..."
@@ -101,7 +101,7 @@ popd
 echo "Concatenating libraries ..."
 pushd $WEBRTC_SRC/out/$CONFIG
 if [ "$OS" = "darwin" ]; then
-	find . -name '*.a' > filelist
+	find . -name '*.o' > filelist
 	libtool -static -o libwebrtc-magic.a -filelist filelist
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
 elif [ "$ARCH" = "arm" ]; then
