@@ -11,8 +11,8 @@
 #ifndef WEBRTC_MODULES_AUDIO_CODING_CODECS_G722_AUDIO_DECODER_G722_H_
 #define WEBRTC_MODULES_AUDIO_CODING_CODECS_G722_AUDIO_DECODER_G722_H_
 
+#include "webrtc/api/audio_codecs/audio_decoder.h"
 #include "webrtc/base/constructormagic.h"
-#include "webrtc/modules/audio_coding/codecs/audio_decoder.h"
 
 typedef struct WebRtcG722DecInst G722DecInst;
 
@@ -24,7 +24,10 @@ class AudioDecoderG722 final : public AudioDecoder {
   ~AudioDecoderG722() override;
   bool HasDecodePlc() const override;
   void Reset() override;
+  std::vector<ParseResult> ParsePayload(rtc::Buffer&& payload,
+                                        uint32_t timestamp) override;
   int PacketDuration(const uint8_t* encoded, size_t encoded_len) const override;
+  int SampleRateHz() const override;
   size_t Channels() const override;
 
  protected:
@@ -44,6 +47,10 @@ class AudioDecoderG722Stereo final : public AudioDecoder {
   AudioDecoderG722Stereo();
   ~AudioDecoderG722Stereo() override;
   void Reset() override;
+  std::vector<ParseResult> ParsePayload(rtc::Buffer&& payload,
+                                        uint32_t timestamp) override;
+  int SampleRateHz() const override;
+  size_t Channels() const override;
 
  protected:
   int DecodeInternal(const uint8_t* encoded,
@@ -51,7 +58,6 @@ class AudioDecoderG722Stereo final : public AudioDecoder {
                      int sample_rate_hz,
                      int16_t* decoded,
                      SpeechType* speech_type) override;
-  size_t Channels() const override;
 
  private:
   // Splits the stereo-interleaved payload in |encoded| into separate payloads

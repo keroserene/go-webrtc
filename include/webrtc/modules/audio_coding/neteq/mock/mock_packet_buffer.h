@@ -13,7 +13,7 @@
 
 #include "webrtc/modules/audio_coding/neteq/packet_buffer.h"
 
-#include "testing/gmock/include/gmock/gmock.h"
+#include "webrtc/test/gmock.h"
 
 namespace webrtc {
 
@@ -27,21 +27,27 @@ class MockPacketBuffer : public PacketBuffer {
       void());
   MOCK_CONST_METHOD0(Empty,
       bool());
-  MOCK_METHOD1(InsertPacket,
+  int InsertPacket(Packet&& packet) {
+    return InsertPacketWrapped(&packet);
+  }
+  // Since gtest does not properly support move-only types, InsertPacket is
+  // implemented as a wrapper. You'll have to implement InsertPacketWrapped
+  // instead and move from |*packet|.
+  MOCK_METHOD1(InsertPacketWrapped,
       int(Packet* packet));
   MOCK_METHOD4(InsertPacketList,
       int(PacketList* packet_list,
           const DecoderDatabase& decoder_database,
-          uint8_t* current_rtp_payload_type,
-          uint8_t* current_cng_rtp_payload_type));
+          rtc::Optional<uint8_t>* current_rtp_payload_type,
+          rtc::Optional<uint8_t>* current_cng_rtp_payload_type));
   MOCK_CONST_METHOD1(NextTimestamp,
       int(uint32_t* next_timestamp));
   MOCK_CONST_METHOD2(NextHigherTimestamp,
       int(uint32_t timestamp, uint32_t* next_timestamp));
-  MOCK_CONST_METHOD0(NextRtpHeader,
-      const RTPHeader*());
-  MOCK_METHOD1(GetNextPacket,
-      Packet*(size_t* discard_count));
+  MOCK_CONST_METHOD0(PeekNextPacket,
+      const Packet*());
+  MOCK_METHOD0(GetNextPacket,
+      rtc::Optional<Packet>());
   MOCK_METHOD0(DiscardNextPacket,
       int());
   MOCK_METHOD2(DiscardOldPackets,

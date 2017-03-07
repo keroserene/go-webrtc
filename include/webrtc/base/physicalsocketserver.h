@@ -14,7 +14,6 @@
 #include <memory>
 #include <vector>
 
-#include "webrtc/base/asyncfile.h"
 #include "webrtc/base/nethelpers.h"
 #include "webrtc/base/socketserver.h"
 #include "webrtc/base/criticalsection.h"
@@ -79,8 +78,6 @@ class PhysicalSocketServer : public SocketServer {
   void Remove(Dispatcher* dispatcher);
 
 #if defined(WEBRTC_POSIX)
-  AsyncFile* CreateFile(int fd);
-
   // Sets the function to be executed in response to the specified POSIX signal.
   // The function is executed from inside Wait() using the "self-pipe trick"--
   // regardless of which thread receives the signal--and hence can safely
@@ -143,8 +140,11 @@ class PhysicalSocket : public AsyncSocket, public sigslot::has_slots<> {
              size_t length,
              const SocketAddress& addr) override;
 
-  int Recv(void* buffer, size_t length) override;
-  int RecvFrom(void* buffer, size_t length, SocketAddress* out_addr) override;
+  int Recv(void* buffer, size_t length, int64_t* timestamp) override;
+  int RecvFrom(void* buffer,
+               size_t length,
+               SocketAddress* out_addr,
+               int64_t* timestamp) override;
 
   int Listen(int backlog) override;
   AsyncSocket* Accept(SocketAddress* out_addr) override;

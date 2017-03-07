@@ -36,16 +36,13 @@ class RTPReceiverAudio : public RTPReceiverStrategy,
   // Is forwarding of outband telephone events turned on/off?
   bool TelephoneEventForwardToDecoder() const override;
 
-  // Is TelephoneEvent configured with payload type payload_type
+  // Is TelephoneEvent configured with |payload_type|.
   bool TelephoneEventPayloadType(const int8_t payload_type) const override;
 
   TelephoneEventHandler* GetTelephoneEventHandler() override { return this; }
 
-  // Returns true if CNG is configured with payload type payload_type. If so,
-  // the frequency and cng_payload_type_has_changed are filled in.
-  bool CNGPayloadType(const int8_t payload_type,
-                      uint32_t* frequency,
-                      bool* cng_payload_type_has_changed);
+  // Returns true if CNG is configured with |payload_type|.
+  bool CNGPayloadType(const int8_t payload_type);
 
   int32_t ParseRtpPacket(WebRtcRTPHeader* rtp_header,
                          const PayloadUnion& specific_payload,
@@ -55,32 +52,17 @@ class RTPReceiverAudio : public RTPReceiverStrategy,
                          int64_t timestamp_ms,
                          bool is_first_packet) override;
 
-  int GetPayloadTypeFrequency() const override;
-
   RTPAliveType ProcessDeadOrAlive(uint16_t last_payload_length) const override;
 
   bool ShouldReportCsrcChanges(uint8_t payload_type) const override;
 
-  int32_t OnNewPayloadTypeCreated(
-      const char payload_name[RTP_PAYLOAD_NAME_SIZE],
-      int8_t payload_type,
-      uint32_t frequency) override;
+  int32_t OnNewPayloadTypeCreated(const CodecInst& audio_codec) override;
 
   int32_t InvokeOnInitializeDecoder(
       RtpFeedback* callback,
       int8_t payload_type,
       const char payload_name[RTP_PAYLOAD_NAME_SIZE],
       const PayloadUnion& specific_payload) const override;
-
-  // We do not allow codecs to have multiple payload types for audio, so we
-  // need to override the default behavior (which is to do nothing).
-  void PossiblyRemoveExistingPayloadType(
-      RtpUtility::PayloadTypeMap* payload_type_map,
-      const char payload_name[RTP_PAYLOAD_NAME_SIZE],
-      size_t payload_name_length,
-      uint32_t frequency,
-      uint8_t channels,
-      uint32_t rate) const;
 
   // We need to look out for special payload types here and sometimes reset
   // statistics. In addition we sometimes need to tweak the frequency.
@@ -97,8 +79,6 @@ class RTPReceiverAudio : public RTPReceiverStrategy,
                                   const AudioPayload& audio_specific,
                                   bool is_red);
 
-  uint32_t last_received_frequency_;
-
   bool telephone_event_forward_to_decoder_;
   int8_t telephone_event_payload_type_;
   std::set<uint8_t> telephone_event_reported_;
@@ -107,12 +87,6 @@ class RTPReceiverAudio : public RTPReceiverStrategy,
   int8_t cng_wb_payload_type_;
   int8_t cng_swb_payload_type_;
   int8_t cng_fb_payload_type_;
-  int8_t cng_payload_type_;
-
-  // G722 is special since it use the wrong number of RTP samples in timestamp
-  // VS. number of samples in the frame
-  int8_t g722_payload_type_;
-  bool last_received_g722_;
 
   uint8_t num_energy_;
   uint8_t current_remote_energy_[kRtpCsrcSize];

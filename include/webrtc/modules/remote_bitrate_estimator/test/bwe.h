@@ -109,8 +109,8 @@ class LinkedSet {
   std::list<PacketIdentifierNode*> list_;
 };
 
-const int kMinBitrateKbps = 50;
-const int kMaxBitrateKbps = 2500;
+const int kMinBitrateKbps = 10;
+const int kMaxBitrateKbps = 25000;
 
 class BweSender : public Module {
  public:
@@ -176,7 +176,7 @@ enum BandwidthEstimatorType {
   kNullEstimator,
   kNadaEstimator,
   kRembEstimator,
-  kFullSendSideEstimator,
+  kSendSideEstimator,
   kTcpEstimator
 };
 

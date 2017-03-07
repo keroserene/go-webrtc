@@ -16,8 +16,10 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "webrtc/p2p/base/portinterface.h"
+#include "webrtc/base/asyncinvoker.h"
 #include "webrtc/base/asyncpacketsocket.h"
 #include "webrtc/base/messagequeue.h"
 #include "webrtc/base/sigslot.h"
@@ -161,7 +163,8 @@ class TurnRedirectInterface {
 // Not yet wired up: TCP support.
 class TurnServer : public sigslot::has_slots<> {
  public:
-  typedef std::map<TurnServerConnection, TurnServerAllocation*> AllocationMap;
+  typedef std::map<TurnServerConnection, std::unique_ptr<TurnServerAllocation>>
+      AllocationMap;
 
   explicit TurnServer(rtc::Thread* thread);
   ~TurnServer();
@@ -188,6 +191,10 @@ class TurnServer : public sigslot::has_slots<> {
   // If set to true, reject CreatePermission requests to RFC1918 addresses.
   void set_reject_private_addresses(bool filter) {
     reject_private_addresses_ = filter;
+  }
+
+  void set_enable_permission_checks(bool enable) {
+    enable_permission_checks_ = enable;
   }
 
   // Starts listening for packets from internal clients.
@@ -253,6 +260,9 @@ class TurnServer : public sigslot::has_slots<> {
   void OnAllocationDestroyed(TurnServerAllocation* allocation);
   void DestroyInternalSocket(rtc::AsyncPacketSocket* socket);
 
+  // Just clears |sockets_to_delete_|; called asynchronously.
+  void FreeSockets();
+
   typedef std::map<rtc::AsyncPacketSocket*,
                    ProtocolType> InternalSocketMap;
   typedef std::map<rtc::AsyncSocket*,
@@ -268,13 +278,19 @@ class TurnServer : public sigslot::has_slots<> {
   // sees the same nonce in next transaction.
   bool enable_otu_nonce_;
   bool reject_private_addresses_ = false;
+  // Check for permission when receiving an external packet.
+  bool enable_permission_checks_ = true;
 
   InternalSocketMap server_sockets_;
   ServerSocketMap server_listen_sockets_;
+  // Used when we need to delete a socket asynchronously.
+  std::vector<std::unique_ptr<rtc::AsyncPacketSocket>> sockets_to_delete_;
   std::unique_ptr<rtc::PacketSocketFactory> external_socket_factory_;
   rtc::SocketAddress external_addr_;
 
   AllocationMap allocations_;
+
+  rtc::AsyncInvoker invoker_;
 
   // For testing only. If this is non-zero, the next NONCE will be generated
   // from this value, and it will be reset to 0 after generating the NONCE.

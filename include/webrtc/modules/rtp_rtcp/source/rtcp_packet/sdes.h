@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "webrtc/base/basictypes.h"
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet.h"
 
 namespace webrtc {
@@ -28,7 +27,7 @@ class Sdes : public RtcpPacket {
     uint32_t ssrc;
     std::string cname;
   };
-  static const uint8_t kPacketType = 202;
+  static constexpr uint8_t kPacketType = 202;
 
   Sdes();
   ~Sdes() override;
@@ -36,7 +35,7 @@ class Sdes : public RtcpPacket {
   // Parse assumes header is already parsed and validated.
   bool Parse(const CommonHeader& packet);
 
-  bool WithCName(uint32_t ssrc, const std::string& cname);
+  bool AddCName(uint32_t ssrc, std::string cname);
 
   const std::vector<Chunk>& chunks() const { return chunks_; }
 
@@ -53,8 +52,6 @@ class Sdes : public RtcpPacket {
 
   std::vector<Chunk> chunks_;
   size_t block_length_;
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(Sdes);
 };
 }  // namespace rtcp
 }  // namespace webrtc

@@ -95,7 +95,7 @@ do
 done
 popd
 pushd $PROJECT_DIR || exit 1
-git clean -fdx "$INCLUDE_DIR"
+git clean -fd "$INCLUDE_DIR"
 popd
 
 echo "Concatenating libraries ..."

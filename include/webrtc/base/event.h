@@ -11,6 +11,7 @@
 #ifndef WEBRTC_BASE_EVENT_H__
 #define WEBRTC_BASE_EVENT_H__
 
+#include "webrtc/base/constructormagic.h"
 #if defined(WEBRTC_WIN)
 #include "webrtc/base/win32.h"  // NOLINT: consider this a system header.
 #elif defined(WEBRTC_POSIX)
@@ -18,8 +19,6 @@
 #else
 #error "Must define either WEBRTC_WIN or WEBRTC_POSIX."
 #endif
-
-#include "webrtc/base/basictypes.h"
 
 namespace rtc {
 
@@ -46,6 +45,8 @@ class Event {
   const bool is_manual_reset_;
   bool event_status_;
 #endif
+
+  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(Event);
 };
 
 }  // namespace rtc

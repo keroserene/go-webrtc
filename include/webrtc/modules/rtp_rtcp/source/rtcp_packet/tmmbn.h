@@ -14,30 +14,26 @@
 #include <vector>
 
 #include "webrtc/base/basictypes.h"
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/rtpfb.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/tmmb_item.h"
-#include "webrtc/modules/rtp_rtcp/source/rtcp_utility.h"
 
 namespace webrtc {
 namespace rtcp {
+class CommonHeader;
+
 // Temporary Maximum Media Stream Bit Rate Notification (TMMBN).
 // RFC 5104, Section 4.2.2.
 class Tmmbn : public Rtpfb {
  public:
-  static const uint8_t kFeedbackMessageType = 4;
+  static constexpr uint8_t kFeedbackMessageType = 4;
 
   Tmmbn() {}
   ~Tmmbn() override {}
 
   // Parse assumes header is already parsed and validated.
-  bool Parse(const RTCPUtility::RtcpCommonHeader& header,
-             const uint8_t* payload);  // Size of the payload is in the header.
+  bool Parse(const CommonHeader& packet);
 
-  void WithTmmbr(uint32_t ssrc, uint32_t bitrate_kbps, uint16_t overhead) {
-    WithTmmbr(TmmbItem(ssrc, bitrate_kbps * 1000, overhead));
-  }
-  void WithTmmbr(const TmmbItem& item);
+  void AddTmmbr(const TmmbItem& item);
 
   const std::vector<TmmbItem>& items() const { return items_; }
 
@@ -54,12 +50,10 @@ class Tmmbn : public Rtpfb {
   }
 
   // Media ssrc is unused, shadow base class setter and getter.
-  void To(uint32_t ssrc);
+  void SetMediaSsrc(uint32_t ssrc);
   uint32_t media_ssrc() const;
 
   std::vector<TmmbItem> items_;
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(Tmmbn);
 };
 }  // namespace rtcp
 }  // namespace webrtc

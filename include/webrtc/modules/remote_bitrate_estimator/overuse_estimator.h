@@ -10,7 +10,7 @@
 #ifndef WEBRTC_MODULES_REMOTE_BITRATE_ESTIMATOR_OVERUSE_ESTIMATOR_H_
 #define WEBRTC_MODULES_REMOTE_BITRATE_ESTIMATOR_OVERUSE_ESTIMATOR_H_
 
-#include <list>
+#include <deque>
 
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/common_types.h"
@@ -27,8 +27,11 @@ class OveruseEstimator {
   // between timestamp groups as defined by the InterArrival class.
   // |current_hypothesis| should be the hypothesis of the over-use detector at
   // this time.
-  void Update(int64_t t_delta, double ts_delta, int size_delta,
-              BandwidthUsage current_hypothesis);
+  void Update(int64_t t_delta,
+              double ts_delta,
+              int size_delta,
+              BandwidthUsage current_hypothesis,
+              int64_t now_ms);
 
   // Returns the estimated noise/jitter variance in ms^2.
   double var_noise() const {
@@ -61,7 +64,7 @@ class OveruseEstimator {
   double process_noise_[2];
   double avg_noise_;
   double var_noise_;
-  std::list<double> ts_delta_hist_;
+  std::deque<double> ts_delta_hist_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(OveruseEstimator);
 };

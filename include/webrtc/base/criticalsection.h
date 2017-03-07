@@ -12,6 +12,7 @@
 #define WEBRTC_BASE_CRITICALSECTION_H_
 
 #include "webrtc/base/atomicops.h"
+#include "webrtc/base/checks.h"
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/base/thread_annotations.h"
 #include "webrtc/base/platform_thread_types.h"
@@ -37,9 +38,7 @@
 #include <dispatch/dispatch.h>
 #endif
 
-#if (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON))
-#define CS_DEBUG_CHECKS 1
-#endif
+#define CS_DEBUG_CHECKS RTC_DCHECK_IS_ON
 
 #if CS_DEBUG_CHECKS
 #define CS_DEBUG_CODE(x) x
@@ -61,12 +60,10 @@ class LOCKABLE CriticalSection {
   bool TryEnter() const EXCLUSIVE_TRYLOCK_FUNCTION(true);
   void Leave() const UNLOCK_FUNCTION();
 
+ private:
   // Use only for RTC_DCHECKing.
   bool CurrentThreadIsOwner() const;
-  // Use only for RTC_DCHECKing.
-  bool IsLocked() const;
 
- private:
 #if defined(WEBRTC_WIN)
   mutable CRITICAL_SECTION crit_;
 #elif defined(WEBRTC_POSIX)

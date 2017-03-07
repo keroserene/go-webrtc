@@ -14,12 +14,13 @@
 #include <fstream>
 #include <memory>
 #include <gflags/gflags.h>
-#include "testing/gtest/include/gtest/gtest.h"
+
 #include "webrtc/modules/audio_coding/neteq/include/neteq.h"
 #include "webrtc/modules/audio_coding/neteq/tools/audio_sink.h"
 #include "webrtc/modules/audio_coding/neteq/tools/input_audio_file.h"
 #include "webrtc/modules/audio_coding/neteq/tools/rtp_generator.h"
 #include "webrtc/modules/include/module_common_types.h"
+#include "webrtc/test/gtest.h"
 #include "webrtc/typedefs.h"
 
 using google::RegisterFlagValidator;
@@ -51,6 +52,7 @@ class UniformLoss : public LossModel {
 class GilbertElliotLoss : public LossModel {
  public:
   GilbertElliotLoss(double prob_trans_11, double prob_trans_01);
+  ~GilbertElliotLoss() override;
   bool Lost() override;
 
  private:
@@ -68,7 +70,7 @@ class NetEqQualityTest : public ::testing::Test {
                    int in_sampling_khz,
                    int out_sampling_khz,
                    NetEqDecoder decoder_type);
-  virtual ~NetEqQualityTest();
+  ~NetEqQualityTest() override;
 
   void SetUp() override;
 

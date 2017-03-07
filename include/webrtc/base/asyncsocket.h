@@ -11,7 +11,6 @@
 #ifndef WEBRTC_BASE_ASYNCSOCKET_H_
 #define WEBRTC_BASE_ASYNCSOCKET_H_
 
-#include "webrtc/base/common.h"
 #include "webrtc/base/sigslot.h"
 #include "webrtc/base/socket.h"
 
@@ -43,7 +42,7 @@ class AsyncSocket : public Socket {
 
 class AsyncSocketAdapter : public AsyncSocket, public sigslot::has_slots<> {
  public:
-  // The adapted socket may explicitly be NULL, and later assigned using Attach.
+  // The adapted socket may explicitly be null, and later assigned using Attach.
   // However, subclasses which support detached mode must override any methods
   // that will be called during the detached period (usually GetState()), to
   // avoid dereferencing a null pointer.
@@ -56,8 +55,11 @@ class AsyncSocketAdapter : public AsyncSocket, public sigslot::has_slots<> {
   int Connect(const SocketAddress& addr) override;
   int Send(const void* pv, size_t cb) override;
   int SendTo(const void* pv, size_t cb, const SocketAddress& addr) override;
-  int Recv(void* pv, size_t cb) override;
-  int RecvFrom(void* pv, size_t cb, SocketAddress* paddr) override;
+  int Recv(void* pv, size_t cb, int64_t* timestamp) override;
+  int RecvFrom(void* pv,
+               size_t cb,
+               SocketAddress* paddr,
+               int64_t* timestamp) override;
   int Listen(int backlog) override;
   AsyncSocket* Accept(SocketAddress* paddr) override;
   int Close() override;

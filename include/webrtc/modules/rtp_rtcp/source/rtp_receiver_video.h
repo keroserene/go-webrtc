@@ -13,7 +13,6 @@
 
 #include "webrtc/base/onetimeevent.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
-#include "webrtc/modules/rtp_rtcp/source/bitrate.h"
 #include "webrtc/modules/rtp_rtcp/source/rtp_receiver_strategy.h"
 #include "webrtc/modules/rtp_rtcp/source/rtp_utility.h"
 #include "webrtc/typedefs.h"
@@ -36,16 +35,11 @@ class RTPReceiverVideo : public RTPReceiverStrategy {
 
   TelephoneEventHandler* GetTelephoneEventHandler() override { return NULL; }
 
-  int GetPayloadTypeFrequency() const override;
-
   RTPAliveType ProcessDeadOrAlive(uint16_t last_payload_length) const override;
 
   bool ShouldReportCsrcChanges(uint8_t payload_type) const override;
 
-  int32_t OnNewPayloadTypeCreated(
-      const char payload_name[RTP_PAYLOAD_NAME_SIZE],
-      int8_t payload_type,
-      uint32_t frequency) override;
+  int32_t OnNewPayloadTypeCreated(const CodecInst& audio_codec) override;
 
   int32_t InvokeOnInitializeDecoder(
       RtpFeedback* callback,

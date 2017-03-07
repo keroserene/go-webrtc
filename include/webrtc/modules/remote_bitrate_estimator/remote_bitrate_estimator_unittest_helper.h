@@ -17,10 +17,10 @@
 #include <utility>
 #include <vector>
 
-#include "testing/gtest/include/gtest/gtest.h"
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h"
 #include "webrtc/system_wrappers/include/clock.h"
+#include "webrtc/test/gtest.h"
 
 namespace webrtc {
 namespace testing {
@@ -79,7 +79,7 @@ class RtpStream {
   int64_t GenerateFrame(int64_t time_now_us, PacketList* packets);
 
   // The send-side time when the next frame can be generated.
-  double next_rtp_time() const;
+  int64_t next_rtp_time() const;
 
   // Generates an RTCP packet.
   RtcpPacket* Rtcp(int64_t time_now_us);
@@ -112,7 +112,7 @@ class StreamGenerator {
  public:
   typedef std::list<RtpStream::RtcpPacket*> RtcpList;
 
-  StreamGenerator(int capacity, double time_now);
+  StreamGenerator(int capacity, int64_t time_now);
 
   ~StreamGenerator();
 
@@ -173,8 +173,7 @@ class RemoteBitrateEstimatorTest : public ::testing::Test {
                       size_t payload_size,
                       int64_t arrival_time,
                       uint32_t rtp_timestamp,
-                      uint32_t absolute_send_time,
-                      bool was_paced);
+                      uint32_t absolute_send_time);
 
   // Generates a frame of packets belonging to a stream at a given bitrate and
   // with a given ssrc. The stream is pushed through a very simple simulated
@@ -204,15 +203,16 @@ class RemoteBitrateEstimatorTest : public ::testing::Test {
   void RateIncreaseRtpTimestampsTestHelper(int expected_iterations);
   void CapacityDropTestHelper(int number_of_streams,
                               bool wrap_time_stamp,
-                              uint32_t expected_bitrate_drop_delta);
+                              uint32_t expected_bitrate_drop_delta,
+                              int64_t receiver_clock_offset_change_ms);
 
   static const uint32_t kDefaultSsrc;
-  static const int kArrivalTimeClockOffsetMs = 60000;
 
   SimulatedClock clock_;  // Time at the receiver.
   std::unique_ptr<testing::TestBitrateObserver> bitrate_observer_;
   std::unique_ptr<RemoteBitrateEstimator> bitrate_estimator_;
   std::unique_ptr<testing::StreamGenerator> stream_generator_;
+  int64_t arrival_time_offset_ms_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(RemoteBitrateEstimatorTest);
 };

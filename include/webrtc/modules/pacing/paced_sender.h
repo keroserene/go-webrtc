@@ -15,15 +15,18 @@
 #include <memory>
 #include <set>
 
+#include "webrtc/base/optional.h"
 #include "webrtc/base/thread_annotations.h"
 #include "webrtc/modules/include/module.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
+class AlrDetector;
 class BitrateProber;
 class Clock;
 class CriticalSectionWrapper;
+class ProbeClusterCreatedObserver;
 
 namespace paced_sender {
 class IntervalBudget;
@@ -43,10 +46,11 @@ class PacedSender : public Module, public RtpPacketSender {
                                   uint16_t sequence_number,
                                   int64_t capture_time_ms,
                                   bool retransmission,
-                                  int probe_cluster_id) = 0;
+                                  const PacedPacketInfo& cluster_info) = 0;
     // Called when it's a good time to send a padding data.
     // Returns the number of bytes sent.
-    virtual size_t TimeToSendPadding(size_t bytes) = 0;
+    virtual size_t TimeToSendPadding(size_t bytes,
+                                     const PacedPacketInfo& cluster_info) = 0;
 
    protected:
     virtual ~PacketSender() {}
@@ -64,12 +68,11 @@ class PacedSender : public Module, public RtpPacketSender {
   // overshoots from the encoder.
   static const float kDefaultPaceMultiplier;
 
-  static const size_t kMinProbePacketSize = 200;
-
-  PacedSender(Clock* clock,
-              PacketSender* packet_sender);
+  PacedSender(Clock* clock, PacketSender* packet_sender);
 
   virtual ~PacedSender();
+
+  virtual void CreateProbeCluster(int bitrate_bps);
 
   // Temporarily pause all sending.
   void Pause();
@@ -89,13 +92,15 @@ class PacedSender : public Module, public RtpPacketSender {
   // |bitrate_bps| * kDefaultPaceMultiplier.
   virtual void SetEstimatedBitrate(uint32_t bitrate_bps);
 
-  // Sets the bitrate that has been allocated for encoders.
-  // |allocated_bitrate| might be higher that the estimated available network
-  // bitrate and if so, the pacer will send with |allocated_bitrate|.
-  // Padding packets will be utilized to reach |padding_bitrate| unless enough
-  // media packets are available.
-  void SetAllocatedSendBitrate(int allocated_bitrate_bps,
-                               int padding_bitrate_bps);
+  // Sets the minimum send bitrate and maximum padding bitrate requested by send
+  // streams.
+  // |min_send_bitrate_bps| might be higher that the estimated available network
+  // bitrate and if so, the pacer will send with |min_send_bitrate_bps|.
+  // |max_padding_bitrate_bps| might be higher than the estimate available
+  // network bitrate and if so, the pacer will send padding packets to reach
+  // the min of the estimated available bitrate and |max_padding_bitrate_bps|.
+  void SetSendBitrateLimits(int min_send_bitrate_bps,
+                            int max_padding_bitrate_bps);
 
   // Returns true if we send the packet now, else it will add the packet
   // information to the queue and call TimeToSendPacket when it's time to send.
@@ -115,6 +120,14 @@ class PacedSender : public Module, public RtpPacketSender {
   // packets in the queue, given the current size and bitrate, ignoring prio.
   virtual int64_t ExpectedQueueTimeMs() const;
 
+  // Returns time in milliseconds when the current application-limited region
+  // started or empty result if the sender is currently not application-limited.
+  //
+  // Application Limited Region (ALR) refers to operating in a state where the
+  // traffic on network is limited due to application not having enough
+  // traffic to meet the current channel capacity.
+  virtual rtc::Optional<int64_t> GetApplicationLimitedRegionStartTime() const;
+
   // Returns the average time since being enqueued, in milliseconds, for all
   // packets currently in the pacer queue, or 0 if queue is empty.
   virtual int64_t AverageQueueTimeMs();
@@ -128,19 +141,23 @@ class PacedSender : public Module, public RtpPacketSender {
 
  private:
   // Updates the number of bytes that can be sent for the next time interval.
-  void UpdateBytesPerInterval(int64_t delta_time_in_ms)
+  void UpdateBudgetWithElapsedTime(int64_t delta_time_in_ms)
+      EXCLUSIVE_LOCKS_REQUIRED(critsect_);
+  void UpdateBudgetWithBytesSent(size_t bytes)
       EXCLUSIVE_LOCKS_REQUIRED(critsect_);
 
-  bool SendPacket(const paced_sender::Packet& packet, int probe_cluster_id)
+  bool SendPacket(const paced_sender::Packet& packet,
+                  const PacedPacketInfo& cluster_info)
       EXCLUSIVE_LOCKS_REQUIRED(critsect_);
-  void SendPadding(size_t padding_needed) EXCLUSIVE_LOCKS_REQUIRED(critsect_);
+  size_t SendPadding(size_t padding_needed, const PacedPacketInfo& cluster_info)
+      EXCLUSIVE_LOCKS_REQUIRED(critsect_);
 
   Clock* const clock_;
   PacketSender* const packet_sender_;
+  std::unique_ptr<AlrDetector> alr_detector_ GUARDED_BY(critsect_);
 
   std::unique_ptr<CriticalSectionWrapper> critsect_;
   bool paused_ GUARDED_BY(critsect_);
-  bool probing_enabled_;
   // This is the media budget, keeping track of how many bits of media
   // we can pace out during the current interval.
   std::unique_ptr<paced_sender::IntervalBudget> media_budget_
@@ -152,10 +169,12 @@ class PacedSender : public Module, public RtpPacketSender {
       GUARDED_BY(critsect_);
 
   std::unique_ptr<BitrateProber> prober_ GUARDED_BY(critsect_);
+  bool probing_send_failure_;
   // Actual configured bitrates (media_budget_ may temporarily be higher in
   // order to meet pace time constraint).
   uint32_t estimated_bitrate_bps_ GUARDED_BY(critsect_);
   uint32_t min_send_bitrate_kbps_ GUARDED_BY(critsect_);
+  uint32_t max_padding_bitrate_kbps_ GUARDED_BY(critsect_);
   uint32_t pacing_bitrate_kbps_ GUARDED_BY(critsect_);
 
   int64_t time_last_update_us_ GUARDED_BY(critsect_);

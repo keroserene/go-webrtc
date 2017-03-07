@@ -11,7 +11,6 @@
 #define WEBRTC_MODULES_RTP_RTCP_SOURCE_RTCP_PACKET_PLI_H_
 
 #include "webrtc/base/basictypes.h"
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/psfb.h"
 
 namespace webrtc {
@@ -20,7 +19,7 @@ class CommonHeader;
 // Picture loss indication (PLI) (RFC 4585).
 class Pli : public Psfb {
  public:
-  static const uint8_t kFeedbackMessageType = 1;
+  static constexpr uint8_t kFeedbackMessageType = 1;
 
   Pli() {}
   ~Pli() override {}
@@ -37,8 +36,6 @@ class Pli : public Psfb {
   size_t BlockLength() const override {
     return kHeaderLength + kCommonFeedbackLength;
   }
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(Pli);
 };
 
 }  // namespace rtcp

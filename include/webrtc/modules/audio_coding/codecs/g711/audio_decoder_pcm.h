@@ -11,19 +11,22 @@
 #ifndef WEBRTC_MODULES_AUDIO_CODING_CODECS_G711_AUDIO_DECODER_PCM_H_
 #define WEBRTC_MODULES_AUDIO_CODING_CODECS_G711_AUDIO_DECODER_PCM_H_
 
+#include "webrtc/api/audio_codecs/audio_decoder.h"
 #include "webrtc/base/checks.h"
 #include "webrtc/base/constructormagic.h"
-#include "webrtc/modules/audio_coding/codecs/audio_decoder.h"
 
 namespace webrtc {
 
 class AudioDecoderPcmU final : public AudioDecoder {
  public:
   explicit AudioDecoderPcmU(size_t num_channels) : num_channels_(num_channels) {
-    RTC_DCHECK_GE(num_channels, 1u);
+    RTC_DCHECK_GE(num_channels, 1);
   }
   void Reset() override;
+  std::vector<ParseResult> ParsePayload(rtc::Buffer&& payload,
+                                        uint32_t timestamp) override;
   int PacketDuration(const uint8_t* encoded, size_t encoded_len) const override;
+  int SampleRateHz() const override;
   size_t Channels() const override;
 
  protected:
@@ -41,10 +44,13 @@ class AudioDecoderPcmU final : public AudioDecoder {
 class AudioDecoderPcmA final : public AudioDecoder {
  public:
   explicit AudioDecoderPcmA(size_t num_channels) : num_channels_(num_channels) {
-    RTC_DCHECK_GE(num_channels, 1u);
+    RTC_DCHECK_GE(num_channels, 1);
   }
   void Reset() override;
+  std::vector<ParseResult> ParsePayload(rtc::Buffer&& payload,
+                                        uint32_t timestamp) override;
   int PacketDuration(const uint8_t* encoded, size_t encoded_len) const override;
+  int SampleRateHz() const override;
   size_t Channels() const override;
 
  protected:

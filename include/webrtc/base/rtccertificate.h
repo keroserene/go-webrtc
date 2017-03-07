@@ -11,9 +11,10 @@
 #ifndef WEBRTC_BASE_RTCCERTIFICATE_H_
 #define WEBRTC_BASE_RTCCERTIFICATE_H_
 
+#include <stdint.h>
+
 #include <memory>
 
-#include "webrtc/base/basictypes.h"
 #include "webrtc/base/refcount.h"
 #include "webrtc/base/scoped_ref_ptr.h"
 #include "webrtc/base/sslidentity.h"
@@ -66,6 +67,7 @@ class RTCCertificate : public RefCountInterface {
 
   // To/from PEM, a text representation of the RTCCertificate.
   RTCCertificatePEM ToPEM() const;
+  // Can return nullptr if the certificate is invalid.
   static scoped_refptr<RTCCertificate> FromPEM(const RTCCertificatePEM& pem);
   bool operator==(const RTCCertificate& certificate) const;
   bool operator!=(const RTCCertificate& certificate) const;
