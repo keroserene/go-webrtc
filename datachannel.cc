@@ -111,8 +111,24 @@ class FakeDataChannel : public DataChannelInterface {
     return state_;
   };
 
+  virtual uint32_t messages_sent() const {
+    return 1234;
+  };
+
+  virtual uint64_t bytes_sent() const {
+    return 1234;
+  };
+
+  virtual uint32_t messages_received() const {
+    return 1234;
+  };
+
+  virtual uint64_t bytes_received() const {
+    return 1234;
+  };
+
   virtual uint64_t buffered_amount() const {
-    return 0;
+    return 1234;
   };
 
   // Sends data to self.

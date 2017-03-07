@@ -10,7 +10,7 @@
 #include <future>
 
 #include "webrtc/api/test/fakeconstraints.h"
-#include "webrtc/api/test/fakeaudiocapturemodule.h"
+#include "webrtc/pc/test/fakeaudiocapturemodule.h"
 #include "webrtc/api/jsepsessiondescription.h"
 #include "webrtc/api/webrtcsdp.h"
 
@@ -244,12 +244,12 @@ PeerConnectionInterface::RTCConfiguration *castConfig_(
   for (auto s : servers) {
     // cgo only allows C arrays, but webrtc expects std::vectors
     vector<string> urls(s.urls, s.urls + s.numUrls);
-    c->servers.push_back({
-      "",  // TODO: Remove once webrtc deprecates the first uri field.
-      urls,
-      s.username,
-      s.credential
-    });
+    PeerConnectionInterface::IceServer is {};
+    is.uri ="";  // TODO: Remove once webrtc deprecates the first uri field.
+    is.urls = urls;
+    is.username = s.username;
+    is.password = s.credential;
+    c->servers.push_back(is);
   }
 
   // Cast Go const "enums" to C++ Enums.
