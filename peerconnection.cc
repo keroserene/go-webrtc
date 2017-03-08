@@ -417,12 +417,13 @@ int CGO_IceGatheringState(CGO_Peer cgoPeer) {
 int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
   Peer *peer = (Peer*)cgoPeer;
   auto cConfig = castConfig_(cgoConfig);
-  bool success = peer->pc_->SetConfiguration(*cConfig);
+  webrtc::RTCError *error = new webrtc::RTCError();
+  bool success = peer->pc_->SetConfiguration(*cConfig, error);
   if (success) {
     peer->SetConfig(cConfig);
     return SUCCESS;
   }
-  return FAILURE;
+  return (int) error->type();
 }
 
 // PeerConnection::CreateDataChannel
