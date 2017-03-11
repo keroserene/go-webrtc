@@ -17,10 +17,11 @@ const (
 	IceProtocolTCP
 )
 
-var IceProtocolString = []string{"udp", "tcp"}
-
 func (p IceProtocol) String() string {
-	return EnumToStringSafe(int(p), IceProtocolString)
+	return EnumToStringSafe(int(p), []string{
+		"udp",
+		"tcp",
+	})
 }
 
 const (
@@ -30,10 +31,13 @@ const (
 	IceCandidateTypeRelay
 )
 
-var IceCandidateTypeString = []string{"host", "srflx", "prflx", "relay"}
-
 func (t IceCandidateType) String() string {
-	return EnumToStringSafe(int(t), IceCandidateTypeString)
+	return EnumToStringSafe(int(t), []string{
+		"host",
+		"srflx",
+		"prflx",
+		"relay",
+	})
 }
 
 const (
@@ -42,10 +46,12 @@ const (
 	IceTcpCandidateTypeSo
 )
 
-var IceTcpCandidateTypeString = []string{"active", "passive", "so"}
-
 func (t IceTcpCandidateType) String() string {
-	return EnumToStringSafe(int(t), IceTcpCandidateTypeString)
+	return EnumToStringSafe(int(t), []string{
+		"active",
+		"passive",
+		"so",
+	})
 }
 
 type IceCandidate struct {
