@@ -7,7 +7,6 @@
  */
 package main
 
-import "C"
 import (
 	"bufio"
 	"encoding/json"
@@ -273,7 +272,7 @@ func main() {
 	}()
 
 	// Input loop.
-	for true {
+	for {
 		text, _ := reader.ReadString('\n')
 		switch mode {
 		case ModeInit:
@@ -292,7 +291,6 @@ func main() {
 			// fmt.Print(username + ": ")
 			break
 		}
-		text = ""
 	}
 	<-wait
 	fmt.Println("done")
