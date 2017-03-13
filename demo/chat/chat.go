@@ -7,7 +7,6 @@
  */
 package main
 
-import "C"
 import (
 	"bufio"
 	"encoding/json"
@@ -169,8 +168,8 @@ func parseCommands(input string) bool {
 		dc.Close()
 	case "status":
 		fmt.Println("WebRTC PeerConnection Configuration:\n", pc.GetConfiguration())
-		fmt.Println("Signaling State: ", pc.SignalingState().String())
-		fmt.Println("Connection State: ", pc.ConnectionState().String())
+		fmt.Println("Signaling State: ", pc.SignalingState())
+		fmt.Println("Connection State: ", pc.ConnectionState())
 	case "help":
 		showCommands()
 	default:
@@ -217,7 +216,7 @@ func start(instigator bool) {
 	}
 	/*
 		pc.OnIceGatheringStateChange = func(state webrtc.IceGatheringState) {
-			fmt.Println("Ice Gathering State:", webrtc.IceGatheringStateString[state])
+			fmt.Println("Ice Gathering State:", state)
 			if webrtc.IceGatheringStateComplete == state {
 				// send local description.
 			}
@@ -273,7 +272,7 @@ func main() {
 	}()
 
 	// Input loop.
-	for true {
+	for {
 		text, _ := reader.ReadString('\n')
 		switch mode {
 		case ModeInit:
@@ -292,7 +291,6 @@ func main() {
 			// fmt.Print(username + ": ")
 			break
 		}
-		text = ""
 	}
 	<-wait
 	fmt.Println("done")

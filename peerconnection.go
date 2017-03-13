@@ -65,11 +65,14 @@ const (
 	PeerConnectionStateFailed
 )
 
-var PeerConnectionStateString = []string{
-	"New", "Connecting", "Connected", "Disconnected", "Failed"}
-
 func (s PeerConnectionState) String() string {
-	return EnumToStringSafe(int(s), PeerConnectionStateString)
+	return EnumToStringSafe(int(s), []string{
+		"New",
+		"Connecting",
+		"Connected",
+		"Disconnected",
+		"Failed",
+	})
 }
 
 const (
@@ -82,12 +85,16 @@ const (
 	IceConnectionStateClosed
 )
 
-var IceConnectionStateString = []string{
-	"New", "Checking", "Connected", "Completed",
-	"Failed", "Disconnected", "Closed"}
-
 func (s IceConnectionState) String() string {
-	return EnumToStringSafe(int(s), IceConnectionStateString)
+	return EnumToStringSafe(int(s), []string{
+		"New",
+		"Checking",
+		"Connected",
+		"Completed",
+		"Failed",
+		"Disconnected",
+		"Closed",
+	})
 }
 
 const (
@@ -96,11 +103,12 @@ const (
 	IceGatheringStateComplete
 )
 
-var IceGatheringStateString = []string{
-	"New", "Gathering", "Complete"}
-
 func (s IceGatheringState) String() string {
-	return EnumToStringSafe(int(s), IceGatheringStateString)
+	return EnumToStringSafe(int(s), []string{
+		"New",
+		"Gathering",
+		"Complete",
+	})
 }
 
 var PCMap = NewCGOMap()
@@ -356,7 +364,7 @@ func (pc *PeerConnection) Close() error {
 
 //export cgoOnSignalingStateChange
 func cgoOnSignalingStateChange(p int, s SignalingState) {
-	INFO.Println("fired OnSignalingStateChange: ", p, s, s.String())
+	INFO.Println("fired OnSignalingStateChange: ", p, s)
 	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnSignalingStateChange {
 		pc.OnSignalingStateChange(s)
