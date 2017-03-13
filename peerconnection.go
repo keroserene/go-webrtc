@@ -32,6 +32,7 @@ package webrtc
 /*
 #cgo CXXFLAGS: -std=c++0x
 #cgo LDFLAGS: -L${SRCDIR}/lib
+#cgo linux,arm pkg-config: webrtc-linux-arm.pc
 #cgo linux,386 pkg-config: webrtc-linux-386.pc
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
@@ -42,6 +43,7 @@ package webrtc
 import "C"
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -313,8 +315,9 @@ func (pc *PeerConnection) GetConfiguration() Configuration {
 func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 	cConfig := config._CGO()
 	defer freeConfig(cConfig)
-	if 0 != C.CGO_SetConfiguration(pc.cgoPeer, cConfig) {
-		return errors.New("PeerConnection: could not set configuration.")
+	err := C.CGO_SetConfiguration(pc.cgoPeer, cConfig)
+	if err != 0 {
+		return errors.New(fmt.Sprintf("PeerConnection: could not set configuration. Error ID: %d", err))
 	}
 	pc.config = config
 	return nil

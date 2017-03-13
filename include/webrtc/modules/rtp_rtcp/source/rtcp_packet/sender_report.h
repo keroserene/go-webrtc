@@ -13,7 +13,6 @@
 
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/report_block.h"
 #include "webrtc/system_wrappers/include/ntp_time.h"
@@ -24,7 +23,7 @@ class CommonHeader;
 
 class SenderReport : public RtcpPacket {
  public:
-  static const uint8_t kPacketType = 200;
+  static constexpr uint8_t kPacketType = 200;
 
   SenderReport();
   ~SenderReport() override {}
@@ -32,18 +31,18 @@ class SenderReport : public RtcpPacket {
   // Parse assumes header is already parsed and validated.
   bool Parse(const CommonHeader& packet);
 
-  void From(uint32_t ssrc) { sender_ssrc_ = ssrc; }
-  void WithNtp(NtpTime ntp) { ntp_ = ntp; }
-  void WithRtpTimestamp(uint32_t rtp_timestamp) {
+  void SetSenderSsrc(uint32_t ssrc) { sender_ssrc_ = ssrc; }
+  void SetNtp(NtpTime ntp) { ntp_ = ntp; }
+  void SetRtpTimestamp(uint32_t rtp_timestamp) {
     rtp_timestamp_ = rtp_timestamp;
   }
-  void WithPacketCount(uint32_t packet_count) {
+  void SetPacketCount(uint32_t packet_count) {
     sender_packet_count_ = packet_count;
   }
-  void WithOctetCount(uint32_t octet_count) {
+  void SetOctetCount(uint32_t octet_count) {
     sender_octet_count_ = octet_count;
   }
-  bool WithReportBlock(const ReportBlock& block);
+  bool AddReportBlock(const ReportBlock& block);
   void ClearReportBlocks() { report_blocks_.clear(); }
 
   uint32_t sender_ssrc() const { return sender_ssrc_; }
@@ -77,8 +76,6 @@ class SenderReport : public RtcpPacket {
   uint32_t sender_packet_count_;
   uint32_t sender_octet_count_;
   std::vector<ReportBlock> report_blocks_;
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(SenderReport);
 };
 
 }  // namespace rtcp

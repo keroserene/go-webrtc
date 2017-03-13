@@ -12,15 +12,19 @@
 #define WEBRTC_MODULES_VIDEO_CODING_CODECS_VP8_SIMULCAST_UNITTEST_H_
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <vector>
 
-#include "testing/gtest/include/gtest/gtest.h"
+#include "webrtc/api/video/i420_buffer.h"
+#include "webrtc/api/video/video_frame.h"
 #include "webrtc/base/checks.h"
 #include "webrtc/common_video/libyuv/include/webrtc_libyuv.h"
-#include "webrtc/modules/video_coding/include/mock/mock_video_codec_interface.h"
 #include "webrtc/modules/video_coding/codecs/vp8/include/vp8.h"
 #include "webrtc/modules/video_coding/codecs/vp8/temporal_layers.h"
+#include "webrtc/modules/video_coding/include/mock/mock_video_codec_interface.h"
+#include "webrtc/modules/video_coding/utility/simulcast_rate_allocator.h"
+#include "webrtc/test/gtest.h"
 #include "webrtc/video_frame.h"
 
 using ::testing::_;
@@ -49,6 +53,13 @@ void SetExpectedValues3(T value0, T value1, T value2, T* expected_values) {
   expected_values[2] = value2;
 }
 
+enum PlaneType {
+  kYPlane = 0,
+  kUPlane = 1,
+  kVPlane = 2,
+  kNumOfPlanes = 3,
+};
+
 class Vp8TestEncodedImageCallback : public EncodedImageCallback {
  public:
   Vp8TestEncodedImageCallback() : picture_id_(-1) {
@@ -61,9 +72,9 @@ class Vp8TestEncodedImageCallback : public EncodedImageCallback {
     delete[] encoded_frame_._buffer;
   }
 
-  virtual int32_t Encoded(const EncodedImage& encoded_image,
-                          const CodecSpecificInfo* codec_specific_info,
-                          const RTPFragmentationHeader* fragmentation) {
+  virtual Result OnEncodedImage(const EncodedImage& encoded_image,
+                                const CodecSpecificInfo* codec_specific_info,
+                                const RTPFragmentationHeader* fragmentation) {
     // Only store the base layer.
     if (codec_specific_info->codecSpecific.VP8.simulcastIdx == 0) {
       if (encoded_image._frameType == kVideoFrameKey) {
@@ -89,7 +100,7 @@ class Vp8TestEncodedImageCallback : public EncodedImageCallback {
         codec_specific_info->codecSpecific.VP8.layerSync;
     temporal_layer_[codec_specific_info->codecSpecific.VP8.simulcastIdx] =
         codec_specific_info->codecSpecific.VP8.temporalIdx;
-    return 0;
+    return Result(Result::OK, encoded_image._timeStamp);
   }
   void GetLastEncodedFrameInfo(int* picture_id,
                                int* temporal_layer,
@@ -134,87 +145,15 @@ class Vp8TestDecodedImageCallback : public DecodedImageCallback {
     RTC_NOTREACHED();
     return -1;
   }
+  void Decoded(VideoFrame& decoded_image,
+               rtc::Optional<int32_t> decode_time_ms,
+               rtc::Optional<uint8_t> qp) override {
+    Decoded(decoded_image);
+  }
   int DecodedFrames() { return decoded_frames_; }
 
  private:
   int decoded_frames_;
-};
-
-class SkipEncodingUnusedStreamsTest {
- public:
-  std::vector<unsigned int> RunTest(VP8Encoder* encoder,
-                                    VideoCodec* settings,
-                                    uint32_t target_bitrate) {
-    SpyingTemporalLayersFactory spy_factory;
-    settings->codecSpecific.VP8.tl_factory = &spy_factory;
-    EXPECT_EQ(0, encoder->InitEncode(settings, 1, 1200));
-
-    encoder->SetRates(target_bitrate, 30);
-
-    std::vector<unsigned int> configured_bitrates;
-    for (std::vector<TemporalLayers*>::const_iterator it =
-             spy_factory.spying_layers_.begin();
-         it != spy_factory.spying_layers_.end(); ++it) {
-      configured_bitrates.push_back(
-          static_cast<SpyingTemporalLayers*>(*it)->configured_bitrate_);
-    }
-    return configured_bitrates;
-  }
-
-  class SpyingTemporalLayers : public TemporalLayers {
-   public:
-    explicit SpyingTemporalLayers(TemporalLayers* layers)
-        : configured_bitrate_(0), layers_(layers) {}
-
-    virtual ~SpyingTemporalLayers() { delete layers_; }
-
-    int EncodeFlags(uint32_t timestamp) override {
-      return layers_->EncodeFlags(timestamp);
-    }
-
-    bool ConfigureBitrates(int bitrate_kbit,
-                           int max_bitrate_kbit,
-                           int framerate,
-                           vpx_codec_enc_cfg_t* cfg) override {
-      configured_bitrate_ = bitrate_kbit;
-      return layers_->ConfigureBitrates(bitrate_kbit, max_bitrate_kbit,
-                                        framerate, cfg);
-    }
-
-    void PopulateCodecSpecific(bool base_layer_sync,
-                               CodecSpecificInfoVP8* vp8_info,
-                               uint32_t timestamp) override {
-      layers_->PopulateCodecSpecific(base_layer_sync, vp8_info, timestamp);
-    }
-
-    void FrameEncoded(unsigned int size, uint32_t timestamp, int qp) override {
-      layers_->FrameEncoded(size, timestamp, qp);
-    }
-
-    int CurrentLayerId() const override { return layers_->CurrentLayerId(); }
-
-    bool UpdateConfiguration(vpx_codec_enc_cfg_t* cfg) override {
-      return false;
-    }
-
-    int configured_bitrate_;
-    TemporalLayers* layers_;
-  };
-
-  class SpyingTemporalLayersFactory : public TemporalLayersFactory {
-   public:
-    virtual ~SpyingTemporalLayersFactory() {}
-    TemporalLayers* Create(int temporal_layers,
-                           uint8_t initial_tl0_pic_idx) const override {
-      SpyingTemporalLayers* layers =
-          new SpyingTemporalLayers(TemporalLayersFactory::Create(
-              temporal_layers, initial_tl0_pic_idx));
-      spying_layers_.push_back(layers);
-      return layers;
-    }
-
-    mutable std::vector<TemporalLayers*> spying_layers_;
-  };
 };
 
 class TestVp8Simulcast : public ::testing::Test {
@@ -236,8 +175,8 @@ class TestVp8Simulcast : public ::testing::Test {
     }
   }
 
-  // Fills in an VideoFrameBuffer from |plane_colors|.
-  static void CreateImage(const rtc::scoped_refptr<VideoFrameBuffer>& buffer,
+  // Fills in an I420Buffer from |plane_colors|.
+  static void CreateImage(const rtc::scoped_refptr<I420Buffer>& buffer,
                           int plane_colors[kNumOfPlanes]) {
     int width = buffer->width();
     int height = buffer->height();
@@ -258,7 +197,7 @@ class TestVp8Simulcast : public ::testing::Test {
 
   static void DefaultSettings(VideoCodec* settings,
                               const int* temporal_layer_profile) {
-    assert(settings);
+    RTC_CHECK(settings);
     memset(settings, 0, sizeof(VideoCodec));
     strncpy(settings->plName, "VP8", 4);
     settings->codecType = kVideoCodecVP8;
@@ -281,13 +220,13 @@ class TestVp8Simulcast : public ::testing::Test {
     ConfigureStream(kDefaultWidth, kDefaultHeight, kMaxBitrates[2],
                     kMinBitrates[2], kTargetBitrates[2],
                     &settings->simulcastStream[2], temporal_layer_profile[2]);
-    settings->codecSpecific.VP8.resilience = kResilientStream;
-    settings->codecSpecific.VP8.denoisingOn = true;
-    settings->codecSpecific.VP8.errorConcealmentOn = false;
-    settings->codecSpecific.VP8.automaticResizeOn = false;
-    settings->codecSpecific.VP8.feedbackModeOn = false;
-    settings->codecSpecific.VP8.frameDroppingOn = true;
-    settings->codecSpecific.VP8.keyFrameInterval = 3000;
+    settings->VP8()->resilience = kResilientStream;
+    settings->VP8()->denoisingOn = true;
+    settings->VP8()->errorConcealmentOn = false;
+    settings->VP8()->automaticResizeOn = false;
+    settings->VP8()->feedbackModeOn = false;
+    settings->VP8()->frameDroppingOn = true;
+    settings->VP8()->keyFrameInterval = 3000;
   }
 
   static void ConfigureStream(int width,
@@ -308,28 +247,38 @@ class TestVp8Simulcast : public ::testing::Test {
   }
 
  protected:
-  virtual void SetUp() { SetUpCodec(kDefaultTemporalLayerProfile); }
+  void SetUp() override { SetUpCodec(kDefaultTemporalLayerProfile); }
 
-  virtual void SetUpCodec(const int* temporal_layer_profile) {
+  void TearDown() override {
+    encoder_->Release();
+    decoder_->Release();
+  }
+
+  void SetUpCodec(const int* temporal_layer_profile) {
     encoder_->RegisterEncodeCompleteCallback(&encoder_callback_);
     decoder_->RegisterDecodeCompleteCallback(&decoder_callback_);
     DefaultSettings(&settings_, temporal_layer_profile);
+    SetUpRateAllocator();
     EXPECT_EQ(0, encoder_->InitEncode(&settings_, 1, 1200));
     EXPECT_EQ(0, decoder_->InitDecode(&settings_, 1));
     int half_width = (kDefaultWidth + 1) / 2;
-    input_frame_.CreateEmptyFrame(kDefaultWidth, kDefaultHeight, kDefaultWidth,
-                                  half_width, half_width);
-    memset(input_frame_.video_frame_buffer()->MutableDataY(), 0,
-           input_frame_.allocated_size(kYPlane));
-    memset(input_frame_.video_frame_buffer()->MutableDataU(), 0,
-           input_frame_.allocated_size(kUPlane));
-    memset(input_frame_.video_frame_buffer()->MutableDataV(), 0,
-           input_frame_.allocated_size(kVPlane));
+    input_buffer_ = I420Buffer::Create(kDefaultWidth, kDefaultHeight,
+                                       kDefaultWidth, half_width, half_width);
+    input_buffer_->InitializeData();
+    input_frame_.reset(
+        new VideoFrame(input_buffer_, 0, 0, webrtc::kVideoRotation_0));
   }
 
-  virtual void TearDown() {
-    encoder_->Release();
-    decoder_->Release();
+  void SetUpRateAllocator() {
+    TemporalLayersFactory* tl_factory = new TemporalLayersFactory();
+    rate_allocator_.reset(new SimulcastRateAllocator(
+        settings_, std::unique_ptr<TemporalLayersFactory>(tl_factory)));
+    settings_.VP8()->tl_factory = tl_factory;
+  }
+
+  void SetRates(uint32_t bitrate_kbps, uint32_t fps) {
+    encoder_->SetRateAllocation(
+        rate_allocator_->GetAllocation(bitrate_kbps * 1000, fps), fps);
   }
 
   void ExpectStreams(FrameType frame_type, int expected_video_streams) {
@@ -338,34 +287,38 @@ class TestVp8Simulcast : public ::testing::Test {
     if (expected_video_streams >= 1) {
       EXPECT_CALL(
           encoder_callback_,
-          Encoded(
+          OnEncodedImage(
               AllOf(Field(&EncodedImage::_frameType, frame_type),
                     Field(&EncodedImage::_encodedWidth, kDefaultWidth / 4),
                     Field(&EncodedImage::_encodedHeight, kDefaultHeight / 4)),
               _, _))
           .Times(1)
-          .WillRepeatedly(Return(0));
+          .WillRepeatedly(Return(EncodedImageCallback::Result(
+              EncodedImageCallback::Result::OK, 0)));
     }
     if (expected_video_streams >= 2) {
       EXPECT_CALL(
           encoder_callback_,
-          Encoded(
+          OnEncodedImage(
               AllOf(Field(&EncodedImage::_frameType, frame_type),
                     Field(&EncodedImage::_encodedWidth, kDefaultWidth / 2),
                     Field(&EncodedImage::_encodedHeight, kDefaultHeight / 2)),
               _, _))
           .Times(1)
-          .WillRepeatedly(Return(0));
+          .WillRepeatedly(Return(EncodedImageCallback::Result(
+              EncodedImageCallback::Result::OK, 0)));
     }
     if (expected_video_streams >= 3) {
       EXPECT_CALL(
           encoder_callback_,
-          Encoded(AllOf(Field(&EncodedImage::_frameType, frame_type),
-                        Field(&EncodedImage::_encodedWidth, kDefaultWidth),
-                        Field(&EncodedImage::_encodedHeight, kDefaultHeight)),
-                  _, _))
+          OnEncodedImage(
+              AllOf(Field(&EncodedImage::_frameType, frame_type),
+                    Field(&EncodedImage::_encodedWidth, kDefaultWidth),
+                    Field(&EncodedImage::_encodedHeight, kDefaultHeight)),
+              _, _))
           .Times(1)
-          .WillRepeatedly(Return(0));
+          .WillRepeatedly(Return(EncodedImageCallback::Result(
+              EncodedImageCallback::Result::OK, 0)));
     }
   }
 
@@ -388,174 +341,169 @@ class TestVp8Simulcast : public ::testing::Test {
   // We currently expect all active streams to generate a key frame even though
   // a key frame was only requested for some of them.
   void TestKeyFrameRequestsOnAllStreams() {
-    encoder_->SetRates(kMaxBitrates[2], 30);  // To get all three streams.
+    SetRates(kMaxBitrates[2], 30);  // To get all three streams.
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, kNumberOfSimulcastStreams);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, kNumberOfSimulcastStreams);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     frame_types[0] = kVideoFrameKey;
     ExpectStreams(kVideoFrameKey, kNumberOfSimulcastStreams);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     std::fill(frame_types.begin(), frame_types.end(), kVideoFrameDelta);
     frame_types[1] = kVideoFrameKey;
     ExpectStreams(kVideoFrameKey, kNumberOfSimulcastStreams);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     std::fill(frame_types.begin(), frame_types.end(), kVideoFrameDelta);
     frame_types[2] = kVideoFrameKey;
     ExpectStreams(kVideoFrameKey, kNumberOfSimulcastStreams);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     std::fill(frame_types.begin(), frame_types.end(), kVideoFrameDelta);
     ExpectStreams(kVideoFrameDelta, kNumberOfSimulcastStreams);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestPaddingAllStreams() {
     // We should always encode the base layer.
-    encoder_->SetRates(kMinBitrates[0] - 1, 30);
+    SetRates(kMinBitrates[0] - 1, 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, 1);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, 1);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestPaddingTwoStreams() {
     // We have just enough to get only the first stream and padding for two.
-    encoder_->SetRates(kMinBitrates[0], 30);
+    SetRates(kMinBitrates[0], 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, 1);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, 1);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestPaddingTwoStreamsOneMaxedOut() {
     // We are just below limit of sending second stream, so we should get
     // the first stream maxed out (at |maxBitrate|), and padding for two.
-    encoder_->SetRates(kTargetBitrates[0] + kMinBitrates[1] - 1, 30);
+    SetRates(kTargetBitrates[0] + kMinBitrates[1] - 1, 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, 1);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, 1);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestPaddingOneStream() {
     // We have just enough to send two streams, so padding for one stream.
-    encoder_->SetRates(kTargetBitrates[0] + kMinBitrates[1], 30);
+    SetRates(kTargetBitrates[0] + kMinBitrates[1], 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, 2);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, 2);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestPaddingOneStreamTwoMaxedOut() {
     // We are just below limit of sending third stream, so we should get
     // first stream's rate maxed out at |targetBitrate|, second at |maxBitrate|.
-    encoder_->SetRates(
-        kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2] - 1, 30);
+    SetRates(kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2] - 1, 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, 2);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, 2);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestSendAllStreams() {
     // We have just enough to send all streams.
-    encoder_->SetRates(
-        kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2], 30);
+    SetRates(kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2], 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, 3);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, 3);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestDisablingStreams() {
     // We should get three media streams.
-    encoder_->SetRates(kMaxBitrates[0] + kMaxBitrates[1] + kMaxBitrates[2], 30);
+    SetRates(kMaxBitrates[0] + kMaxBitrates[1] + kMaxBitrates[2], 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
     ExpectStreams(kVideoFrameKey, 3);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     ExpectStreams(kVideoFrameDelta, 3);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     // We should only get two streams and padding for one.
-    encoder_->SetRates(
-        kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2] / 2, 30);
+    SetRates(kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2] / 2, 30);
     ExpectStreams(kVideoFrameDelta, 2);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     // We should only get the first stream and padding for two.
-    encoder_->SetRates(kTargetBitrates[0] + kMinBitrates[1] / 2, 30);
+    SetRates(kTargetBitrates[0] + kMinBitrates[1] / 2, 30);
     ExpectStreams(kVideoFrameDelta, 1);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     // We don't have enough bitrate for the thumbnail stream, but we should get
     // it anyway with current configuration.
-    encoder_->SetRates(kTargetBitrates[0] - 1, 30);
+    SetRates(kTargetBitrates[0] - 1, 30);
     ExpectStreams(kVideoFrameDelta, 1);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     // We should only get two streams and padding for one.
-    encoder_->SetRates(
-        kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2] / 2, 30);
+    SetRates(kTargetBitrates[0] + kTargetBitrates[1] + kMinBitrates[2] / 2, 30);
     // We get a key frame because a new stream is being enabled.
     ExpectStreams(kVideoFrameKey, 2);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     // We should get all three streams.
-    encoder_->SetRates(
-        kTargetBitrates[0] + kTargetBitrates[1] + kTargetBitrates[2], 30);
+    SetRates(kTargetBitrates[0] + kTargetBitrates[1] + kTargetBitrates[2], 30);
     // We get a key frame because a new stream is being enabled.
     ExpectStreams(kVideoFrameKey, 3);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void SwitchingToOneStream(int width, int height) {
     // Disable all streams except the last and set the bitrate of the last to
     // 100 kbps. This verifies the way GTP switches to screenshare mode.
-    settings_.codecSpecific.VP8.numberOfTemporalLayers = 1;
+    settings_.VP8()->numberOfTemporalLayers = 1;
     settings_.maxBitrate = 100;
     settings_.startBitrate = 100;
     settings_.width = width;
@@ -567,14 +515,12 @@ class TestVp8Simulcast : public ::testing::Test {
     }
     // Setting input image to new resolution.
     int half_width = (settings_.width + 1) / 2;
-    input_frame_.CreateEmptyFrame(settings_.width, settings_.height,
-                                  settings_.width, half_width, half_width);
-    memset(input_frame_.video_frame_buffer()->MutableDataY(), 0,
-           input_frame_.allocated_size(kYPlane));
-    memset(input_frame_.video_frame_buffer()->MutableDataU(), 0,
-           input_frame_.allocated_size(kUPlane));
-    memset(input_frame_.video_frame_buffer()->MutableDataV(), 0,
-           input_frame_.allocated_size(kVPlane));
+    input_buffer_ = I420Buffer::Create(settings_.width, settings_.height,
+                                       settings_.width, half_width, half_width);
+    input_buffer_->InitializeData();
+
+    input_frame_.reset(
+        new VideoFrame(input_buffer_, 0, 0, webrtc::kVideoRotation_0));
 
     // The for loop above did not set the bitrate of the highest layer.
     settings_.simulcastStream[settings_.numberOfSimulcastStreams - 1]
@@ -584,39 +530,40 @@ class TestVp8Simulcast : public ::testing::Test {
         settings_.width;
     settings_.simulcastStream[settings_.numberOfSimulcastStreams - 1].height =
         settings_.height;
+    SetUpRateAllocator();
     EXPECT_EQ(0, encoder_->InitEncode(&settings_, 1, 1200));
 
     // Encode one frame and verify.
-    encoder_->SetRates(kMaxBitrates[0] + kMaxBitrates[1], 30);
+    SetRates(kMaxBitrates[0] + kMaxBitrates[1], 30);
     std::vector<FrameType> frame_types(kNumberOfSimulcastStreams,
                                        kVideoFrameDelta);
-    EXPECT_CALL(encoder_callback_,
-                Encoded(AllOf(Field(&EncodedImage::_frameType, kVideoFrameKey),
-                              Field(&EncodedImage::_encodedWidth, width),
-                              Field(&EncodedImage::_encodedHeight, height)),
-                        _, _))
+    EXPECT_CALL(
+        encoder_callback_,
+        OnEncodedImage(AllOf(Field(&EncodedImage::_frameType, kVideoFrameKey),
+                             Field(&EncodedImage::_encodedWidth, width),
+                             Field(&EncodedImage::_encodedHeight, height)),
+                       _, _))
         .Times(1)
-        .WillRepeatedly(Return(0));
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+        .WillRepeatedly(Return(
+            EncodedImageCallback::Result(EncodedImageCallback::Result::OK, 0)));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
 
     // Switch back.
     DefaultSettings(&settings_, kDefaultTemporalLayerProfile);
     // Start at the lowest bitrate for enabling base stream.
     settings_.startBitrate = kMinBitrates[0];
+    SetUpRateAllocator();
     EXPECT_EQ(0, encoder_->InitEncode(&settings_, 1, 1200));
-    encoder_->SetRates(settings_.startBitrate, 30);
+    SetRates(settings_.startBitrate, 30);
     ExpectStreams(kVideoFrameKey, 1);
     // Resize |input_frame_| to the new resolution.
     half_width = (settings_.width + 1) / 2;
-    input_frame_.CreateEmptyFrame(settings_.width, settings_.height,
-                                  settings_.width, half_width, half_width);
-    memset(input_frame_.video_frame_buffer()->MutableDataY(), 0,
-           input_frame_.allocated_size(kYPlane));
-    memset(input_frame_.video_frame_buffer()->MutableDataU(), 0,
-           input_frame_.allocated_size(kUPlane));
-    memset(input_frame_.video_frame_buffer()->MutableDataV(), 0,
-           input_frame_.allocated_size(kVPlane));
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, &frame_types));
+    input_buffer_ = I420Buffer::Create(settings_.width, settings_.height,
+                                       settings_.width, half_width, half_width);
+    input_buffer_->InitializeData();
+    input_frame_.reset(
+        new VideoFrame(input_buffer_, 0, 0, webrtc::kVideoRotation_0));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, &frame_types));
   }
 
   void TestSwitchingToOneStream() { SwitchingToOneStream(1024, 768); }
@@ -629,9 +576,9 @@ class TestVp8Simulcast : public ::testing::Test {
     Vp8TestEncodedImageCallback encoder_callback;
     encoder_->RegisterEncodeCompleteCallback(&encoder_callback);
 
-    encoder_->SetRates(kMaxBitrates[2], 30);  // To get all three streams.
+    SetRates(kMaxBitrates[2], 30);  // To get all three streams.
 
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     int picture_id = -1;
     int temporal_layer = -1;
     bool layer_sync = false;
@@ -641,22 +588,22 @@ class TestVp8Simulcast : public ::testing::Test {
     EXPECT_TRUE(layer_sync);
     int key_frame_picture_id = picture_id;
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     encoder_callback.GetLastEncodedFrameInfo(&picture_id, &temporal_layer,
                                              &layer_sync, 0);
     EXPECT_EQ(2, temporal_layer);
     EXPECT_TRUE(layer_sync);
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     encoder_callback.GetLastEncodedFrameInfo(&picture_id, &temporal_layer,
                                              &layer_sync, 0);
     EXPECT_EQ(1, temporal_layer);
     EXPECT_TRUE(layer_sync);
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     encoder_callback.GetLastEncodedFrameInfo(&picture_id, &temporal_layer,
                                              &layer_sync, 0);
     EXPECT_EQ(2, temporal_layer);
@@ -669,8 +616,8 @@ class TestVp8Simulcast : public ::testing::Test {
     // Must match last key frame to trigger.
     codec_specific.codecSpecific.VP8.pictureIdRPSI = key_frame_picture_id;
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, &codec_specific, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, &codec_specific, NULL));
     encoder_callback.GetLastEncodedFrameInfo(&picture_id, &temporal_layer,
                                              &layer_sync, 0);
 
@@ -680,8 +627,8 @@ class TestVp8Simulcast : public ::testing::Test {
     // Must match last key frame to trigger, test bad id.
     codec_specific.codecSpecific.VP8.pictureIdRPSI = key_frame_picture_id + 17;
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, &codec_specific, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, &codec_specific, NULL));
     encoder_callback.GetLastEncodedFrameInfo(&picture_id, &temporal_layer,
                                              &layer_sync, 0);
 
@@ -698,16 +645,16 @@ class TestVp8Simulcast : public ::testing::Test {
     encoder_->RegisterEncodeCompleteCallback(&encoder_callback);
     decoder_->RegisterDecodeCompleteCallback(&decoder_callback);
 
-    encoder_->SetRates(kMaxBitrates[2], 30);  // To get all three streams.
+    SetRates(kMaxBitrates[2], 30);  // To get all three streams.
 
     // Set color.
     int plane_offset[kNumOfPlanes];
     plane_offset[kYPlane] = kColorY;
     plane_offset[kUPlane] = kColorU;
     plane_offset[kVPlane] = kColorV;
-    CreateImage(input_frame_.video_frame_buffer(), plane_offset);
+    CreateImage(input_buffer_, plane_offset);
 
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     int picture_id = -1;
     int temporal_layer = -1;
     bool layer_sync = false;
@@ -721,27 +668,27 @@ class TestVp8Simulcast : public ::testing::Test {
     plane_offset[kYPlane] += 1;
     plane_offset[kUPlane] += 1;
     plane_offset[kVPlane] += 1;
-    CreateImage(input_frame_.video_frame_buffer(), plane_offset);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    CreateImage(input_buffer_, plane_offset);
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
 
     // Change color.
     plane_offset[kYPlane] += 1;
     plane_offset[kUPlane] += 1;
     plane_offset[kVPlane] += 1;
-    CreateImage(input_frame_.video_frame_buffer(), plane_offset);
+    CreateImage(input_buffer_, plane_offset);
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
 
     // Change color.
     plane_offset[kYPlane] += 1;
     plane_offset[kUPlane] += 1;
     plane_offset[kVPlane] += 1;
-    CreateImage(input_frame_.video_frame_buffer(), plane_offset);
+    CreateImage(input_buffer_, plane_offset);
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
 
     CodecSpecificInfo codec_specific;
     codec_specific.codecType = kVideoCodecVP8;
@@ -753,10 +700,10 @@ class TestVp8Simulcast : public ::testing::Test {
     plane_offset[kYPlane] = kColorY;
     plane_offset[kUPlane] = kColorU;
     plane_offset[kVPlane] = kColorV;
-    CreateImage(input_frame_.video_frame_buffer(), plane_offset);
+    CreateImage(input_buffer_, plane_offset);
 
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, &codec_specific, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, &codec_specific, NULL));
 
     EncodedImage encoded_frame;
     encoder_callback.GetLastEncodedKeyFrame(&encoded_frame);
@@ -772,53 +719,53 @@ class TestVp8Simulcast : public ::testing::Test {
   void TestSaptioTemporalLayers333PatternEncoder() {
     Vp8TestEncodedImageCallback encoder_callback;
     encoder_->RegisterEncodeCompleteCallback(&encoder_callback);
-    encoder_->SetRates(kMaxBitrates[2], 30);  // To get all three streams.
+    SetRates(kMaxBitrates[2], 30);  // To get all three streams.
 
     int expected_temporal_idx[3] = {-1, -1, -1};
     bool expected_layer_sync[3] = {false, false, false};
 
     // First frame: #0.
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(0, 0, 0, expected_temporal_idx);
     SetExpectedValues3<bool>(true, true, true, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #1.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(2, 2, 2, expected_temporal_idx);
     SetExpectedValues3<bool>(true, true, true, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #2.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(1, 1, 1, expected_temporal_idx);
     SetExpectedValues3<bool>(true, true, true, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #3.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(2, 2, 2, expected_temporal_idx);
     SetExpectedValues3<bool>(false, false, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #4.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(0, 0, 0, expected_temporal_idx);
     SetExpectedValues3<bool>(false, false, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #5.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(2, 2, 2, expected_temporal_idx);
     SetExpectedValues3<bool>(false, false, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
@@ -841,53 +788,53 @@ class TestVp8Simulcast : public ::testing::Test {
     SetUpCodec(temporal_layer_profile);
     Vp8TestEncodedImageCallback encoder_callback;
     encoder_->RegisterEncodeCompleteCallback(&encoder_callback);
-    encoder_->SetRates(kMaxBitrates[2], 30);  // To get all three streams.
+    SetRates(kMaxBitrates[2], 30);  // To get all three streams.
 
     int expected_temporal_idx[3] = {-1, -1, -1};
     bool expected_layer_sync[3] = {false, false, false};
 
     // First frame: #0.
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(0, 0, 255, expected_temporal_idx);
     SetExpectedValues3<bool>(true, true, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #1.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(2, 1, 255, expected_temporal_idx);
     SetExpectedValues3<bool>(true, true, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #2.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(1, 0, 255, expected_temporal_idx);
     SetExpectedValues3<bool>(true, false, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #3.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(2, 1, 255, expected_temporal_idx);
     SetExpectedValues3<bool>(false, false, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #4.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(0, 0, 255, expected_temporal_idx);
     SetExpectedValues3<bool>(false, false, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
         &encoder_callback, expected_temporal_idx, expected_layer_sync, 3);
 
     // Next frame: #5.
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
     SetExpectedValues3<int>(2, 1, 255, expected_temporal_idx);
     SetExpectedValues3<bool>(false, false, false, expected_layer_sync);
     VerifyTemporalIdxAndSyncForAllSpatialLayers(
@@ -900,29 +847,32 @@ class TestVp8Simulcast : public ::testing::Test {
     encoder_->RegisterEncodeCompleteCallback(&encoder_callback);
     decoder_->RegisterDecodeCompleteCallback(&decoder_callback);
 
-    encoder_->SetRates(kMaxBitrates[2], 30);  // To get all three streams.
+    SetRates(kMaxBitrates[2], 30);  // To get all three streams.
     // Setting two (possibly) problematic use cases for stride:
     // 1. stride > width 2. stride_y != stride_uv/2
     int stride_y = kDefaultWidth + 20;
     int stride_uv = ((kDefaultWidth + 1) / 2) + 5;
-    input_frame_.CreateEmptyFrame(kDefaultWidth, kDefaultHeight, stride_y,
-                                  stride_uv, stride_uv);
+    input_buffer_ = I420Buffer::Create(kDefaultWidth, kDefaultHeight, stride_y,
+                                       stride_uv, stride_uv);
+    input_frame_.reset(
+        new VideoFrame(input_buffer_, 0, 0, webrtc::kVideoRotation_0));
+
     // Set color.
     int plane_offset[kNumOfPlanes];
     plane_offset[kYPlane] = kColorY;
     plane_offset[kUPlane] = kColorU;
     plane_offset[kVPlane] = kColorV;
-    CreateImage(input_frame_.video_frame_buffer(), plane_offset);
+    CreateImage(input_buffer_, plane_offset);
 
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
 
     // Change color.
     plane_offset[kYPlane] += 1;
     plane_offset[kUPlane] += 1;
     plane_offset[kVPlane] += 1;
-    CreateImage(input_frame_.video_frame_buffer(), plane_offset);
-    input_frame_.set_timestamp(input_frame_.timestamp() + 3000);
-    EXPECT_EQ(0, encoder_->Encode(input_frame_, NULL, NULL));
+    CreateImage(input_buffer_, plane_offset);
+    input_frame_->set_timestamp(input_frame_->timestamp() + 3000);
+    EXPECT_EQ(0, encoder_->Encode(*input_frame_, NULL, NULL));
 
     EncodedImage encoded_frame;
     // Only encoding one frame - so will be a key frame.
@@ -933,36 +883,14 @@ class TestVp8Simulcast : public ::testing::Test {
     EXPECT_EQ(2, decoder_callback.DecodedFrames());
   }
 
-  void TestSkipEncodingUnusedStreams() {
-    SkipEncodingUnusedStreamsTest test;
-    std::vector<unsigned int> configured_bitrate =
-        test.RunTest(encoder_.get(), &settings_,
-                     1);  // Target bit rate 1, to force all streams but the
-                          // base one to be exceeding bandwidth constraints.
-    EXPECT_EQ(static_cast<size_t>(kNumberOfSimulcastStreams),
-              configured_bitrate.size());
-
-    unsigned int min_bitrate =
-        std::max(settings_.simulcastStream[0].minBitrate, settings_.minBitrate);
-    int stream = 0;
-    for (std::vector<unsigned int>::const_iterator it =
-             configured_bitrate.begin();
-         it != configured_bitrate.end(); ++it) {
-      if (stream == 0) {
-        EXPECT_EQ(min_bitrate, *it);
-      } else {
-        EXPECT_EQ(0u, *it);
-      }
-      ++stream;
-    }
-  }
-
   std::unique_ptr<VP8Encoder> encoder_;
   MockEncodedImageCallback encoder_callback_;
   std::unique_ptr<VP8Decoder> decoder_;
   MockDecodedImageCallback decoder_callback_;
   VideoCodec settings_;
-  VideoFrame input_frame_;
+  rtc::scoped_refptr<I420Buffer> input_buffer_;
+  std::unique_ptr<VideoFrame> input_frame_;
+  std::unique_ptr<SimulcastRateAllocator> rate_allocator_;
 };
 
 }  // namespace testing

@@ -24,7 +24,6 @@
 #include <utility>
 #include <vector>
 
-#include "webrtc/base/common.h"
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/base/random.h"
 #include "webrtc/modules/bitrate_controller/include/bitrate_controller.h"
@@ -230,16 +229,16 @@ class RateCounterFilter : public PacketProcessor {
   RateCounterFilter(PacketProcessorListener* listener,
                     int flow_id,
                     const char* name,
-                    const std::string& plot_name);
+                    const std::string& algorithm_name);
   RateCounterFilter(PacketProcessorListener* listener,
                     const FlowIds& flow_ids,
                     const char* name,
-                    const std::string& plot_name);
+                    const std::string& algorithm_name);
   RateCounterFilter(PacketProcessorListener* listener,
                     const FlowIds& flow_ids,
                     const char* name,
                     int64_t start_plotting_time_ms,
-                    const std::string& plot_name);
+                    const std::string& algorithm_name);
   virtual ~RateCounterFilter();
 
   void LogStats();
@@ -250,10 +249,13 @@ class RateCounterFilter : public PacketProcessor {
  private:
   Stats<double> packets_per_second_stats_;
   Stats<double> kbps_stats_;
-  std::string name_;
   int64_t start_plotting_time_ms_;
+#if BWE_TEST_LOGGING_COMPILE_TIME_ENABLE
+  int flow_id_ = 0;
+#endif
+  std::string name_;
   // Algorithm name if single flow, Total link utilization if all flows.
-  std::string plot_name_;
+  std::string algorithm_name_;
 
   RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(RateCounterFilter);
 };

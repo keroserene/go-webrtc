@@ -13,7 +13,9 @@
 
 #include <stddef.h>
 #include <list>
+#include <vector>
 
+#include "webrtc/common_types.h"
 #include "webrtc/modules/include/module_common_types.h"
 #include "webrtc/system_wrappers/include/clock.h"
 #include "webrtc/typedefs.h"
@@ -21,7 +23,6 @@
 #define RTCP_CNAME_SIZE 256    // RFC 3550 page 44, including null termination
 #define IP_PACKET_SIZE 1500    // we assume ethernet
 #define MAX_NUMBER_OF_PARALLEL_TELEPHONE_EVENTS 10
-#define TIMEOUT_SEI_MESSAGES_MS 30000   // in milliseconds
 
 namespace webrtc {
 namespace rtcp {
@@ -29,6 +30,10 @@ class TransportFeedback;
 }
 
 const int kVideoPayloadTypeFrequency = 90000;
+// TODO(solenberg): RTP time stamp rate for RTCP is fixed at 8k, this is legacy
+// and should be fixed.
+// See: https://bugs.chromium.org/p/webrtc/issues/detail?id=6458
+const int kBogusRtpRateForAudioRtcp = 8000;
 
 // Minimum RTP header size in bytes.
 const uint8_t kRtpHeaderSize = 12;
@@ -40,7 +45,9 @@ struct AudioPayload {
 };
 
 struct VideoPayload {
-    RtpVideoCodecTypes   videoCodecType;
+  RtpVideoCodecTypes videoCodecType;
+  // The H264 profile only matters if videoCodecType == kRtpVideoH264.
+  H264::Profile h264_profile;
 };
 
 union PayloadUnion {
@@ -67,6 +74,8 @@ enum RTPExtensionType {
   kRtpExtensionAbsoluteSendTime,
   kRtpExtensionVideoRotation,
   kRtpExtensionTransportSequenceNumber,
+  kRtpExtensionPlayoutDelay,
+  kRtpExtensionNumberOfExtensions,
 };
 
 enum RTCPAppSubTypes { kAppSubtypeBwe = 0x00 };
@@ -93,6 +102,7 @@ enum RTCPPacketType : uint32_t {
   kRtcpXrReceiverReferenceTime = 0x40000,
   kRtcpXrDlrrReportBlock = 0x80000,
   kRtcpTransportFeedback = 0x100000,
+  kRtcpXrTargetBitrate = 0x200000
 };
 
 enum KeyFrameRequestMethod { kKeyFrameReqPliRtcp, kKeyFrameReqFirRtcp };
@@ -158,13 +168,6 @@ struct RTCPReportBlock {
   uint32_t delaySinceLastSR;
 };
 
-struct RtcpReceiveTimeInfo {
-  // Fields as described by RFC 3611 4.5.
-  uint32_t sourceSSRC;
-  uint32_t lastRR;
-  uint32_t delaySinceLastRR;
-};
-
 typedef std::list<RTCPReportBlock> ReportBlockList;
 
 struct RtpState {
@@ -187,9 +190,9 @@ class RtpData {
  public:
   virtual ~RtpData() {}
 
-  virtual int32_t OnReceivedPayloadData(const uint8_t* payloadData,
-                                        const size_t payloadSize,
-                                        const WebRtcRTPHeader* rtpHeader) = 0;
+  virtual int32_t OnReceivedPayloadData(const uint8_t* payload_data,
+                                        size_t payload_size,
+                                        const WebRtcRTPHeader* rtp_header) = 0;
 
   virtual bool OnRecoveredPacket(const uint8_t* packet,
                                  size_t packet_length) = 0;
@@ -204,15 +207,15 @@ class RtpFeedback {
   *   channels    - number of channels in codec (1 = mono, 2 = stereo)
   */
   virtual int32_t OnInitializeDecoder(
-      const int8_t payloadType,
-      const char payloadName[RTP_PAYLOAD_NAME_SIZE],
-      const int frequency,
-      const size_t channels,
-      const uint32_t rate) = 0;
+      int8_t payload_type,
+      const char payload_name[RTP_PAYLOAD_NAME_SIZE],
+      int frequency,
+      size_t channels,
+      uint32_t rate) = 0;
 
-  virtual void OnIncomingSSRCChanged(const uint32_t ssrc) = 0;
+  virtual void OnIncomingSSRCChanged(uint32_t ssrc) = 0;
 
-  virtual void OnIncomingCSRCChanged(const uint32_t CSRC, const bool added) = 0;
+  virtual void OnIncomingCSRCChanged(uint32_t csrc, bool added) = 0;
 };
 
 class RtcpIntraFrameObserver {
@@ -224,8 +227,6 @@ class RtcpIntraFrameObserver {
 
   virtual void OnReceivedRPSI(uint32_t ssrc,
                               uint64_t picture_id) = 0;
-
-  virtual void OnLocalSsrcChanged(uint32_t old_ssrc, uint32_t new_ssrc) = 0;
 
   virtual ~RtcpIntraFrameObserver() {}
 };
@@ -245,32 +246,51 @@ class RtcpBandwidthObserver {
 
 struct PacketInfo {
   PacketInfo(int64_t arrival_time_ms, uint16_t sequence_number)
-      : PacketInfo(-1, arrival_time_ms, -1, sequence_number, 0, false) {}
+      : PacketInfo(-1,
+                   arrival_time_ms,
+                   -1,
+                   sequence_number,
+                   0,
+                   PacedPacketInfo()) {}
 
   PacketInfo(int64_t arrival_time_ms,
              int64_t send_time_ms,
              uint16_t sequence_number,
              size_t payload_size,
-             bool was_paced)
+             const PacedPacketInfo& pacing_info)
       : PacketInfo(-1,
                    arrival_time_ms,
                    send_time_ms,
                    sequence_number,
                    payload_size,
-                   was_paced) {}
+                   pacing_info) {}
 
   PacketInfo(int64_t creation_time_ms,
              int64_t arrival_time_ms,
              int64_t send_time_ms,
              uint16_t sequence_number,
              size_t payload_size,
-             bool was_paced)
+             const PacedPacketInfo& pacing_info)
       : creation_time_ms(creation_time_ms),
         arrival_time_ms(arrival_time_ms),
         send_time_ms(send_time_ms),
         sequence_number(sequence_number),
         payload_size(payload_size),
-        was_paced(was_paced) {}
+        pacing_info(pacing_info) {}
+
+  static constexpr int kNotAProbe = -1;
+
+  // NOTE! The variable |creation_time_ms| is not used when testing equality.
+  //       This is due to |creation_time_ms| only being used by SendTimeHistory
+  //       for book-keeping, and is of no interest outside that class.
+  // TODO(philipel): Remove |creation_time_ms| from PacketInfo when cleaning up
+  //                 SendTimeHistory.
+  bool operator==(const PacketInfo& rhs) const {
+    return arrival_time_ms == rhs.arrival_time_ms &&
+           send_time_ms == rhs.send_time_ms &&
+           sequence_number == rhs.sequence_number &&
+           payload_size == rhs.payload_size && pacing_info == rhs.pacing_info;
+  }
 
   // Time corresponding to when this object was created.
   int64_t creation_time_ms;
@@ -285,8 +305,8 @@ struct PacketInfo {
   uint16_t sequence_number;
   // Size of the packet excluding RTP headers.
   size_t payload_size;
-  // True if the packet was paced out by the pacer.
-  bool was_paced;
+  // Pacing information about this packet.
+  PacedPacketInfo pacing_info;
 };
 
 class TransportFeedbackObserver {
@@ -294,13 +314,14 @@ class TransportFeedbackObserver {
   TransportFeedbackObserver() {}
   virtual ~TransportFeedbackObserver() {}
 
-  // Note: Transport-wide sequence number as sequence number. Arrival time
-  // must be set to 0.
+  // Note: Transport-wide sequence number as sequence number.
   virtual void AddPacket(uint16_t sequence_number,
                          size_t length,
-                         bool was_paced) = 0;
+                         const PacedPacketInfo& pacing_info) = 0;
 
   virtual void OnTransportFeedback(const rtcp::TransportFeedback& feedback) = 0;
+
+  virtual std::vector<PacketInfo> GetTransportFeedbackVector() const = 0;
 };
 
 class RtcpRttStats {
@@ -317,16 +338,16 @@ class NullRtpFeedback : public RtpFeedback {
  public:
   virtual ~NullRtpFeedback() {}
 
-  int32_t OnInitializeDecoder(const int8_t payloadType,
+  int32_t OnInitializeDecoder(int8_t payload_type,
                               const char payloadName[RTP_PAYLOAD_NAME_SIZE],
-                              const int frequency,
-                              const size_t channels,
-                              const uint32_t rate) override {
+                              int frequency,
+                              size_t channels,
+                              uint32_t rate) override {
     return 0;
   }
 
-  void OnIncomingSSRCChanged(const uint32_t ssrc) override {}
-  void OnIncomingCSRCChanged(const uint32_t CSRC, const bool added) override {}
+  void OnIncomingSSRCChanged(uint32_t ssrc) override {}
+  void OnIncomingCSRCChanged(uint32_t csrc, bool added) override {}
 };
 
 // Null object version of RtpData.
@@ -334,9 +355,9 @@ class NullRtpData : public RtpData {
  public:
   virtual ~NullRtpData() {}
 
-  int32_t OnReceivedPayloadData(const uint8_t* payloadData,
-                                const size_t payloadSize,
-                                const WebRtcRTPHeader* rtpHeader) override {
+  int32_t OnReceivedPayloadData(const uint8_t* payload_data,
+                                size_t payload_size,
+                                const WebRtcRTPHeader* rtp_header) override {
     return 0;
   }
 

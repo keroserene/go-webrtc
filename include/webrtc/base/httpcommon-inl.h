@@ -12,7 +12,7 @@
 #define WEBRTC_BASE_HTTPCOMMON_INL_H__
 
 #include "webrtc/base/arraysize.h"
-#include "webrtc/base/common.h"
+#include "webrtc/base/checks.h"
 #include "webrtc/base/httpcommon.h"
 
 namespace rtc {
@@ -53,7 +53,7 @@ void Url<CTYPE>::do_set_address(const CTYPE* val, size_t len) {
     host_.assign(val, colon - val);
     // Note: In every case, we're guaranteed that colon is followed by a null,
     // or non-numeric character.
-    port_ = static_cast<uint16_t>(::strtoul(colon + 1, NULL, 10));
+    port_ = static_cast<uint16_t>(::strtoul(colon + 1, nullptr, 10));
     // TODO: Consider checking for invalid data following port number.
   } else {
     host_.assign(val, len);
@@ -72,7 +72,7 @@ void Url<CTYPE>::do_set_full_path(const CTYPE* val, size_t len) {
     // TODO: consider failing in this case.
     path_.assign(1, static_cast<CTYPE>('/'));
   } else {
-    ASSERT(val[0] == static_cast<CTYPE>('/'));
+    RTC_DCHECK(val[0] == static_cast<CTYPE>('/'));
     path_.assign(val, path_length);
   }
   query_.assign(query, len - path_length);

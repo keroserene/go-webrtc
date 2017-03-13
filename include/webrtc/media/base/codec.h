@@ -17,16 +17,16 @@
 #include <vector>
 
 #include "webrtc/api/rtpparameters.h"
+#include "webrtc/common_types.h"
 #include "webrtc/media/base/mediaconstants.h"
 
 namespace cricket {
 
 typedef std::map<std::string, std::string> CodecParameterMap;
 
-extern const int kMaxPayloadId;
-
 class FeedbackParam {
  public:
+  FeedbackParam() = default;
   FeedbackParam(const std::string& id, const std::string& param)
       : id_(id),
         param_(param) {
@@ -68,11 +68,6 @@ struct Codec {
   CodecParameterMap params;
   FeedbackParams feedback_params;
 
-  // Creates a codec with the given parameters.
-  Codec(int id, const std::string& name, int clockrate);
-  // Creates an empty codec.
-  Codec();
-  Codec(const Codec& c);
   virtual ~Codec();
 
   // Indicates if this codec is compatible with the specified codec.
@@ -99,12 +94,22 @@ struct Codec {
   virtual webrtc::RtpCodecParameters ToCodecParameters() const;
 
   Codec& operator=(const Codec& c);
+  Codec& operator=(Codec&& c);
 
   bool operator==(const Codec& c) const;
 
   bool operator!=(const Codec& c) const {
     return !(*this == c);
   }
+
+ protected:
+  // A Codec can't be created without a subclass.
+  // Creates a codec with the given parameters.
+  Codec(int id, const std::string& name, int clockrate);
+  // Creates an empty codec.
+  Codec();
+  Codec(const Codec& c);
+  Codec(Codec&& c);
 };
 
 struct AudioCodec : public Codec {
@@ -120,6 +125,7 @@ struct AudioCodec : public Codec {
   // Creates an empty codec.
   AudioCodec();
   AudioCodec(const AudioCodec& c);
+  AudioCodec(AudioCodec&& c);
   virtual ~AudioCodec() = default;
 
   // Indicates if this codec is compatible with the specified codec.
@@ -130,6 +136,7 @@ struct AudioCodec : public Codec {
   webrtc::RtpCodecParameters ToCodecParameters() const override;
 
   AudioCodec& operator=(const AudioCodec& c);
+  AudioCodec& operator=(AudioCodec&& c);
 
   bool operator==(const AudioCodec& c) const;
 
@@ -138,26 +145,50 @@ struct AudioCodec : public Codec {
   }
 };
 
-struct VideoCodec : public Codec {
-  int width;
-  int height;
-  int framerate;
+inline std::ostream& operator<<(std::ostream& os, const AudioCodec& ac) {
+  os << "{id: " << ac.id;
+  os << ", name: " << ac.name;
+  os << ", clockrate: " << ac.clockrate;
+  os << ", bitrate: " << ac.bitrate;
+  os << ", channels: " << ac.channels;
+  os << ", params: {";
+  const char* sep = "";
+  for (const auto& kv : ac.params) {
+    os << sep << kv.first << ": " << kv.second;
+    sep = ", ";
+  }
+  os << "}, feedback_params: {";
+  sep = "";
+  for (const FeedbackParam& fp : ac.feedback_params.params()) {
+    os << sep << fp.id() << ": " << fp.param();
+    sep = ", ";
+  }
+  os << "}}";
+  return os;
+}
 
+struct VideoCodec : public Codec {
   // Creates a codec with the given parameters.
-  VideoCodec(int id,
-             const std::string& name,
-             int width,
-             int height,
-             int framerate);
   VideoCodec(int id, const std::string& name);
+  // Creates a codec with the given name and empty id.
+  explicit VideoCodec(const std::string& name);
   // Creates an empty codec.
   VideoCodec();
   VideoCodec(const VideoCodec& c);
+  VideoCodec(VideoCodec&& c);
   virtual ~VideoCodec() = default;
+
+  // Indicates if this video codec is the same as the other video codec, e.g. if
+  // they are both VP8 or VP9, or if they are both H264 with the same H264
+  // profile. H264 levels however are not compared.
+  bool Matches(const VideoCodec& codec) const;
 
   std::string ToString() const;
 
+  webrtc::RtpCodecParameters ToCodecParameters() const override;
+
   VideoCodec& operator=(const VideoCodec& c);
+  VideoCodec& operator=(VideoCodec&& c);
 
   bool operator==(const VideoCodec& c) const;
 
@@ -172,6 +203,7 @@ struct VideoCodec : public Codec {
     CODEC_VIDEO,
     CODEC_RED,
     CODEC_ULPFEC,
+    CODEC_FLEXFEC,
     CODEC_RTX,
   };
 
@@ -180,38 +212,45 @@ struct VideoCodec : public Codec {
   // don't make sense (such as max < min bitrate), and error is logged and
   // ValidateCodecFormat returns false.
   bool ValidateCodecFormat() const;
+
+ private:
+  void SetDefaultParameters();
 };
 
 struct DataCodec : public Codec {
   DataCodec(int id, const std::string& name);
   DataCodec();
   DataCodec(const DataCodec& c);
+  DataCodec(DataCodec&& c);
   virtual ~DataCodec() = default;
 
   DataCodec& operator=(const DataCodec& c);
+  DataCodec& operator=(DataCodec&& c);
 
   std::string ToString() const;
 };
 
 // Get the codec setting associated with |payload_type|. If there
-// is no codec associated with that payload type it returns false.
+// is no codec associated with that payload type it returns nullptr.
 template <class Codec>
-bool FindCodecById(const std::vector<Codec>& codecs,
-                   int payload_type,
-                   Codec* codec_out) {
+const Codec* FindCodecById(const std::vector<Codec>& codecs, int payload_type) {
   for (const auto& codec : codecs) {
-    if (codec.id == payload_type) {
-      *codec_out = codec;
-      return true;
-    }
+    if (codec.id == payload_type)
+      return &codec;
   }
-  return false;
+  return nullptr;
 }
 
 bool CodecNamesEq(const std::string& name1, const std::string& name2);
+bool CodecNamesEq(const char* name1, const char* name2);
 bool HasNack(const Codec& codec);
 bool HasRemb(const Codec& codec);
 bool HasTransportCc(const Codec& codec);
+// Returns the first codec in |supported_codecs| that matches |codec|, or
+// nullptr if no codec matches.
+const VideoCodec* FindMatchingCodec(
+    const std::vector<VideoCodec>& supported_codecs,
+    const VideoCodec& codec);
 
 }  // namespace cricket
 

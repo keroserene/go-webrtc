@@ -56,7 +56,7 @@ class ThreadManager {
   // unexpected contexts (like inside browser plugins) and it would be a
   // shame to break it.  It is also conceivable on Win32 that we won't even
   // be able to get synchronization privileges, in which case the result
-  // will have a NULL handle.
+  // will have a null handle.
   Thread *WrapCurrentThread();
   void UnwrapCurrentThread();
 
@@ -93,7 +93,7 @@ class Runnable {
 
 // WARNING! SUBCLASSES MUST CALL Stop() IN THEIR DESTRUCTORS!  See ~Thread().
 
-class Thread : public MessageQueue {
+class LOCKABLE Thread : public MessageQueue {
  public:
   // Create a new Thread and optionally assign it to the passed SocketServer.
   Thread();
@@ -133,12 +133,12 @@ class Thread : public MessageQueue {
   static bool SleepMs(int millis);
 
   // Sets the thread's name, for debugging. Must be called before Start().
-  // If |obj| is non-NULL, its value is appended to |name|.
+  // If |obj| is non-null, its value is appended to |name|.
   const std::string& name() const { return name_; }
   bool SetName(const std::string& name, const void* obj);
 
   // Starts the execution of the thread.
-  bool Start(Runnable* runnable = NULL);
+  bool Start(Runnable* runnable = nullptr);
 
   // Tells the thread to stop and waits until it is joined.
   // Never call Stop on the current thread.  Instead use the inherited Quit
@@ -151,30 +151,30 @@ class Thread : public MessageQueue {
   // ProcessMessages occasionally.
   virtual void Run();
 
-  virtual void Send(MessageHandler* phandler,
+  virtual void Send(const Location& posted_from,
+                    MessageHandler* phandler,
                     uint32_t id = 0,
-                    MessageData* pdata = NULL);
+                    MessageData* pdata = nullptr);
 
   // Convenience method to invoke a functor on another thread.  Caller must
   // provide the |ReturnT| template argument, which cannot (easily) be deduced.
   // Uses Send() internally, which blocks the current thread until execution
   // is complete.
-  // Ex: bool result = thread.Invoke<bool>(&MyFunctionReturningBool);
+  // Ex: bool result = thread.Invoke<bool>(RTC_FROM_HERE,
+  // &MyFunctionReturningBool);
   // NOTE: This function can only be called when synchronous calls are allowed.
   // See ScopedDisallowBlockingCalls for details.
   template <class ReturnT, class FunctorT>
-  ReturnT Invoke(const FunctorT& functor) {
-    InvokeBegin();
+  ReturnT Invoke(const Location& posted_from, const FunctorT& functor) {
     FunctorMessageHandler<ReturnT, FunctorT> handler(functor);
-    Send(&handler);
-    InvokeEnd();
-    return handler.result();
+    InvokeInternal(posted_from, &handler);
+    return handler.MoveResult();
   }
 
   // From MessageQueue
   void Clear(MessageHandler* phandler,
              uint32_t id = MQID_ANY,
-             MessageList* removed = NULL) override;
+             MessageList* removed = nullptr) override;
   void ReceiveSends() override;
 
   // ProcessMessages will process I/O and dispatch messages until:
@@ -238,7 +238,11 @@ class Thread : public MessageQueue {
   friend class ScopedDisallowBlockingCalls;
 
  private:
+#if defined(WEBRTC_WIN)
+  static DWORD WINAPI PreRun(LPVOID context);
+#else
   static void *PreRun(void *pv);
+#endif
 
   // ThreadManager calls this instead WrapCurrent() because
   // ThreadManager::Instance() cannot be used while ThreadManager is
@@ -251,19 +255,17 @@ class Thread : public MessageQueue {
   // Return true if the thread was started and hasn't yet stopped.
   bool running() { return running_.Wait(0); }
 
-  // Processes received "Send" requests. If |source| is not NULL, only requests
+  // Processes received "Send" requests. If |source| is not null, only requests
   // from |source| are processed, otherwise, all requests are processed.
   void ReceiveSendsFromThread(const Thread* source);
 
-  // If |source| is not NULL, pops the first "Send" message from |source| in
+  // If |source| is not null, pops the first "Send" message from |source| in
   // |sendlist_|, otherwise, pops the first "Send" message of |sendlist_|.
   // The caller must lock |crit_| before calling.
   // Returns true if there is such a message.
   bool PopSendMessageFromThread(const Thread* source, _SendMessage* msg);
 
-  // Used for tracking performance of Invoke calls.
-  void InvokeBegin();
-  void InvokeEnd();
+  void InvokeInternal(const Location& posted_from, MessageHandler* handler);
 
   std::list<_SendMessage> sendlist_;
   std::string name_;
@@ -304,7 +306,7 @@ class AutoThread : public Thread {
 class ComThread : public Thread {
  public:
   ComThread() {}
-  ~ComThread() override { Stop(); }
+  ~ComThread() override;
 
  protected:
   void Run() override;

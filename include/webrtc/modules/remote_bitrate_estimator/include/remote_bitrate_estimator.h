@@ -34,6 +34,7 @@ class RemoteBitrateObserver {
   // incoming streams.
   virtual void OnReceiveBitrateChanged(const std::vector<uint32_t>& ssrcs,
                                        uint32_t bitrate) = 0;
+  virtual void OnProbeBitrate(uint32_t bitrate) {}
 
   virtual ~RemoteBitrateObserver() {}
 };
@@ -43,7 +44,6 @@ struct ReceiveBandwidthEstimatorStats {};
 
 class RemoteBitrateEstimator : public CallStatsObserver, public Module {
  public:
-  static const int kDefaultMinBitrateBps = 30000;
   virtual ~RemoteBitrateEstimator() {}
 
   virtual void IncomingPacketFeedbackVector(
@@ -58,8 +58,7 @@ class RemoteBitrateEstimator : public CallStatsObserver, public Module {
   // Note that |arrival_time_ms| can be of an arbitrary time base.
   virtual void IncomingPacket(int64_t arrival_time_ms,
                               size_t payload_size,
-                              const RTPHeader& header,
-                              bool was_paced) = 0;
+                              const RTPHeader& header) = 0;
 
   // Removes all data for |ssrc|.
   virtual void RemoveStream(uint32_t ssrc) = 0;

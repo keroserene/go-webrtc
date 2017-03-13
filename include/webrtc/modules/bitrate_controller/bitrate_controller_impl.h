@@ -19,6 +19,7 @@
 
 #include <list>
 #include <utility>
+#include <vector>
 
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/base/criticalsection.h"
@@ -30,7 +31,9 @@ class BitrateControllerImpl : public BitrateController {
  public:
   // TODO(perkj): BitrateObserver has been deprecated and is not used in WebRTC.
   // |observer| is left for project that is not yet updated.
-  BitrateControllerImpl(Clock* clock, BitrateObserver* observer);
+  BitrateControllerImpl(Clock* clock,
+                        BitrateObserver* observer,
+                        RtcEventLog* event_log);
   virtual ~BitrateControllerImpl() {}
 
   bool AvailableBandwidth(uint32_t* bandwidth) const override;
@@ -46,16 +49,19 @@ class BitrateControllerImpl : public BitrateController {
                    int min_bitrate_bps,
                    int max_bitrate_bps) override;
 
-  void UpdateDelayBasedEstimate(uint32_t bitrate_bps) override;
+  void ResetBitrates(int bitrate_bps,
+                     int min_bitrate_bps,
+                     int max_bitrate_bps) override;
+
 
   void SetReservedBitrate(uint32_t reserved_bitrate_bps) override;
-
-  void SetEventLog(RtcEventLog* event_log) override;
 
   // Returns true if the parameters have changed since the last call.
   bool GetNetworkParameters(uint32_t* bitrate,
                             uint8_t* fraction_loss,
                             int64_t* rtt) override;
+
+  void OnDelayBasedBweResult(const DelayBasedBwe::Result& result) override;
 
   int64_t TimeUntilNextProcess() override;
   void Process() override;
@@ -64,7 +70,7 @@ class BitrateControllerImpl : public BitrateController {
   class RtcpBandwidthObserverImpl;
 
   // Called by BitrateObserver's direct from the RTCP module.
-  void OnReceivedEstimatedBitrate(uint32_t bitrate);
+  void OnReceiverEstimatedBitrate(uint32_t bitrate);
 
   void OnReceivedRtcpReceiverReport(uint8_t fraction_loss,
                                     int64_t rtt,
@@ -82,6 +88,7 @@ class BitrateControllerImpl : public BitrateController {
   Clock* const clock_;
   BitrateObserver* const observer_;
   int64_t last_bitrate_update_ms_;
+  RtcEventLog* const event_log_;
 
   rtc::CriticalSection critsect_;
   SendSideBandwidthEstimation bandwidth_estimation_ GUARDED_BY(critsect_);

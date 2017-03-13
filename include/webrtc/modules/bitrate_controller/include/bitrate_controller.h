@@ -17,6 +17,7 @@
 
 #include <map>
 
+#include "webrtc/modules/congestion_controller/delay_based_bwe.h"
 #include "webrtc/modules/include/module.h"
 #include "webrtc/modules/pacing/paced_sender.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
@@ -55,8 +56,11 @@ class BitrateController : public Module {
   // TODO(perkj): BitrateObserver has been deprecated and is not used in WebRTC.
   // Remove this method once other other projects does not use it.
   static BitrateController* CreateBitrateController(Clock* clock,
-                                                    BitrateObserver* observer);
-  static BitrateController* CreateBitrateController(Clock* clock);
+                                                    BitrateObserver* observer,
+                                                    RtcEventLog* event_log);
+
+  static BitrateController* CreateBitrateController(Clock* clock,
+                                                    RtcEventLog* event_log);
 
   virtual ~BitrateController() {}
 
@@ -70,9 +74,11 @@ class BitrateController : public Module {
                            int min_bitrate_bps,
                            int max_bitrate_bps) = 0;
 
-  virtual void UpdateDelayBasedEstimate(uint32_t bitrate_bps) = 0;
+  virtual void ResetBitrates(int bitrate_bps,
+                             int min_bitrate_bps,
+                             int max_bitrate_bps) = 0;
 
-  virtual void SetEventLog(RtcEventLog* event_log) = 0;
+  virtual void OnDelayBasedBweResult(const DelayBasedBwe::Result& result) = 0;
 
   // Gets the available payload bandwidth in bits per second. Note that
   // this bandwidth excludes packet headers.

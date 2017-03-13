@@ -15,7 +15,7 @@
 #include <string>
 
 #include "webrtc/base/constructormagic.h"
-#include "webrtc/call/rtc_event_log_parser.h"
+#include "webrtc/logging/rtc_event_log/rtc_event_log_parser.h"
 #include "webrtc/modules/audio_coding/neteq/tools/packet_source.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 
@@ -38,9 +38,7 @@ class RtcEventLogSource : public PacketSource {
   // Registers an RTP header extension and binds it to |id|.
   virtual bool RegisterRtpHeaderExtension(RTPExtensionType type, uint8_t id);
 
-  // Returns a pointer to the next packet. Returns NULL if end of file was
-  // reached.
-  Packet* NextPacket() override;
+  std::unique_ptr<Packet> NextPacket() override;
 
   // Returns the timestamp of the next audio output event, in milliseconds. The
   // maximum value of int64_t is returned if there are no more audio output

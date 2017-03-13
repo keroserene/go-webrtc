@@ -31,18 +31,19 @@ class DesktopAndCursorComposer : public DesktopCapturer,
   // of both arguments.
   DesktopAndCursorComposer(DesktopCapturer* desktop_capturer,
                       MouseCursorMonitor* mouse_monitor);
-  virtual ~DesktopAndCursorComposer();
+  ~DesktopAndCursorComposer() override;
 
   // DesktopCapturer interface.
   void Start(DesktopCapturer::Callback* callback) override;
   void SetSharedMemoryFactory(
       std::unique_ptr<SharedMemoryFactory> shared_memory_factory) override;
-  void Capture(const DesktopRegion& region) override;
+  void CaptureFrame() override;
   void SetExcludedWindow(WindowId window) override;
 
  private:
   // DesktopCapturer::Callback interface.
-  void OnCaptureCompleted(DesktopFrame* frame) override;
+  void OnCaptureResult(DesktopCapturer::Result result,
+                       std::unique_ptr<DesktopFrame> frame) override;
 
   // MouseCursorMonitor::Callback interface.
   void OnMouseCursor(MouseCursor* cursor) override;

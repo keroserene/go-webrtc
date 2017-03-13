@@ -15,43 +15,36 @@
 
 #include <list>
 
-#include "webrtc/video_frame.h"
+#include "webrtc/api/video/video_frame.h"
+#include "webrtc/base/optional.h"
 
 namespace webrtc {
 
 // Class definitions
 class VideoRenderFrames {
  public:
-  VideoRenderFrames();
+  explicit VideoRenderFrames(uint32_t render_delay_ms);
+  VideoRenderFrames(const VideoRenderFrames&) = delete;
 
   // Add a frame to the render queue
-  int32_t AddFrame(const VideoFrame& new_frame);
+  int32_t AddFrame(VideoFrame&& new_frame);
 
-  // Get a frame for rendering, or a zero-size frame if it's not time to render.
-  VideoFrame FrameToRender();
-
-  // Releases all frames
-  int32_t ReleaseAllFrames();
+  // Get a frame for rendering, or false if it's not time to render.
+  rtc::Optional<VideoFrame> FrameToRender();
 
   // Returns the number of ms to next frame to render
   uint32_t TimeToNextFrameRelease();
 
-  // Sets estimates delay in renderer
-  int32_t SetRenderDelay(const uint32_t render_delay);
+  bool HasPendingFrames() const;
 
  private:
-  // 10 seconds for 30 fps.
-  enum { KMaxNumberOfFrames = 300 };
-  // Don't render frames with timestamp older than 500ms from now.
-  enum { KOldRenderTimestampMS = 500 };
-  // Don't render frames with timestamp more than 10s into the future.
-  enum { KFutureRenderTimestampMS = 10000 };
-
   // Sorted list with framed to be rendered, oldest first.
   std::list<VideoFrame> incoming_frames_;
 
   // Estimated delay from a frame is released until it's rendered.
-  uint32_t render_delay_ms_;
+  const uint32_t render_delay_ms_;
+
+  int64_t last_render_time_ms_ = 0;
 };
 
 }  // namespace webrtc

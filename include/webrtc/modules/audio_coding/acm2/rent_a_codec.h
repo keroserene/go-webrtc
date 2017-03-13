@@ -15,12 +15,12 @@
 #include <map>
 #include <memory>
 
+#include "webrtc/api/audio_codecs/audio_decoder.h"
+#include "webrtc/api/audio_codecs/audio_format.h"
 #include "webrtc/base/array_view.h"
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/base/optional.h"
 #include "webrtc/base/scoped_ref_ptr.h"
-#include "webrtc/modules/audio_coding/codecs/audio_decoder.h"
-#include "webrtc/modules/audio_coding/codecs/audio_format.h"
 #include "webrtc/modules/audio_coding/codecs/audio_encoder.h"
 #include "webrtc/modules/audio_coding/include/audio_coding_module_typedefs.h"
 #include "webrtc/typedefs.h"
@@ -72,6 +72,9 @@ class RentACodec {
     kCNFB,
 #endif
     kAVT,
+    kAVT16kHz,
+    kAVT32kHz,
+    kAVT48kHz,
 #ifdef WEBRTC_CODEC_RED
     kRED,
 #endif
@@ -127,6 +130,9 @@ class RentACodec {
     kDecoderG722_2ch,
     kDecoderRED,
     kDecoderAVT,
+    kDecoderAVT16kHz,
+    kDecoderAVT32kHz,
+    kDecoderAVT48kHz,
     kDecoderCNGnb,
     kDecoderCNGwb,
     kDecoderCNGswb32kHz,
@@ -220,7 +226,7 @@ class RentACodec {
   std::unique_ptr<AudioEncoder> RentEncoderStack(StackParameters* param);
 
   // Creates and returns an iSAC decoder.
-  std::unique_ptr<AudioDecoder> RentIsacDecoder();
+  std::unique_ptr<AudioDecoder> RentIsacDecoder(int sample_rate_hz);
 
  private:
   std::unique_ptr<AudioEncoder> speech_encoder_;

@@ -12,8 +12,9 @@
 #define WEBRTC_MODULES_AUDIO_DEVICE_INCLUDE_MOCK_AUDIO_DEVICE_H_
 
 #include <string>
-#include "testing/gmock/include/gmock/gmock.h"
+
 #include "webrtc/modules/audio_device/include/audio_device.h"
+#include "webrtc/test/gmock.h"
 
 namespace webrtc {
 namespace test {
@@ -125,9 +126,10 @@ class MockAudioDeviceModule : public AudioDeviceModule {
   MOCK_METHOD1(EnableBuiltInAEC, int32_t(bool enable));
   MOCK_METHOD1(EnableBuiltInAGC, int32_t(bool enable));
   MOCK_METHOD1(EnableBuiltInNS, int32_t(bool enable));
-  MOCK_CONST_METHOD0(BuiltInAECIsEnabled, bool());
+#if defined(WEBRTC_IOS)
   MOCK_CONST_METHOD1(GetPlayoutAudioParameters, int(AudioParameters* params));
   MOCK_CONST_METHOD1(GetRecordAudioParameters, int(AudioParameters* params));
+#endif  // WEBRTC_IOS
 };
 }  // namespace test
 }  // namespace webrtc

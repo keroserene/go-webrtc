@@ -37,12 +37,12 @@
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__MIPSEL__)
-#if defined(__LP64__)
-#define WEBRTC_ARCH_MIPS64_FAMILY
-#else
 #define WEBRTC_ARCH_MIPS_FAMILY
-#endif
+#if defined(__LP64__)
+#define WEBRTC_ARCH_64_BITS
+#else
 #define WEBRTC_ARCH_32_BITS
+#endif
 #define WEBRTC_ARCH_LITTLE_ENDIAN
 #elif defined(__pnacl__)
 #define WEBRTC_ARCH_32_BITS
@@ -61,7 +61,6 @@
 #define WEBRTC_CPU_DETECTION
 #endif
 
-// TODO(pbos): Use webrtc/base/basictypes.h instead to include fixed-size ints.
 #include <stdint.h>
 
 // Annotate a function indicating the caller must examine the return value.
@@ -99,6 +98,7 @@
 #endif
 #endif
 
+#ifndef NO_RETURN
 // Annotate a function that will not return control flow to the caller.
 #if defined(_MSC_VER)
 #define NO_RETURN __declspec(noreturn)
@@ -106,6 +106,7 @@
 #define NO_RETURN __attribute__ ((__noreturn__))
 #else
 #define NO_RETURN
+#endif
 #endif
 
 #endif  // WEBRTC_TYPEDEFS_H_

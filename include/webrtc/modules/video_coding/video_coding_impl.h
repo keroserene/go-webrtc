@@ -19,7 +19,7 @@
 
 #include "webrtc/base/onetimeevent.h"
 #include "webrtc/base/thread_annotations.h"
-#include "webrtc/base/thread_checker.h"
+#include "webrtc/base/sequenced_task_checker.h"
 #include "webrtc/common_video/include/frame_callback.h"
 #include "webrtc/modules/video_coding/codec_database.h"
 #include "webrtc/modules/video_coding/frame_buffer.h"
@@ -34,10 +34,15 @@
 
 namespace webrtc {
 
+class VideoBitrateAllocator;
+class VideoBitrateAllocationObserver;
+
 namespace vcm {
 
 class VCMProcessTimer {
  public:
+  static const int64_t kDefaultProcessIntervalMs = 1000;
+
   VCMProcessTimer(int64_t periodMs, Clock* clock)
       : _clock(clock),
         _periodMs(periodMs),
@@ -58,7 +63,6 @@ class VideoSender : public Module {
 
   VideoSender(Clock* clock,
               EncodedImageCallback* post_encode_callback,
-              VideoEncoderRateObserver* encoder_rate_observer,
               VCMSendStatisticsCallback* send_stats_callback);
 
   ~VideoSender();
@@ -76,12 +80,27 @@ class VideoSender : public Module {
   int Bitrate(unsigned int* bitrate) const;
   int FrameRate(unsigned int* framerate) const;
 
-  int32_t SetChannelParameters(uint32_t target_bitrate,  // bits/s.
-                               uint8_t lossRate,
-                               int64_t rtt);
+  // Update the channel parameters based on new rates and rtt. This will also
+  // cause an immediate call to VideoEncoder::SetRateAllocation().
+  int32_t SetChannelParameters(
+      uint32_t target_bitrate_bps,
+      uint8_t loss_rate,
+      int64_t rtt,
+      VideoBitrateAllocator* bitrate_allocator,
+      VideoBitrateAllocationObserver* bitrate_updated_callback);
 
+  // Updates the channel parameters with a new bitrate allocation, but using the
+  // current targit_bitrate, loss rate and rtt. That is, the distribution or
+  // caps may be updated to a change to a new VideoCodec or allocation mode.
+  // The new parameters will be stored as pending EncoderParameters, and the
+  // encoder will only be updated on the next frame.
+  void UpdateChannelParemeters(
+      VideoBitrateAllocator* bitrate_allocator,
+      VideoBitrateAllocationObserver* bitrate_updated_callback);
+
+  // Deprecated:
+  // TODO(perkj): Remove once no projects use it.
   int32_t RegisterProtectionCallback(VCMProtectionCallback* protection);
-  void SetVideoProtection(VCMVideoProtection videoProtection);
 
   int32_t AddVideoFrame(const VideoFrame& videoFrame,
                         const CodecSpecificInfo* codecSpecificInfo);
@@ -89,14 +108,15 @@ class VideoSender : public Module {
   int32_t IntraFrameRequest(size_t stream_index);
   int32_t EnableFrameDropper(bool enable);
 
-  void SuspendBelowMinBitrate();
-  bool VideoSuspended() const;
-
   int64_t TimeUntilNextProcess() override;
   void Process() override;
 
  private:
-  void SetEncoderParameters(EncoderParameters params)
+  EncoderParameters UpdateEncoderParameters(
+      const EncoderParameters& params,
+      VideoBitrateAllocator* bitrate_allocator,
+      uint32_t target_bitrate_bps);
+  void SetEncoderParameters(EncoderParameters params, bool has_internal_source)
       EXCLUSIVE_LOCKS_REQUIRED(encoder_crit_);
 
   Clock* const clock_;
@@ -105,6 +125,7 @@ class VideoSender : public Module {
   VCMGenericEncoder* _encoder;
   media_optimization::MediaOptimization _mediaOpt;
   VCMEncodedFrameCallback _encodedFrameCallback GUARDED_BY(encoder_crit_);
+  EncodedImageCallback* const post_encode_callback_;
   VCMSendStatisticsCallback* const send_stats_callback_;
   VCMCodecDataBase _codecDataBase GUARDED_BY(encoder_crit_);
   bool frame_dropper_enabled_ GUARDED_BY(encoder_crit_);
@@ -112,14 +133,11 @@ class VideoSender : public Module {
 
   // Must be accessed on the construction thread of VideoSender.
   VideoCodec current_codec_;
-  rtc::ThreadChecker main_thread_;
-
-  VCMProtectionCallback* protection_callback_;
+  rtc::SequencedTaskChecker sequenced_checker_;
 
   rtc::CriticalSection params_crit_;
   EncoderParameters encoder_params_ GUARDED_BY(params_crit_);
   bool encoder_has_internal_source_ GUARDED_BY(params_crit_);
-  std::string encoder_name_ GUARDED_BY(params_crit_);
   std::vector<FrameType> next_frame_types_ GUARDED_BY(params_crit_);
 };
 
@@ -130,6 +148,7 @@ class VideoReceiver : public Module {
   VideoReceiver(Clock* clock,
                 EventFactory* event_factory,
                 EncodedImageCallback* pre_decode_image_callback,
+                VCMTiming* timing,
                 NackSender* nack_sender = nullptr,
                 KeyFrameRequestSender* keyframe_request_sender = nullptr);
   ~VideoReceiver();
@@ -149,6 +168,8 @@ class VideoReceiver : public Module {
   int32_t RegisterPacketRequestCallback(VCMPacketRequestCallback* callback);
 
   int32_t Decode(uint16_t maxWaitTimeMs);
+
+  int32_t Decode(const webrtc::VCMEncodedFrame* frame);
 
   int32_t ReceiveCodec(VideoCodec* currentReceiveCodec) const;
   VideoCodecType ReceiveCodec() const;
@@ -188,7 +209,7 @@ class VideoReceiver : public Module {
   Clock* const clock_;
   rtc::CriticalSection process_crit_;
   rtc::CriticalSection receive_crit_;
-  VCMTiming _timing;
+  VCMTiming* _timing;
   VCMReceiver _receiver;
   VCMDecodedFrameCallback _decodedFrameCallback;
   VCMFrameTypeCallback* _frameTypeCallback GUARDED_BY(process_crit_);

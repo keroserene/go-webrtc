@@ -9,7 +9,7 @@ DEPOT_TOOLS_DIR="$THIRD_PARTY_DIR/depot_tools"
 OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
 CONFIG="Release"
-COMMIT="f33698296719f956497d2dbff81b5080864a8804"  # branch-heads/52
+COMMIT="c279861207c5b15fc51069e96595782350e0ac12"  # branch-heads/58
 
 INCLUDE_DIR="$PROJECT_DIR/include"
 LIB_DIR="$PROJECT_DIR/lib"
@@ -57,6 +57,13 @@ else
 	popd
 fi
 
+if [ "$ARCH" = "arm" ]; then
+    echo "Manually fetching arm sysroot"
+    pushd $WEBRTC_SRC || exit 1
+    ./build/linux/sysroot_scripts/install-sysroot.py --arch=arm || exit 1
+    popd
+fi
+
 echo "Checking out latest tested / compatible version of webrtc ..."
 pushd $WEBRTC_SRC
 git checkout $COMMIT
@@ -67,19 +74,15 @@ pushd $WEBRTC_SRC || exit 1
 rm -rf out/$CONFIG
 popd
 
-echo "Applying webrtc patches ..."
-pushd $WEBRTC_SRC || exit 1
-for PATCH in build_at_webrtc_branch_heads_52.patch; do
-	git apply --check ${PROJECT_DIR}/webrtc_patches/${PATCH} || exit 1
-	git am < ${PROJECT_DIR}/webrtc_patches/${PATCH} || exit 1
-done
-popd
-
 echo "Building webrtc ..."
 pushd $WEBRTC_SRC
 export GYP_DEFINES="include_tests=0 include_examples=0"
-python webrtc/build/gyp_webrtc webrtc/api/api.gyp || exit 1
-ninja -C out/$CONFIG || exit 1
+if [ "$ARCH" = "arm" ]; then
+    gn gen out/$CONFIG --args='target_os="linux" target_cpu="arm" is_debug=false' || exit 1
+else
+    gn gen out/$CONFIG --args='is_debug=false' || exit 1
+fi
+ninja -C out/$CONFIG webrtc webrtc/test webrtc/pc:pc_test_utils || exit 1
 popd
 
 echo "Copying headers ..."
@@ -92,15 +95,17 @@ do
 done
 popd
 pushd $PROJECT_DIR || exit 1
-git clean -fdx "$INCLUDE_DIR"
+git clean -fd "$INCLUDE_DIR"
 popd
 
 echo "Concatenating libraries ..."
 pushd $WEBRTC_SRC/out/$CONFIG
 if [ "$OS" = "darwin" ]; then
-	ls *.a > filelist
+	find . -name '*.o' > filelist
 	libtool -static -o libwebrtc-magic.a -filelist filelist
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
+elif [ "$ARCH" = "arm" ]; then
+    arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 else
 	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
 fi

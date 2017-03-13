@@ -15,7 +15,6 @@
 #include <string>
 #include <vector>
 
-#include "webrtc/base/timing.h"
 #include "webrtc/media/base/mediachannel.h"
 #include "webrtc/media/base/mediaconstants.h"
 #include "webrtc/media/base/mediaengine.h"
@@ -28,20 +27,14 @@ class RtpDataEngine : public DataEngineInterface {
  public:
   RtpDataEngine();
 
-  virtual DataMediaChannel* CreateChannel(DataChannelType data_channel_type);
+  virtual DataMediaChannel* CreateChannel(const MediaConfig& config);
 
   virtual const std::vector<DataCodec>& data_codecs() {
     return data_codecs_;
   }
 
-  // Mostly for testing with a fake clock.  Ownership is passed in.
-  void SetTiming(rtc::Timing* timing) {
-    timing_.reset(timing);
-  }
-
  private:
   std::vector<DataCodec> data_codecs_;
-  std::unique_ptr<rtc::Timing> timing_;
 };
 
 // Keep track of sequence number and timestamp of an RTP stream.  The
@@ -68,16 +61,8 @@ class RtpClock {
 
 class RtpDataMediaChannel : public DataMediaChannel {
  public:
-  // Timing* Used for the RtpClock
-  explicit RtpDataMediaChannel(rtc::Timing* timing);
-  // Sets Timing == NULL, so you'll need to call set_timer() before
-  // using it.  This is needed by FakeMediaEngine.
-  RtpDataMediaChannel();
+  RtpDataMediaChannel(const MediaConfig& config);
   virtual ~RtpDataMediaChannel();
-
-  void set_timing(rtc::Timing* timing) {
-    timing_ = timing;
-  }
 
   virtual bool SetSendParameters(const DataSendParameters& params);
   virtual bool SetRecvParameters(const DataRecvParameters& params);
@@ -98,20 +83,21 @@ class RtpDataMediaChannel : public DataMediaChannel {
   virtual void OnRtcpReceived(rtc::CopyOnWriteBuffer* packet,
                               const rtc::PacketTime& packet_time) {}
   virtual void OnReadyToSend(bool ready) {}
+  virtual void OnTransportOverheadChanged(int transport_overhead_per_packet) {}
   virtual bool SendData(
     const SendDataParams& params,
     const rtc::CopyOnWriteBuffer& payload,
     SendDataResult* result);
+  virtual rtc::DiffServCodePoint PreferredDscp() const;
 
  private:
-  void Construct(rtc::Timing* timing);
+  void Construct();
   bool SetMaxSendBandwidth(int bps);
   bool SetSendCodecs(const std::vector<DataCodec>& codecs);
   bool SetRecvCodecs(const std::vector<DataCodec>& codecs);
 
   bool sending_;
   bool receiving_;
-  rtc::Timing* timing_;
   std::vector<DataCodec> send_codecs_;
   std::vector<DataCodec> recv_codecs_;
   std::vector<StreamParams> send_streams_;
