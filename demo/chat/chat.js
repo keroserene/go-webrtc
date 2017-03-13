@@ -217,6 +217,13 @@ function prepareDataChannel(channel) {
     if ("[object ArrayBuffer]" == recv.toString()) {
       var bytes = new Uint8Array(recv);
       line = String.fromCharCode.apply(null, bytes);
+    } else if ("[object Blob]" == recv.toString()) {
+      var reader = new FileReader();
+      reader.addEventListener("loadend", function() {
+        log(reader.result.trim());
+      });
+      reader.readAsText(recv);
+      return;
     } else {
       line = recv;
     }

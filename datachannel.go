@@ -29,10 +29,13 @@ const (
 	DataStateClosed
 )
 
-var DataStateString = []string{"Connecting", "Open", "Closing", "Closed"}
-
 func (s DataState) String() string {
-	return EnumToStringSafe(int(s), DataStateString)
+	return EnumToStringSafe(int(s), []string{
+		"Connecting",
+		"Open",
+		"Closing",
+		"Closed",
+	})
 }
 
 var DCMap = NewCGOMap()

@@ -46,10 +46,12 @@ const (
 	BundlePolicyMaxCompat
 )
 
-var BundlePolicyString = []string{"Balanced", "MaxBundle", "MaxCompat"}
-
 func (p BundlePolicy) String() string {
-	return EnumToStringSafe(int(p), BundlePolicyString)
+	return EnumToStringSafe(int(p), []string{
+		"Balanced",
+		"MaxBundle",
+		"MaxCompat",
+	})
 }
 
 const (
@@ -62,10 +64,13 @@ const (
 	IceTransportPolicyAll
 )
 
-var IceTransportPolicyString = []string{"None", "Relay", "NoHost", "All"}
-
 func (p IceTransportPolicy) String() string {
-	return EnumToStringSafe(int(p), IceTransportPolicyString)
+	return EnumToStringSafe(int(p), []string{
+		"None",
+		"Relay",
+		"NoHost",
+		"All",
+	})
 }
 
 const (
@@ -77,13 +82,15 @@ const (
 	SignalingStateClosed
 )
 
-var SignalingStateString = []string{"Stable",
-	"HaveLocalOffer", "HaveLocalPrAnswer",
-	"HaveRemoteOffer", "HaveRemotePrAnswer",
-	"Closed"}
-
 func (s SignalingState) String() string {
-	return EnumToStringSafe(int(s), SignalingStateString)
+	return EnumToStringSafe(int(s), []string{
+		"Stable",
+		"HaveLocalOffer",
+		"HaveLocalPrAnswer",
+		"HaveRemoteOffer",
+		"HaveRemotePrAnswer",
+		"Closed",
+	})
 }
 
 // TODO: [ED]
@@ -184,8 +191,7 @@ func OptionIceServer(params ...string) ConfigurationOption {
 
 func OptionIceTransportPolicy(policy IceTransportPolicy) ConfigurationOption {
 	return func(config *Configuration) error {
-		INFO.Println("OptionIceTransportPolicy: ", policy,
-			IceTransportPolicyString[policy])
+		INFO.Println("OptionIceTransportPolicy: ", policy)
 		config.IceTransportPolicy = policy
 		return nil
 	}
