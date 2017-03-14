@@ -12,7 +12,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/keroserene/go-webrtc"
+	"../../go-webrtc"
 )
 
 func main() {
