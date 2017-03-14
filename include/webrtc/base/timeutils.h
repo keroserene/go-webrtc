@@ -11,10 +11,10 @@
 #ifndef WEBRTC_BASE_TIMEUTILS_H_
 #define WEBRTC_BASE_TIMEUTILS_H_
 
-#include <ctime>
+#include <stdint.h>
 #include <time.h>
 
-#include "webrtc/base/basictypes.h"
+#include <ctime>
 
 namespace rtc {
 
@@ -31,6 +31,33 @@ static const int64_t kNumNanosecsPerMicrosec =
 
 // TODO(honghaiz): Define a type for the time value specifically.
 
+class ClockInterface {
+ public:
+  virtual ~ClockInterface() {}
+  virtual int64_t TimeNanos() const = 0;
+};
+
+// Sets the global source of time. This is useful mainly for unit tests.
+//
+// Returns the previously set ClockInterface, or nullptr if none is set.
+//
+// Does not transfer ownership of the clock. SetClockForTesting(nullptr)
+// should be called before the ClockInterface is deleted.
+//
+// This method is not thread-safe; it should only be used when no other thread
+// is running (for example, at the start/end of a unit test, or start/end of
+// main()).
+//
+// TODO(deadbeef): Instead of having functions that access this global
+// ClockInterface, we may want to pass the ClockInterface into everything
+// that uses it, eliminating the need for a global variable and this function.
+ClockInterface* SetClockForTesting(ClockInterface* clock);
+
+// Returns the actual system time, even if a clock is set for testing.
+// Useful for timeouts while using a test clock, or for logging.
+int64_t SystemTimeNanos();
+int64_t SystemTimeMillis();
+
 // Returns the current time in milliseconds in 32 bits.
 uint32_t Time32();
 
@@ -42,10 +69,11 @@ inline int64_t Time() {
 }
 
 // Returns the current time in microseconds.
-uint64_t TimeMicros();
+int64_t TimeMicros();
 
 // Returns the current time in nanoseconds.
-uint64_t TimeNanos();
+int64_t TimeNanos();
+
 
 // Returns a future timestamp, 'elapsed' milliseconds from now.
 int64_t TimeAfter(int64_t elapsed);
@@ -61,7 +89,7 @@ inline int64_t TimeSince(int64_t earlier) {
 }
 
 // The number of milliseconds that will elapse between now and 'later'.
-inline int64_t TimeUntil(uint64_t later) {
+inline int64_t TimeUntil(int64_t later) {
   return later - TimeMillis();
 }
 
@@ -80,6 +108,18 @@ class TimestampWrapAroundHandler {
 // seconds from 1970-01-01 00:00 ("epoch").  Don't return time_t since that
 // is still 32 bits on many systems.
 int64_t TmToSeconds(const std::tm& tm);
+
+// Return the number of microseconds since January 1, 1970, UTC.
+// Useful mainly when producing logs to be correlated with other
+// devices, and when the devices in question all have properly
+// synchronized clocks.
+//
+// Note that this function obeys the system's idea about what the time
+// is. It is not guaranteed to be monotonic; it will jump in case the
+// system time is changed, e.g., by some other process calling
+// settimeofday. Always use rtc::TimeMicros(), not this function, for
+// measuring time intervals and timeouts.
+int64_t TimeUTCMicros();
 
 }  // namespace rtc
 

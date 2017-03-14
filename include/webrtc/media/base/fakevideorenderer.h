@@ -11,37 +11,38 @@
 #ifndef WEBRTC_MEDIA_BASE_FAKEVIDEORENDERER_H_
 #define WEBRTC_MEDIA_BASE_FAKEVIDEORENDERER_H_
 
+#include "webrtc/api/video/video_frame.h"
 #include "webrtc/base/logging.h"
-#include "webrtc/base/sigslot.h"
-#include "webrtc/media/base/videoframe.h"
 #include "webrtc/media/base/videosinkinterface.h"
 
 namespace cricket {
 
 // Faked video renderer that has a callback for actions on rendering.
-class FakeVideoRenderer : public rtc::VideoSinkInterface<cricket::VideoFrame> {
+class FakeVideoRenderer : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
  public:
   FakeVideoRenderer()
       : errors_(0),
         width_(0),
         height_(0),
         rotation_(webrtc::kVideoRotation_0),
-        timestamp_(0),
+        timestamp_us_(0),
         num_rendered_frames_(0),
         black_frame_(false) {}
 
-  virtual void OnFrame(const VideoFrame& frame) {
+  virtual void OnFrame(const webrtc::VideoFrame& frame) {
     rtc::CritScope cs(&crit_);
     // TODO(zhurunz) Check with VP8 team to see if we can remove this
-    // tolerance on Y values.
-    black_frame_ = CheckFrameColorYuv(6, 48, 128, 128, 128, 128, &frame);
+    // tolerance on Y values. Some unit tests produce Y values close
+    // to 16 rather than close to zero, for supposedly black frames.
+    // Largest value observed is 34, e.g., running
+    // P2PTestConductor.LocalP2PTest16To9 (peerconnection_unittests).
+    black_frame_ = CheckFrameColorYuv(0, 48, 128, 128, 128, 128, &frame);
     // Treat unexpected frame size as error.
     ++num_rendered_frames_;
     width_ = frame.width();
     height_ = frame.height();
     rotation_ = frame.rotation();
-    timestamp_ = frame.GetTimeStamp();
-    SignalRenderFrame(&frame);
+    timestamp_us_ = frame.timestamp_us();
   }
 
   int errors() const { return errors_; }
@@ -58,9 +59,9 @@ class FakeVideoRenderer : public rtc::VideoSinkInterface<cricket::VideoFrame> {
     return rotation_;
   }
 
-  int64_t timestamp() const {
+  int64_t timestamp_us() const {
     rtc::CritScope cs(&crit_);
-    return timestamp_;
+    return timestamp_us_;
   }
   int num_rendered_frames() const {
     rtc::CritScope cs(&crit_);
@@ -71,9 +72,6 @@ class FakeVideoRenderer : public rtc::VideoSinkInterface<cricket::VideoFrame> {
     return black_frame_;
   }
 
-  sigslot::signal3<int, int, int> SignalSetSize;
-  sigslot::signal1<const VideoFrame*> SignalRenderFrame;
-
  private:
   static bool CheckFrameColorYuv(uint8_t y_min,
                                  uint8_t y_max,
@@ -81,7 +79,7 @@ class FakeVideoRenderer : public rtc::VideoSinkInterface<cricket::VideoFrame> {
                                  uint8_t u_max,
                                  uint8_t v_min,
                                  uint8_t v_max,
-                                 const cricket::VideoFrame* frame) {
+                                 const webrtc::VideoFrame* frame) {
     if (!frame || !frame->video_frame_buffer()) {
       return false;
     }
@@ -130,7 +128,7 @@ class FakeVideoRenderer : public rtc::VideoSinkInterface<cricket::VideoFrame> {
   int width_;
   int height_;
   webrtc::VideoRotation rotation_;
-  int64_t timestamp_;
+  int64_t timestamp_us_;
   int num_rendered_frames_;
   bool black_frame_;
   rtc::CriticalSection crit_;

@@ -72,7 +72,7 @@ class DelayManager {
   // the nominal frame time, the return value is zero. A positive value
   // corresponds to packet spacing being too large, while a negative value means
   // that the packets arrive with less spacing than expected.
-  virtual int AverageIAT() const;
+  virtual double EstimatedClockDriftPpm() const;
 
   // Returns true if peak-mode is active. That is, delay peaks were observed
   // recently. This method simply asks for the same information from the
@@ -91,7 +91,9 @@ class DelayManager {
   // includes any extra delay set through the set_extra_delay_ms() method.
   virtual int TargetLevel() const;
 
-  virtual void LastDecoderType(NetEqDecoder decoder_type);
+  // Informs the delay manager whether or not the last decoded packet contained
+  // speech.
+  virtual void LastDecodedWasCngOrDtmf(bool it_was);
 
   // Accessors and mutators.
   // Assuming |delay| is in valid range.

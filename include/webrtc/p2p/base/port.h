@@ -19,13 +19,15 @@
 
 #include "webrtc/p2p/base/candidate.h"
 #include "webrtc/p2p/base/candidatepairinterface.h"
+#include "webrtc/p2p/base/jseptransport.h"
 #include "webrtc/p2p/base/packetsocketfactory.h"
 #include "webrtc/p2p/base/portinterface.h"
 #include "webrtc/p2p/base/stun.h"
 #include "webrtc/p2p/base/stunrequest.h"
-#include "webrtc/p2p/base/transport.h"
 #include "webrtc/base/asyncpacketsocket.h"
+#include "webrtc/base/checks.h"
 #include "webrtc/base/network.h"
+#include "webrtc/base/optional.h"
 #include "webrtc/base/proxyinfo.h"
 #include "webrtc/base/ratetracker.h"
 #include "webrtc/base/sigslot.h"
@@ -45,6 +47,7 @@ extern const char RELAY_PORT_TYPE[];
 extern const char UDP_PROTOCOL_NAME[];
 extern const char TCP_PROTOCOL_NAME[];
 extern const char SSLTCP_PROTOCOL_NAME[];
+extern const char TLS_PROTOCOL_NAME[];
 
 // RFC 6544, TCP candidate encoding rules.
 extern const int DISCARD_PORT;
@@ -70,7 +73,10 @@ static const int CONNECTION_WRITE_TIMEOUT = 15 * 1000;  // 15 seconds
 static const int CONNECTION_WRITE_CONNECT_TIMEOUT = 5 * 1000;  // 5 seconds
 
 // This is the length of time that we wait for a ping response to come back.
-static const int CONNECTION_RESPONSE_TIMEOUT = 5 * 1000;  // 5 seconds
+// There is no harm to keep this value high other than a small amount
+// of increased memory.  But in some networks (2G),
+// we observe up to 60s RTTs.
+static const int CONNECTION_RESPONSE_TIMEOUT = 60 * 1000;  // 60 seconds
 
 // The number of pings that must fail to respond before we become unwritable.
 static const uint32_t CONNECTION_WRITE_CONNECT_FAILURES = 5;
@@ -81,18 +87,24 @@ enum RelayType {
 };
 
 enum IcePriorityValue {
-  // The reason we are choosing Relay preference 2 is because, we can run
-  // Relay from client to server on UDP/TCP/TLS. To distinguish the transport
-  // protocol, we prefer UDP over TCP over TLS.
-  // For UDP ICE_TYPE_PREFERENCE_RELAY will be 2.
-  // For TCP ICE_TYPE_PREFERENCE_RELAY will be 1.
-  // For TLS ICE_TYPE_PREFERENCE_RELAY will be 0.
-  // Check turnport.cc for setting these values.
-  ICE_TYPE_PREFERENCE_RELAY = 2,
+  ICE_TYPE_PREFERENCE_RELAY_TLS = 0,
+  ICE_TYPE_PREFERENCE_RELAY_TCP = 1,
+  ICE_TYPE_PREFERENCE_RELAY_UDP = 2,
+  ICE_TYPE_PREFERENCE_PRFLX_TCP = 80,
   ICE_TYPE_PREFERENCE_HOST_TCP = 90,
   ICE_TYPE_PREFERENCE_SRFLX = 100,
   ICE_TYPE_PREFERENCE_PRFLX = 110,
   ICE_TYPE_PREFERENCE_HOST = 126
+};
+
+// States are from RFC 5245. http://tools.ietf.org/html/rfc5245#section-5.7.4
+enum class IceCandidatePairState {
+  WAITING = 0,  // Check has not been performed, Waiting pair on CL.
+  IN_PROGRESS,  // Check has been sent, transaction is in progress.
+  SUCCEEDED,    // Check already done, produced a successful result.
+  FAILED,       // Check for this connection failed.
+  // According to spec there should also be a frozen state, but nothing is ever
+  // frozen because we have not implemented ICE freezing logic.
 };
 
 const char* ProtoToString(ProtocolType proto);
@@ -101,15 +113,12 @@ bool StringToProto(const char* value, ProtocolType* proto);
 struct ProtocolAddress {
   rtc::SocketAddress address;
   ProtocolType proto;
-  bool secure;
 
   ProtocolAddress(const rtc::SocketAddress& a, ProtocolType p)
-      : address(a), proto(p), secure(false) { }
-  ProtocolAddress(const rtc::SocketAddress& a, ProtocolType p, bool sec)
-      : address(a), proto(p), secure(sec) { }
+      : address(a), proto(p) {}
 
   bool operator==(const ProtocolAddress& o) const {
-    return address == o.address && proto == o.proto && secure == o.secure;
+    return address == o.address && proto == o.proto;
   }
   bool operator!=(const ProtocolAddress& o) const { return !(*this == o); }
 };
@@ -122,7 +131,14 @@ typedef std::set<rtc::SocketAddress> ServerAddresses;
 class Port : public PortInterface, public rtc::MessageHandler,
              public sigslot::has_slots<> {
  public:
+  // INIT: The state when a port is just created.
+  // KEEP_ALIVE_UNTIL_PRUNED: A port should not be destroyed even if no
+  // connection is using it.
+  // PRUNED: It will be destroyed if no connection is using it for a period of
+  // 30 seconds.
+  enum class State { INIT, KEEP_ALIVE_UNTIL_PRUNED, PRUNED };
   Port(rtc::Thread* thread,
+       const std::string& type,
        rtc::PacketSocketFactory* factory,
        rtc::Network* network,
        const rtc::IPAddress& ip,
@@ -152,6 +168,12 @@ class Port : public PortInterface, public rtc::MessageHandler,
   virtual bool SharedSocket() const { return shared_socket_; }
   void ResetSharedSocket() { shared_socket_ = false; }
 
+  // Should not destroy the port even if no connection is using it. Called when
+  // a port is ready to use.
+  void KeepAliveUntilPruned();
+  // Allows a port to be destroyed if no connection is using it.
+  void Prune();
+
   // The thread on which this port performs its I/O.
   rtc::Thread* thread() { return thread_; }
 
@@ -178,7 +200,7 @@ class Port : public PortInterface, public rtc::MessageHandler,
   }
 
   // Identifies the generation that this port was created in.
-  uint32_t generation() { return generation_; }
+  uint32_t generation() const { return generation_; }
   void set_generation(uint32_t generation) { generation_ = generation; }
 
   const std::string username_fragment() const;
@@ -230,7 +252,7 @@ class Port : public PortInterface, public rtc::MessageHandler,
       rtc::AsyncPacketSocket* socket, const char* data, size_t size,
       const rtc::SocketAddress& remote_addr,
       const rtc::PacketTime& packet_time) {
-    ASSERT(false);
+    RTC_NOTREACHED();
     return false;
   }
 
@@ -293,19 +315,17 @@ class Port : public PortInterface, public rtc::MessageHandler,
   // Returns the index of the new local candidate.
   size_t AddPrflxCandidate(const Candidate& local);
 
-  void set_candidate_filter(uint32_t candidate_filter) {
-    candidate_filter_ = candidate_filter;
-  }
   int16_t network_cost() const { return network_cost_; }
 
  protected:
-  enum {
-    MSG_DEAD = 0,
-    MSG_FIRST_AVAILABLE
-  };
+  enum { MSG_DESTROY_IF_DEAD = 0, MSG_FIRST_AVAILABLE };
+
+  virtual void UpdateNetworkCost();
 
   void set_type(const std::string& type) { type_ = type; }
 
+  // Deprecated. Use the AddAddress() method below with "url" instead.
+  // TODO(zhihuang): Remove this after downstream applications stop using it.
   void AddAddress(const rtc::SocketAddress& address,
                   const rtc::SocketAddress& base_address,
                   const rtc::SocketAddress& related_address,
@@ -317,8 +337,22 @@ class Port : public PortInterface, public rtc::MessageHandler,
                   uint32_t relay_preference,
                   bool final);
 
-  // Adds the given connection to the list.  (Deleting removes them.)
-  void AddConnection(Connection* conn);
+  void AddAddress(const rtc::SocketAddress& address,
+                  const rtc::SocketAddress& base_address,
+                  const rtc::SocketAddress& related_address,
+                  const std::string& protocol,
+                  const std::string& relay_protocol,
+                  const std::string& tcptype,
+                  const std::string& type,
+                  uint32_t type_preference,
+                  uint32_t relay_preference,
+                  const std::string& url,
+                  bool final);
+
+  // Adds the given connection to the map keyed by the remote candidate address.
+  // If an existing connection has the same address, the existing one will be
+  // replaced and destroyed.
+  void AddOrReplaceConnection(Connection* conn);
 
   // Called when a packet is received from an unknown address that is not
   // currently a connection.  If this is an authenticated STUN binding request,
@@ -347,20 +381,15 @@ class Port : public PortInterface, public rtc::MessageHandler,
     return rtc::DSCP_NO_CHANGE;
   }
 
-  uint32_t candidate_filter() { return candidate_filter_; }
+  // Extra work to be done in subclasses when a connection is destroyed.
+  virtual void HandleConnectionDestroyed(Connection* conn) {}
 
  private:
   void Construct();
   // Called when one of our connections deletes itself.
   void OnConnectionDestroyed(Connection* conn);
 
-  // Whether this port is dead, and hence, should be destroyed on the controlled
-  // side.
-  bool dead() const {
-    return ice_role_ == ICEROLE_CONTROLLED && connections_.empty();
-  }
-
-  void OnNetworkInactive(const rtc::Network* network);
+  void OnNetworkTypeChanged(const rtc::Network* network);
 
   rtc::Thread* thread_;
   rtc::PacketSocketFactory* factory_;
@@ -394,16 +423,12 @@ class Port : public PortInterface, public rtc::MessageHandler,
   std::string user_agent_;
   rtc::ProxyInfo proxy_;
 
-  // Candidate filter is pushed down to Port such that each Port could
-  // make its own decision on how to create candidates. For example,
-  // when IceTransportsType is set to relay, both RelayPort and
-  // TurnPort will hide raddr to avoid local address leakage.
-  uint32_t candidate_filter_;
-
   // A virtual cost perceived by the user, usually based on the network type
   // (WiFi. vs. Cellular). It takes precedence over the priority when
   // comparing two connections.
   uint16_t network_cost_;
+  State state_ = State::INIT;
+  int64_t last_time_all_connections_removed_ = 0;
 
   friend class Connection;
 };
@@ -415,19 +440,12 @@ class Connection : public CandidatePairInterface,
                    public sigslot::has_slots<> {
  public:
   struct SentPing {
-    SentPing(const std::string id, int64_t sent_time)
-        : id(id), sent_time(sent_time) {}
+    SentPing(const std::string id, int64_t sent_time, uint32_t nomination)
+        : id(id), sent_time(sent_time), nomination(nomination) {}
 
     std::string id;
     int64_t sent_time;
-  };
-
-  // States are from RFC 5245. http://tools.ietf.org/html/rfc5245#section-5.7.4
-  enum State {
-    STATE_WAITING = 0,  // Check has not been performed, Waiting pair on CL.
-    STATE_INPROGRESS,   // Check has been sent, transaction is in progress.
-    STATE_SUCCEEDED,    // Check already done, produced a successful result.
-    STATE_FAILED        // Check for this connection failed.
+    uint32_t nomination;
   };
 
   virtual ~Connection();
@@ -463,20 +481,17 @@ class Connection : public CandidatePairInterface,
   bool active() const {
     return write_state_ != STATE_WRITE_TIMEOUT;
   }
+
   // A connection is dead if it can be safely deleted.
   bool dead(int64_t now) const;
 
   // Estimate of the round-trip time over this connection.
   int rtt() const { return rtt_; }
 
-  size_t sent_total_bytes();
-  size_t sent_bytes_second();
-  // Used to track how many packets are discarded in the application socket due
-  // to errors.
-  size_t sent_discarded_packets();
-  size_t sent_total_packets();
-  size_t recv_total_bytes();
-  size_t recv_bytes_second();
+  // Gets the |ConnectionInfo| stats, where |best_connection| has not been
+  // populated (default value false).
+  ConnectionInfo stats();
+
   sigslot::signal1<Connection*> SignalStateChange;
 
   // Sent when the connection has decided that it is no longer of value.  It
@@ -514,14 +529,29 @@ class Connection : public CandidatePairInterface,
   bool use_candidate_attr() const { return use_candidate_attr_; }
   void set_use_candidate_attr(bool enable);
 
-  bool nominated() const { return nominated_; }
-  void set_nominated(bool nominated) { nominated_ = nominated; }
+  void set_nomination(uint32_t value) { nomination_ = value; }
+
+  uint32_t remote_nomination() const { return remote_nomination_; }
+  // One or several pairs may be nominated based on if Regular or Aggressive
+  // Nomination is used. https://tools.ietf.org/html/rfc5245#section-8
+  // |nominated| is defined both for the controlling or controlled agent based
+  // on if a nomination has been pinged or acknowledged. The controlled agent
+  // gets its |remote_nomination_| set when pinged by the controlling agent with
+  // a nomination value. The controlling agent gets its |acked_nomination_| set
+  // when receiving a response to a nominating ping.
+  bool nominated() const { return acked_nomination_ || remote_nomination_; }
+  // Public for unit tests.
+  void set_remote_nomination(uint32_t remote_nomination) {
+    remote_nomination_ = remote_nomination;
+  }
+  // Public for unit tests.
+  uint32_t acked_nomination() const { return acked_nomination_; }
 
   void set_remote_ice_mode(IceMode mode) {
     remote_ice_mode_ = mode;
   }
 
-  void set_receiving_timeout(int64_t receiving_timeout_ms) {
+  void set_receiving_timeout(int receiving_timeout_ms) {
     receiving_timeout_ = receiving_timeout_ms;
   }
 
@@ -531,6 +561,10 @@ class Connection : public CandidatePairInterface,
   // Makes the connection go away, in a failed state.
   void FailAndDestroy();
 
+  // Prunes the connection and sets its state to STATE_FAILED,
+  // It will not be used or send pings although it can still receive packets.
+  void FailAndPrune();
+
   // Checks that the state of this connection is up-to-date.  The argument is
   // the current time, which is compared against various timeouts.
   void UpdateState(int64_t now);
@@ -538,10 +572,12 @@ class Connection : public CandidatePairInterface,
   // Called when this connection should try checking writability again.
   int64_t last_ping_sent() const { return last_ping_sent_; }
   void Ping(int64_t now);
-  void ReceivedPingResponse();
+  void ReceivedPingResponse(int rtt, const std::string& request_id);
   int64_t last_ping_response_received() const {
     return last_ping_response_received_;
   }
+  // Used to check if any STUN ping response has been received.
+  int rtt_samples() const { return rtt_samples_; }
 
   // Called whenever a valid ping is received on this connection.  This is
   // public because the connection intercepts the first ping for us.
@@ -549,6 +585,8 @@ class Connection : public CandidatePairInterface,
   void ReceivedPing();
   // Handles the binding request; sends a response if this is a valid request.
   void HandleBindingRequest(IceMessage* msg);
+
+  int64_t last_data_received() const { return last_data_received_; }
 
   // Debugging description of this connection
   std::string ToDebugId() const;
@@ -567,20 +605,19 @@ class Connection : public CandidatePairInterface,
   // Invoked when Connection receives STUN error response with 487 code.
   void HandleRoleConflictFromPeer();
 
-  State state() const { return state_; }
+  IceCandidatePairState state() const { return state_; }
+
+  int num_pings_sent() const { return num_pings_sent_; }
 
   IceMode remote_ice_mode() const { return remote_ice_mode_; }
 
   uint32_t ComputeNetworkCost() const;
 
-  // Update the ICE password and/or generation of the remote candidate if a
-  // ufrag in |remote_ice_parameters| matches the candidate's ufrag, and the
+  // Update the ICE password and/or generation of the remote candidate if the
+  // ufrag in |params| matches the candidate's ufrag, and the
   // candidate's password and/or ufrag has not been set.
-  // |remote_ice_parameters| should be a list of known ICE parameters ordered
-  // by generation.
-  void MaybeSetRemoteIceCredentialsAndGeneration(const std::string& ice_ufrag,
-                                                 const std::string& ice_pwd,
-                                                 int generation);
+  void MaybeSetRemoteIceParametersAndGeneration(const IceParameters& params,
+                                                int generation);
 
   // If |remote_candidate_| is peer reflexive and is equivalent to
   // |new_candidate| except the type, update |remote_candidate_| to
@@ -590,6 +627,12 @@ class Connection : public CandidatePairInterface,
   // Returns the last received time of any data, stun request, or stun
   // response in milliseconds
   int64_t last_received() const;
+  // Returns the last time when the connection changed its receiving state.
+  int64_t receiving_unchanged_since() const {
+    return receiving_unchanged_since_;
+  }
+
+  bool stable(int64_t now) const;
 
  protected:
   enum { MSG_DELETE = 0, MSG_FIRST_AVAILABLE };
@@ -608,17 +651,36 @@ class Connection : public CandidatePairInterface,
   void OnConnectionRequestTimeout(ConnectionRequest* req);
   void OnConnectionRequestSent(ConnectionRequest* req);
 
+  bool rtt_converged() const;
+
+  // If the response is not received within 2 * RTT, the response is assumed to
+  // be missing.
+  bool missing_responses(int64_t now) const;
+
   // Changes the state and signals if necessary.
   void set_write_state(WriteState value);
-  void set_receiving(bool value);
-  void set_state(State state);
+  void UpdateReceiving(int64_t now);
+  void set_state(IceCandidatePairState state);
   void set_connected(bool value);
+
+  uint32_t nomination() const { return nomination_; }
 
   void OnMessage(rtc::Message *pmsg);
 
   Port* port_;
   size_t local_candidate_index_;
   Candidate remote_candidate_;
+
+  ConnectionInfo stats_;
+  rtc::RateTracker recv_rate_tracker_;
+  rtc::RateTracker send_rate_tracker_;
+
+ private:
+  // Update the local candidate based on the mapped address attribute.
+  // If the local candidate changed, fires SignalStateChange.
+  void MaybeUpdateLocalCandidate(ConnectionRequest* request,
+                                 StunMessage* response);
+
   WriteState write_state_;
   bool receiving_;
   bool connected_;
@@ -628,33 +690,41 @@ class Connection : public CandidatePairInterface,
   // But when peer is ice-lite, this flag "must" be initialized to false and
   // turn on when connection becomes "best connection".
   bool use_candidate_attr_;
-  // Whether this connection has been nominated by the controlling side via
-  // the use_candidate attribute.
-  bool nominated_;
+  // Used by the controlling side to indicate that this connection will be
+  // selected for transmission if the peer supports ICE-renomination when this
+  // value is positive. A larger-value indicates that a connection is nominated
+  // later and should be selected by the controlled side with higher precedence.
+  // A zero-value indicates not nominating this connection.
+  uint32_t nomination_ = 0;
+  // The last nomination that has been acknowledged.
+  uint32_t acked_nomination_ = 0;
+  // Used by the controlled side to remember the nomination value received from
+  // the controlling side. When the peer does not support ICE re-nomination,
+  // its value will be 1 if the connection has been nominated.
+  uint32_t remote_nomination_ = 0;
+
   IceMode remote_ice_mode_;
   StunRequestManager requests_;
   int rtt_;
+  int rtt_samples_ = 0;
+  // https://w3c.github.io/webrtc-stats/#dom-rtcicecandidatepairstats-totalroundtriptime
+  uint64_t total_round_trip_time_ms_ = 0;
+  // https://w3c.github.io/webrtc-stats/#dom-rtcicecandidatepairstats-currentroundtriptime
+  rtc::Optional<uint32_t> current_round_trip_time_ms_;
   int64_t last_ping_sent_;      // last time we sent a ping to the other side
   int64_t last_ping_received_;  // last time we received a ping from the other
                                 // side
   int64_t last_data_received_;
   int64_t last_ping_response_received_;
+  int64_t receiving_unchanged_since_ = 0;
   std::vector<SentPing> pings_since_last_response_;
 
-  rtc::RateTracker recv_rate_tracker_;
-  rtc::RateTracker send_rate_tracker_;
-  uint32_t sent_packets_discarded_;
-  uint32_t sent_packets_total_;
-
- private:
-  void MaybeAddPrflxCandidate(ConnectionRequest* request,
-                              StunMessage* response);
-
   bool reported_;
-  State state_;
+  IceCandidatePairState state_;
   // Time duration to switch from receiving to not receiving.
   int receiving_timeout_;
   int64_t time_created_ms_;
+  int num_pings_sent_ = 0;
 
   friend class Port;
   friend class ConnectionRequest;

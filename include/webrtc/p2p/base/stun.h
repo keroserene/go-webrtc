@@ -158,10 +158,8 @@ class StunMessage {
   const StunErrorCodeAttribute* GetErrorCode() const;
   const StunUInt16ListAttribute* GetUnknownAttributes() const;
 
-  // Takes ownership of the specified attribute, verifies it is of the correct
-  // type, and adds it to the message. The return value indicates whether this
-  // was successful.
-  bool AddAttribute(StunAttribute* attr);
+  // Takes ownership of the specified attribute and adds it to the message.
+  void AddAttribute(StunAttribute* attr);
 
   // Validates that a raw STUN message has a correct MESSAGE-INTEGRITY value.
   // This can't currently be done on a StunMessage, since it is affected by
@@ -606,6 +604,7 @@ enum IceAttributeType {
   STUN_ATTR_USE_CANDIDATE = 0x0025,    // No content, Length = 0
   STUN_ATTR_ICE_CONTROLLED = 0x8029,   // UInt64
   STUN_ATTR_ICE_CONTROLLING = 0x802A,  // UInt64
+  STUN_ATTR_NOMINATION = 0xC001,       // UInt32
   // UInt32. The higher 16 bits are the network ID. The lower 16 bits are the
   // network cost.
   STUN_ATTR_NETWORK_INFO = 0xC057
@@ -624,6 +623,7 @@ class IceMessage : public StunMessage {
     switch (type) {
       case STUN_ATTR_PRIORITY:
       case STUN_ATTR_NETWORK_INFO:
+      case STUN_ATTR_NOMINATION:
         return STUN_VALUE_UINT32;
       case STUN_ATTR_USE_CANDIDATE:   return STUN_VALUE_BYTE_STRING;
       case STUN_ATTR_ICE_CONTROLLED:  return STUN_VALUE_UINT64;

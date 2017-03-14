@@ -11,7 +11,6 @@
 #ifndef WEBRTC_PC_RTCPMUXFILTER_H_
 #define WEBRTC_PC_RTCPMUXFILTER_H_
 
-#include "webrtc/base/basictypes.h"
 #include "webrtc/p2p/base/sessiondescription.h"
 
 namespace cricket {
@@ -21,10 +20,20 @@ class RtcpMuxFilter {
  public:
   RtcpMuxFilter();
 
-  // Whether the filter is active, i.e. has RTCP mux been properly negotiated.
+  // Whether RTCP mux has been negotiated with a final answer (not provisional).
+  bool IsFullyActive() const;
+
+  // Whether RTCP mux has been negotiated with a provisional answer; this means
+  // a later answer could disable RTCP mux, and so the RTCP transport should
+  // not be disposed yet.
+  bool IsProvisionallyActive() const;
+
+  // Whether the filter is active, i.e. has RTCP mux been properly negotiated,
+  // either with a final or provisional answer.
   bool IsActive() const;
 
-  // Make the filter active, regardless of the current state.
+  // Make the filter active (fully, not provisionally) regardless of the
+  // current state. This should be used when an endpoint *requires* RTCP mux.
   void SetActive();
 
   // Specifies whether the offer indicates the use of RTCP mux.

@@ -11,8 +11,8 @@
 #ifndef WEBRTC_MODULES_AUDIO_CODING_TEST_UTILITY_H_
 #define WEBRTC_MODULES_AUDIO_CODING_TEST_UTILITY_H_
 
-#include "testing/gtest/include/gtest/gtest.h"
 #include "webrtc/modules/audio_coding/include/audio_coding_module.h"
+#include "webrtc/test/gtest.h"
 
 namespace webrtc {
 
@@ -83,6 +83,9 @@ class ACMTestTimer {
   unsigned long _hour;
 };
 
+// To avoid clashes with CircularBuffer in APM.
+namespace test {
+
 class CircularBuffer {
  public:
   CircularBuffer(uint32_t len);
@@ -109,6 +112,8 @@ class CircularBuffer {
   double _sumSqr;
 };
 
+}  // namespace test
+
 int16_t ChooseCodec(CodecInst& codecInst);
 
 void PrintCodecs();
@@ -118,10 +123,8 @@ bool FixedPayloadTypeCodec(const char* payloadName);
 class VADCallback : public ACMVADCallback {
  public:
   VADCallback();
-  ~VADCallback() {
-  }
 
-  int32_t InFrameType(FrameType frame_type);
+  int32_t InFrameType(FrameType frame_type) override;
 
   void PrintFrameTypes();
   void Reset();
@@ -129,10 +132,6 @@ class VADCallback : public ACMVADCallback {
  private:
   uint32_t _numFrameTypes[5];
 };
-
-void UseLegacyAcm(webrtc::Config* config);
-
-void UseNewAcm(webrtc::Config* config);
 
 }  // namespace webrtc
 

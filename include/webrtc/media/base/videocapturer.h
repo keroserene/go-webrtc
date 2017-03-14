@@ -13,22 +13,32 @@
 #ifndef WEBRTC_MEDIA_BASE_VIDEOCAPTURER_H_
 #define WEBRTC_MEDIA_BASE_VIDEOCAPTURER_H_
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "webrtc/base/basictypes.h"
+// TODO(nisse): Transition hack, some downstream applications expect that
+// including this file declares I420Buffer and NativeHandleBuffer. Delete after
+// users of these classes are fixed to include the right headers.
+#include "webrtc/api/video/i420_buffer.h"
+#include "webrtc/common_video/include/video_frame_buffer.h"
+
 #include "webrtc/base/constructormagic.h"
 #include "webrtc/base/criticalsection.h"
 #include "webrtc/media/base/videosourceinterface.h"
 #include "webrtc/base/sigslot.h"
 #include "webrtc/base/thread_checker.h"
+#include "webrtc/base/timestampaligner.h"
 #include "webrtc/media/base/videoadapter.h"
 #include "webrtc/media/base/videobroadcaster.h"
 #include "webrtc/media/base/videocommon.h"
-#include "webrtc/media/base/videoframefactory.h"
 
+namespace webrtc {
+class VideoFrame;
+}
 
 namespace cricket {
 
@@ -40,40 +50,6 @@ enum CaptureState {
   CS_RUNNING,    // The capturer has been started successfully and is now
                  // capturing.
   CS_FAILED,     // The capturer failed to start.
-};
-
-class VideoFrame;
-
-struct CapturedFrame {
-  static const uint32_t kFrameHeaderSize = 40;  // Size from width to data_size.
-  static const uint32_t kUnknownDataSize = 0xFFFFFFFF;
-
-  CapturedFrame();
-
-  // Get the number of bytes of the frame data. If data_size is known, return
-  // it directly. Otherwise, calculate the size based on width, height, and
-  // fourcc. Return true if succeeded.
-  bool GetDataSize(uint32_t* size) const;
-
-  // The width and height of the captured frame could be different from those
-  // of VideoFormat. Once the first frame is captured, the width, height,
-  // fourcc, pixel_width, and pixel_height should keep the same over frames.
-  int width;              // in number of pixels
-  int height;             // in number of pixels
-  uint32_t fourcc;        // compression
-  uint32_t pixel_width;   // width of a pixel, default is 1
-  uint32_t pixel_height;  // height of a pixel, default is 1
-  int64_t time_stamp;  // timestamp of when the frame was captured, in unix
-                       // time with nanosecond units.
-  uint32_t data_size;  // number of bytes of the frame data
-
-  webrtc::VideoRotation rotation;  // rotation in degrees of the frame.
-
-  void*  data;          // pointer to the frame data. This object allocates the
-                        // memory or points to an existing memory.
-
- private:
-  RTC_DISALLOW_COPY_AND_ASSIGN(CapturedFrame);
 };
 
 // VideoCapturer is an abstract class that defines the interfaces for video
@@ -103,7 +79,7 @@ struct CapturedFrame {
 //   thread safe.
 //
 class VideoCapturer : public sigslot::has_slots<>,
-                      public rtc::VideoSourceInterface<cricket::VideoFrame> {
+                      public rtc::VideoSourceInterface<webrtc::VideoFrame> {
  public:
   VideoCapturer();
 
@@ -168,7 +144,7 @@ class VideoCapturer : public sigslot::has_slots<>,
     return capture_state_;
   }
 
-  virtual bool GetApplyRotation() { return apply_rotation_; }
+  virtual bool apply_rotation() { return apply_rotation_; }
 
   // Returns true if the capturer is screencasting. This can be used to
   // implement screencast specific behavior.
@@ -191,13 +167,6 @@ class VideoCapturer : public sigslot::has_slots<>,
   // Signal all capture state changes that are not a direct result of calling
   // Start().
   sigslot::signal2<VideoCapturer*, CaptureState> SignalStateChange;
-  // Frame callbacks are multithreaded to allow disconnect and connect to be
-  // called concurrently. It also ensures that it is safe to call disconnect
-  // at any time which is needed since the signal may be called from an
-  // unmarshalled thread owned by the VideoCapturer.
-  // Signal the captured frame to downstream.
-  sigslot::signal2<VideoCapturer*, const CapturedFrame*,
-                   sigslot::multi_threaded_local> SignalFrameCaptured;
 
   // If true, run video adaptation. By default, video adaptation is enabled
   // and users must call video_adapter()->OnOutputFormatRequest()
@@ -207,29 +176,53 @@ class VideoCapturer : public sigslot::has_slots<>,
     enable_video_adapter_ = enable_video_adapter;
   }
 
-  // Takes ownership.
-  void set_frame_factory(VideoFrameFactory* frame_factory);
-
   bool GetInputSize(int* width, int* height);
 
   // Implements VideoSourceInterface
-  void AddOrUpdateSink(rtc::VideoSinkInterface<cricket::VideoFrame>* sink,
+  void AddOrUpdateSink(rtc::VideoSinkInterface<webrtc::VideoFrame>* sink,
                        const rtc::VideoSinkWants& wants) override;
-  void RemoveSink(rtc::VideoSinkInterface<cricket::VideoFrame>* sink) override;
+  void RemoveSink(rtc::VideoSinkInterface<webrtc::VideoFrame>* sink) override;
 
  protected:
   // OnSinkWantsChanged can be overridden to change the default behavior
   // when a sink changes its VideoSinkWants by calling AddOrUpdateSink.
   virtual void OnSinkWantsChanged(const rtc::VideoSinkWants& wants);
 
-  // Callback attached to SignalFrameCaptured where SignalVideoFrames is called.
-  void OnFrameCaptured(VideoCapturer* video_capturer,
-                       const CapturedFrame* captured_frame);
+  // Reports the appropriate frame size after adaptation. Returns true
+  // if a frame is wanted. Returns false if there are no interested
+  // sinks, or if the VideoAdapter decides to drop the frame.
 
-  // Called when a frame has been captured and converted to a VideoFrame.
-  // OnFrame can be called directly by an implementation that does not use
-  // SignalFrameCaptured or OnFrameCaptured.
-  void OnFrame(VideoCapturer* capturer, const VideoFrame* frame);
+  // This function also implements timestamp translation/filtering.
+  // |camera_time_ns| is the camera's timestamp for the captured
+  // frame; it is expected to have good accuracy, but it may use an
+  // arbitrary epoch and a small possibly free-running with a frequency
+  // slightly different from the system clock. |system_time_us| is the
+  // monotonic system time (in the same scale as rtc::TimeMicros) when
+  // the frame was captured; the application is expected to read the
+  // system time as soon as possible after frame capture, but it may
+  // suffer scheduling jitter or poor system clock resolution. The
+  // output |translated_camera_time_us| is a combined timestamp,
+  // taking advantage of the supposedly higher accuracy in the camera
+  // timestamp, but using the same epoch and frequency as system time.
+  bool AdaptFrame(int width,
+                  int height,
+                  int64_t camera_time_us,
+                  int64_t system_time_us,
+                  int* out_width,
+                  int* out_height,
+                  int* crop_width,
+                  int* crop_height,
+                  int* crop_x,
+                  int* crop_y,
+                  int64_t* translated_camera_time_us);
+
+  // Called when a frame has been captured and converted to a
+  // VideoFrame. OnFrame can be called directly by an implementation
+  // that does not use SignalFrameCaptured or OnFrameCaptured. The
+  // orig_width and orig_height are used only to produce stats.
+  void OnFrame(const webrtc::VideoFrame& frame,
+               int orig_width,
+               int orig_height);
 
   VideoAdapter* video_adapter() { return &video_adapter_; }
 
@@ -246,15 +239,9 @@ class VideoCapturer : public sigslot::has_slots<>,
 
   void SetCaptureFormat(const VideoFormat* format) {
     capture_format_.reset(format ? new VideoFormat(*format) : NULL);
-    if (capture_format_) {
-      ASSERT(capture_format_->interval > 0 &&
-             "Capture format expected to have positive interval.");
-      video_adapter_.SetExpectedInputFrameInterval(capture_format_->interval);
-    }
   }
 
   void SetSupportedFormats(const std::vector<VideoFormat>& formats);
-  VideoFrameFactory* frame_factory() { return frame_factory_.get(); }
 
  private:
   void Construct();
@@ -264,21 +251,17 @@ class VideoCapturer : public sigslot::has_slots<>,
   int64_t GetFormatDistance(const VideoFormat& desired,
                             const VideoFormat& supported);
 
-  // Convert captured frame to readable string for LOG messages.
-  std::string ToString(const CapturedFrame* frame) const;
-
   // Updates filtered_supported_formats_ so that it contains the formats in
   // supported_formats_ that fulfill all applied restrictions.
   void UpdateFilteredSupportedFormats();
   // Returns true if format doesn't fulfill all applied restrictions.
   bool ShouldFilterFormat(const VideoFormat& format) const;
 
-  void UpdateInputSize(const CapturedFrame* captured_frame);
+  void UpdateInputSize(int width, int height);
 
   rtc::ThreadChecker thread_checker_;
   std::string id_;
   CaptureState capture_state_;
-  std::unique_ptr<VideoFrameFactory> frame_factory_;
   std::unique_ptr<VideoFormat> capture_format_;
   std::vector<VideoFormat> supported_formats_;
   std::unique_ptr<VideoFormat> max_format_;
@@ -298,9 +281,12 @@ class VideoCapturer : public sigslot::has_slots<>,
   int input_width_ GUARDED_BY(frame_stats_crit_);
   int input_height_ GUARDED_BY(frame_stats_crit_);
 
-  // Whether capturer should apply rotation to the frame before signaling it.
+  // Whether capturer should apply rotation to the frame before
+  // passing it on to the registered sinks.
   bool apply_rotation_;
 
+  // State for the timestamp translation.
+  rtc::TimestampAligner timestamp_aligner_;
   RTC_DISALLOW_COPY_AND_ASSIGN(VideoCapturer);
 };
 

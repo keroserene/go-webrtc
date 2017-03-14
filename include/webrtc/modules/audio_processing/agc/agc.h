@@ -19,7 +19,7 @@
 namespace webrtc {
 
 class AudioFrame;
-class Histogram;
+class LoudnessHistogram;
 
 class Agc {
  public:
@@ -40,17 +40,14 @@ class Agc {
   virtual void Reset();
 
   virtual int set_target_level_dbfs(int level);
-  virtual int target_level_dbfs() const { return target_level_dbfs_; }
-
-  virtual float voice_probability() const {
-    return vad_.last_voice_probability();
-  }
+  virtual int target_level_dbfs() const;
+  virtual float voice_probability() const;
 
  private:
   double target_level_loudness_;
   int target_level_dbfs_;
-  std::unique_ptr<Histogram> histogram_;
-  std::unique_ptr<Histogram> inactive_histogram_;
+  std::unique_ptr<LoudnessHistogram> histogram_;
+  std::unique_ptr<LoudnessHistogram> inactive_histogram_;
   VoiceActivityDetector vad_;
 };
 

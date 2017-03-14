@@ -12,23 +12,22 @@
 #define WEBRTC_MODULES_RTP_RTCP_SOURCE_RTCP_PACKET_RAPID_RESYNC_REQUEST_H_
 
 #include "webrtc/base/basictypes.h"
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/rtpfb.h"
-#include "webrtc/modules/rtp_rtcp/source/rtcp_utility.h"
 
 namespace webrtc {
 namespace rtcp {
+class CommonHeader;
+
 // draft-perkins-avt-rapid-rtp-sync-03
 class RapidResyncRequest : public Rtpfb {
  public:
-  static const uint8_t kFeedbackMessageType = 5;
+  static constexpr uint8_t kFeedbackMessageType = 5;
 
   RapidResyncRequest() {}
   ~RapidResyncRequest() override {}
 
   // Parse assumes header is already parsed and validated.
-  bool Parse(const RTCPUtility::RtcpCommonHeader& header,
-             const uint8_t* payload);  // Size of the payload is in the header.
+  bool Parse(const CommonHeader& header);
 
  protected:
   bool Create(uint8_t* packet,
@@ -40,8 +39,6 @@ class RapidResyncRequest : public Rtpfb {
   size_t BlockLength() const override {
     return kHeaderLength + kCommonFeedbackLength;
   }
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(RapidResyncRequest);
 };
 }  // namespace rtcp
 }  // namespace webrtc

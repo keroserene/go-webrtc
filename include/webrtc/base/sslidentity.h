@@ -28,6 +28,18 @@ namespace rtc {
 // Forward declaration due to circular dependency with SSLCertificate.
 class SSLCertChain;
 
+struct SSLCertificateStats {
+  SSLCertificateStats(std::string&& fingerprint,
+                      std::string&& fingerprint_algorithm,
+                      std::string&& base64_certificate,
+                      std::unique_ptr<SSLCertificateStats>&& issuer);
+  ~SSLCertificateStats();
+  std::string fingerprint;
+  std::string fingerprint_algorithm;
+  std::string base64_certificate;
+  std::unique_ptr<SSLCertificateStats> issuer;
+};
+
 // Abstract interface overridden by SSL library specific
 // implementations.
 
@@ -39,9 +51,9 @@ class SSLCertChain;
 class SSLCertificate {
  public:
   // Parses and builds a certificate from a PEM encoded string.
-  // Returns NULL on failure.
+  // Returns null on failure.
   // The length of the string representation of the certificate is
-  // stored in *pem_length if it is non-NULL, and only if
+  // stored in *pem_length if it is non-null, and only if
   // parsing was successful.
   // Caller is responsible for freeing the returned object.
   static SSLCertificate* FromPEMString(const std::string& pem_string);
@@ -75,6 +87,15 @@ class SSLCertificate {
   // Returns the time in seconds relative to epoch, 1970-01-01T00:00:00Z (UTC),
   // or -1 if an expiration time could not be retrieved.
   virtual int64_t CertificateExpirationTime() const = 0;
+
+  // Gets information (fingerprint, etc.) about this certificate and its chain
+  // (if it has a certificate chain). This is used for certificate stats, see
+  // https://w3c.github.io/webrtc-stats/#certificatestats-dict*.
+  std::unique_ptr<SSLCertificateStats> GetStats() const;
+
+ private:
+  std::unique_ptr<SSLCertificateStats> GetStats(
+    std::unique_ptr<SSLCertificateStats> issuer) const;
 };
 
 // SSLCertChain is a simple wrapper for a vector of SSLCertificates. It serves
@@ -117,20 +138,7 @@ class SSLCertChain {
 // KT_LAST is intended for vector declarations and loops over all key types;
 // it does not represent any key type in itself.
 // KT_DEFAULT is used as the default KeyType for KeyParams.
-enum KeyType {
-  KT_RSA, KT_ECDSA, KT_LAST,
-#if defined(WEBRTC_CHROMIUM_BUILD)
-  // TODO(hbos): Because of an experiment running in Chromium which relies on
-  // RSA being the default (for performance reasons) we have this #if. ECDSA
-  // launches in Chromium by flipping a flag which overrides the default. As
-  // soon as the experiment has ended and there is no risk of RSA being the
-  // default we should make KT_DEFAULT = KT_ECDSA unconditionally.
-  // crbug.com/611698
-  KT_DEFAULT = KT_RSA
-#else
-  KT_DEFAULT = KT_ECDSA
-#endif
-};
+enum KeyType { KT_RSA, KT_ECDSA, KT_LAST, KT_DEFAULT = KT_ECDSA };
 
 static const int kRsaDefaultModSize = 1024;
 static const int kRsaDefaultExponent = 0x10001;  // = 2^16+1 = 65537
@@ -208,7 +216,7 @@ class SSLIdentity {
   // parameters are defined in |key_param|. The certificate's lifetime in
   // seconds from the current time is defined in |certificate_lifetime|; it
   // should be a non-negative number.
-  // Returns NULL on failure.
+  // Returns null on failure.
   // Caller is responsible for freeing the returned object.
   static SSLIdentity* GenerateWithExpiration(const std::string& common_name,
                                              const KeyParams& key_param,

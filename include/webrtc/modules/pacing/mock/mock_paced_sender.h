@@ -13,10 +13,9 @@
 
 #include <vector>
 
-#include "testing/gmock/include/gmock/gmock.h"
-
 #include "webrtc/modules/pacing/paced_sender.h"
 #include "webrtc/system_wrappers/include/clock.h"
+#include "webrtc/test/gmock.h"
 
 namespace webrtc {
 
@@ -29,10 +28,13 @@ class MockPacedSender : public PacedSender {
                                 int64_t capture_time_ms,
                                 size_t bytes,
                                 bool retransmission));
+  MOCK_METHOD1(CreateProbeCluster, void(int));
   MOCK_METHOD1(SetEstimatedBitrate, void(uint32_t));
   MOCK_CONST_METHOD0(QueueInMs, int64_t());
   MOCK_CONST_METHOD0(QueueInPackets, int());
   MOCK_CONST_METHOD0(ExpectedQueueTimeMs, int64_t());
+  MOCK_CONST_METHOD0(GetApplicationLimitedRegionStartTime,
+                     rtc::Optional<int64_t>());
 };
 
 }  // namespace webrtc

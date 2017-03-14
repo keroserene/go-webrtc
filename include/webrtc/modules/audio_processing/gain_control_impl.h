@@ -23,6 +23,7 @@
 
 namespace webrtc {
 
+class ApmDataDumper;
 class AudioBuffer;
 
 class GainControlImpl : public GainControl {
@@ -31,25 +32,20 @@ class GainControlImpl : public GainControl {
                   rtc::CriticalSection* crit_capture);
   ~GainControlImpl() override;
 
-  int ProcessRenderAudio(AudioBuffer* audio);
+  void ProcessRenderAudio(rtc::ArrayView<const int16_t> packed_render_audio);
   int AnalyzeCaptureAudio(AudioBuffer* audio);
   int ProcessCaptureAudio(AudioBuffer* audio, bool stream_has_echo);
 
   void Initialize(size_t num_proc_channels, int sample_rate_hz);
+
+  static void PackRenderAudioBuffer(AudioBuffer* audio,
+                                    std::vector<int16_t>* packed_buffer);
 
   // GainControl implementation.
   bool is_enabled() const override;
   int stream_analog_level() override;
   bool is_limiter_enabled() const override;
   Mode mode() const override;
-
-  // Checks whether the module is enabled. Must only be
-  // called from the render side of APM as otherwise
-  // deadlocks may occur.
-  bool is_enabled_render_side_query() const;
-
-  // Reads render side data that has been queued on the render call.
-  void ReadQueuedRenderData();
 
   int compression_gain_db() const override;
 
@@ -69,11 +65,12 @@ class GainControlImpl : public GainControl {
   int analog_level_maximum() const override;
   bool stream_is_saturated() const override;
 
-  void AllocateRenderQueue();
   int Configure();
 
   rtc::CriticalSection* const crit_render_ ACQUIRED_BEFORE(crit_capture_);
   rtc::CriticalSection* const crit_capture_;
+
+  std::unique_ptr<ApmDataDumper> data_dumper_;
 
   bool enabled_ = false;
 
@@ -87,21 +84,12 @@ class GainControlImpl : public GainControl {
   bool was_analog_level_set_ GUARDED_BY(crit_capture_);
   bool stream_is_saturated_ GUARDED_BY(crit_capture_);
 
-  size_t render_queue_element_max_size_ GUARDED_BY(crit_render_)
-      GUARDED_BY(crit_capture_);
-  std::vector<int16_t> render_queue_buffer_ GUARDED_BY(crit_render_);
-  std::vector<int16_t> capture_queue_buffer_ GUARDED_BY(crit_capture_);
-
-  // Lock protection not needed.
-  std::unique_ptr<
-      SwapQueue<std::vector<int16_t>, RenderQueueItemVerifier<int16_t>>>
-      render_signal_queue_;
-
   std::vector<std::unique_ptr<GainController>> gain_controllers_;
 
   rtc::Optional<size_t> num_proc_channels_ GUARDED_BY(crit_capture_);
   rtc::Optional<int> sample_rate_hz_ GUARDED_BY(crit_capture_);
 
+  static int instance_counter_;
   RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(GainControlImpl);
 };
 }  // namespace webrtc

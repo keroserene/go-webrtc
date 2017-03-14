@@ -13,8 +13,8 @@
 
 #include <vector>
 
-#include "testing/gmock/include/gmock/gmock.h"
 #include "webrtc/modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h"
+#include "webrtc/test/gmock.h"
 
 namespace webrtc {
 
@@ -28,7 +28,7 @@ class MockRemoteBitrateEstimator : public RemoteBitrateEstimator {
  public:
   MOCK_METHOD1(IncomingPacketFeedbackVector,
                void(const std::vector<PacketInfo>&));
-  MOCK_METHOD4(IncomingPacket, void(int64_t, size_t, const RTPHeader&, bool));
+  MOCK_METHOD3(IncomingPacket, void(int64_t, size_t, const RTPHeader&));
   MOCK_METHOD1(RemoveStream, void(uint32_t));
   MOCK_CONST_METHOD2(LatestEstimate, bool(std::vector<uint32_t>*, uint32_t*));
 

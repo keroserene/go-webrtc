@@ -49,15 +49,15 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
 
   void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) override;
 
-  int32_t Init() override;
+  InitStatus Init() override;
   int32_t Terminate() override;
   bool Initialized() const override { return initialized_; }
 
   int32_t InitPlayout() override;
-  bool PlayoutIsInitialized() const override { return play_is_initialized_; }
+  bool PlayoutIsInitialized() const override { return audio_is_initialized_; }
 
   int32_t InitRecording() override;
-  bool RecordingIsInitialized() const override { return rec_is_initialized_; }
+  bool RecordingIsInitialized() const override { return audio_is_initialized_; }
 
   int32_t StartPlayout() override;
   int32_t StopPlayout() override;
@@ -92,7 +92,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   // See audio_device_not_implemented.cc for trivial implementations.
   int32_t PlayoutBuffer(AudioDeviceModule::BufferType& type,
                         uint16_t& sizeMS) const override;
-  int32_t ActiveAudioLayer(AudioDeviceModule::AudioLayer& audioLayer) const;
+  int32_t ActiveAudioLayer(
+      AudioDeviceModule::AudioLayer& audioLayer) const override;
   int32_t ResetAudioDevice() override;
   int32_t PlayoutIsAvailable(bool& available) override;
   int32_t RecordingIsAvailable(bool& available) override;
@@ -279,11 +280,9 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   // Set to true after successful call to Init(), false otherwise.
   bool initialized_;
 
-  // Set to true after successful call to InitRecording(), false otherwise.
-  bool rec_is_initialized_;
-
-  // Set to true after successful call to InitPlayout(), false otherwise.
-  bool play_is_initialized_;
+  // Set to true after successful call to InitRecording() or InitPlayout(),
+  // false otherwise.
+  bool audio_is_initialized_;
 
   // Set to true if audio session is interrupted, false otherwise.
   bool is_interrupted_;

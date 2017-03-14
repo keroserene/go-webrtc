@@ -28,7 +28,7 @@
 #include <vector>
 #include "webrtc/base/arraysize.h"
 #include "webrtc/base/asyncsocket.h"
-#include "webrtc/base/common.h"
+#include "webrtc/base/checks.h"
 #include "webrtc/base/gunit.h"
 #include "webrtc/base/nethelpers.h"
 #include "webrtc/base/pathutils.h"
@@ -177,7 +177,7 @@ public:
     va_start(args, format);
     char buffer[1024];
     size_t len = vsprintfn(buffer, sizeof(buffer), format, args);
-    ASSERT(len < sizeof(buffer) - 1);
+    RTC_CHECK(len < sizeof(buffer) - 1);
     va_end(args);
     QueueData(buffer, len);
   }
@@ -276,14 +276,12 @@ private:
 
 class SocketTestClient : public sigslot::has_slots<> {
 public:
-  SocketTestClient() {
-    Init(NULL, AF_INET);
-  }
-  SocketTestClient(AsyncSocket* socket) {
-    Init(socket, socket->GetLocalAddress().family());
+ SocketTestClient() { Init(nullptr, AF_INET); }
+ SocketTestClient(AsyncSocket* socket) {
+   Init(socket, socket->GetLocalAddress().family());
   }
   SocketTestClient(const SocketAddress& address) {
-    Init(NULL, address.family());
+    Init(nullptr, address.family());
     socket_->Connect(address);
   }
 
@@ -297,7 +295,7 @@ public:
     va_start(args, format);
     char buffer[1024];
     size_t len = vsprintfn(buffer, sizeof(buffer), format, args);
-    ASSERT(len < sizeof(buffer) - 1);
+    RTC_CHECK(len < sizeof(buffer) - 1);
     va_end(args);
     QueueData(buffer, len);
   }
@@ -359,7 +357,7 @@ private:
   }
   void OnReadEvent(AsyncSocket* socket) {
     char data[64 * 1024];
-    int result = socket_->Recv(data, arraysize(data));
+    int result = socket_->Recv(data, arraysize(data), nullptr);
     if (result > 0) {
       recv_buffer_.insert(recv_buffer_.end(), data, data + result);
     }
@@ -408,8 +406,7 @@ class SocketTestServer : public sigslot::has_slots<> {
 
  private:
   void OnReadEvent(AsyncSocket* socket) {
-    AsyncSocket* accepted =
-      static_cast<AsyncSocket*>(socket_->Accept(NULL));
+    AsyncSocket* accepted = static_cast<AsyncSocket*>(socket_->Accept(nullptr));
     if (!accepted)
       return;
     clients_.push_back(new SocketTestClient(accepted));
@@ -418,49 +415,6 @@ class SocketTestServer : public sigslot::has_slots<> {
   std::unique_ptr<AsyncSocket> socket_;
   std::vector<SocketTestClient*> clients_;
 };
-
-///////////////////////////////////////////////////////////////////////////////
-// Generic Utilities
-///////////////////////////////////////////////////////////////////////////////
-
-inline bool ReadFile(const char* filename, std::string* contents) {
-  FILE* fp = fopen(filename, "rb");
-  if (!fp)
-    return false;
-  char buffer[1024*64];
-  size_t read;
-  contents->clear();
-  while ((read = fread(buffer, 1, sizeof(buffer), fp))) {
-    contents->append(buffer, read);
-  }
-  bool success = (0 != feof(fp));
-  fclose(fp);
-  return success;
-}
-
-// Look in parent dir for parallel directory.
-inline rtc::Pathname GetSiblingDirectory(
-    const std::string& parallel_dir) {
-  rtc::Pathname path = rtc::Filesystem::GetCurrentDirectory();
-  while (!path.empty()) {
-    rtc::Pathname potential_parallel_dir = path;
-    potential_parallel_dir.AppendFolder(parallel_dir);
-    if (rtc::Filesystem::IsFolder(potential_parallel_dir)) {
-      return potential_parallel_dir;
-    }
-
-    path.SetFolder(path.parent_folder());
-  }
-  return path;
-}
-
-inline rtc::Pathname GetGoogle3Directory() {
-  return GetSiblingDirectory("google3");
-}
-
-inline rtc::Pathname GetTalkDirectory() {
-  return GetSiblingDirectory("talk");
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Unittest predicates which are similar to STREQ, but for raw memory
@@ -504,25 +458,6 @@ inline AssertionResult CmpHelperMemEq(const char* expected_expression,
   return AssertionFailure(msg);
 }
 
-inline AssertionResult CmpHelperFileEq(const char* expected_expression,
-                                       const char* expected_length_expression,
-                                       const char* actual_filename,
-                                       const void* expected,
-                                       size_t expected_length,
-                                       const char* filename)
-{
-  std::string contents;
-  if (!ReadFile(filename, &contents)) {
-    Message msg;
-    msg << "File '" << filename << "' could not be read.";
-    return AssertionFailure(msg);
-  }
-  return CmpHelperMemEq(expected_expression, expected_length_expression,
-                        actual_filename, "",
-                        expected, expected_length,
-                        contents.c_str(), contents.size());
-}
-
 #define EXPECT_MEMEQ(expected, expected_length, actual, actual_length) \
   EXPECT_PRED_FORMAT4(::testing::CmpHelperMemEq, expected, expected_length, \
                       actual, actual_length)
@@ -530,14 +465,6 @@ inline AssertionResult CmpHelperFileEq(const char* expected_expression,
 #define ASSERT_MEMEQ(expected, expected_length, actual, actual_length) \
   ASSERT_PRED_FORMAT4(::testing::CmpHelperMemEq, expected, expected_length, \
                       actual, actual_length)
-
-#define EXPECT_FILEEQ(expected, expected_length, filename) \
-  EXPECT_PRED_FORMAT3(::testing::CmpHelperFileEq, expected, expected_length, \
-                      filename)
-
-#define ASSERT_FILEEQ(expected, expected_length, filename) \
-  ASSERT_PRED_FORMAT3(::testing::CmpHelperFileEq, expected, expected_length, \
-                      filename)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Helpers for initializing constant memory with integers in a particular byte
@@ -600,9 +527,9 @@ inline AssertionResult CmpHelperFileEq(const char* expected_expression,
 
 #if defined(WEBRTC_LINUX) && !defined(WEBRTC_ANDROID)
 struct XDisplay {
-  XDisplay() : display_(XOpenDisplay(NULL)) { }
+  XDisplay() : display_(XOpenDisplay(nullptr)) {}
   ~XDisplay() { if (display_) XCloseDisplay(display_); }
-  bool IsValid() const { return display_ != NULL; }
+  bool IsValid() const { return display_ != nullptr; }
   operator Display*() { return display_; }
  private:
   Display* display_;

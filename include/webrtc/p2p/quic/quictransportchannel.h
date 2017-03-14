@@ -142,13 +142,11 @@ class QuicTransportChannel : public TransportChannelImpl,
   void SetIceTiebreaker(uint64_t tiebreaker) override {
     channel_->SetIceTiebreaker(tiebreaker);
   }
-  void SetIceCredentials(const std::string& ice_ufrag,
-                         const std::string& ice_pwd) override {
-    channel_->SetIceCredentials(ice_ufrag, ice_pwd);
+  void SetIceParameters(const IceParameters& ice_params) override {
+    channel_->SetIceParameters(ice_params);
   }
-  void SetRemoteIceCredentials(const std::string& ice_ufrag,
-                               const std::string& ice_pwd) override {
-    channel_->SetRemoteIceCredentials(ice_ufrag, ice_pwd);
+  void SetRemoteIceParameters(const IceParameters& ice_params) override {
+    channel_->SetRemoteIceParameters(ice_params);
   }
   void SetRemoteIceMode(IceMode mode) override {
     channel_->SetRemoteIceMode(mode);
@@ -165,9 +163,6 @@ class QuicTransportChannel : public TransportChannelImpl,
   }
   void SetIceConfig(const IceConfig& config) override {
     channel_->SetIceConfig(config);
-  }
-  void Connect() override {
-    channel_->Connect();
   }
 
   // QuicPacketWriter overrides.
@@ -204,6 +199,10 @@ class QuicTransportChannel : public TransportChannelImpl,
   void OnProofVerifyDetailsAvailable(
       const net::ProofVerifyDetails& verify_details) override;
 
+  void SetMetricsObserver(webrtc::MetricsObserverInterface* observer) override {
+    channel_->SetMetricsObserver(observer);
+  }
+
   // Returns true if |quic_| has queued data which wasn't written due
   // to |channel_| being write blocked.
   bool HasDataToWrite() const;
@@ -213,6 +212,8 @@ class QuicTransportChannel : public TransportChannelImpl,
   QuicTransportState quic_state() const { return quic_state_; }
   // Creates a new QUIC stream that can send data.
   ReliableQuicStream* CreateQuicStream();
+
+  TransportChannelImpl* ice_transport_channel() { return channel_.get(); }
 
   // Emitted when |quic_| creates a QUIC stream to receive data from the remote
   // peer, when the stream did not exist previously.
@@ -246,8 +247,9 @@ class QuicTransportChannel : public TransportChannelImpl,
   void OnSelectedCandidatePairChanged(
       TransportChannel* channel,
       CandidatePairInterface* selected_candidate_pair,
-      int last_sent_packet_id);
-  void OnConnectionRemoved(TransportChannelImpl* channel);
+      int last_sent_packet_id,
+      bool ready_to_send);
+  void OnChannelStateChanged(TransportChannelImpl* channel);
 
   // Callbacks for |quic_|.
   // Called when |quic_| has established the crypto handshake.
@@ -269,7 +271,7 @@ class QuicTransportChannel : public TransportChannelImpl,
   void set_quic_state(QuicTransportState state);
 
   // Everything should occur on this thread.
-  rtc::Thread* worker_thread_;
+  rtc::Thread* network_thread_;
   // Underlying channel which is responsible for connecting with the remote peer
   // and sending/receiving packets across the network.
   std::unique_ptr<TransportChannelImpl> channel_;
