@@ -11,6 +11,20 @@ ARCH=$(go env GOARCH)
 CONFIG="Release"
 COMMIT="c279861207c5b15fc51069e96595782350e0ac12"  # branch-heads/58
 
+# Values are from,
+#   https://github.com/golang/go/blob/master/src/go/build/syslist.go
+#   https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/reference.md
+
+oses=",linux:linux,darwin:mac,windows:win,android:android,"
+cpus=",386:x86,amd64:x64,arm:arm,"
+
+get() {
+	echo "$(expr "$1" : ".*,$2:\([^,]*\),.*")"
+}
+
+TARGET_OS=$(get $oses $OS)
+TARGET_CPU=$(get $cpus $ARCH)
+
 INCLUDE_DIR="$PROJECT_DIR/include"
 LIB_DIR="$PROJECT_DIR/lib"
 
@@ -69,7 +83,7 @@ popd
 
 echo "Building webrtc ..."
 pushd $WEBRTC_SRC
-gn gen out/$CONFIG --args='is_debug=false' || exit 1
+gn gen out/$CONFIG --args="target_os=\"$TARGET_OS\" target_cpu=\"$TARGET_CPU\" is_debug=false" || exit 1
 ninja -C out/$CONFIG webrtc field_trial metrics_default pc_test_utils || exit 1
 popd
 
