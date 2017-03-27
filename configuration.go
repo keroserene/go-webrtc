@@ -54,6 +54,10 @@ func (p BundlePolicy) String() string {
 	})
 }
 
+func (p BundlePolicy) String() string {
+	return EnumToStringSafe(int(p), BundlePolicyString)
+}
+
 const (
 	IceTransportPolicyNone IceTransportPolicy = iota
 	IceTransportPolicyRelay
@@ -71,6 +75,10 @@ func (p IceTransportPolicy) String() string {
 		"NoHost",
 		"All",
 	})
+}
+
+func (p IceTransportPolicy) String() string {
+	return EnumToStringSafe(int(p), IceTransportPolicyString)
 }
 
 const (
@@ -91,6 +99,10 @@ func (s SignalingState) String() string {
 		"HaveRemotePrAnswer",
 		"Closed",
 	})
+}
+
+func (s SignalingState) String() string {
+	return EnumToStringSafe(int(s), SignalingStateString)
 }
 
 // TODO: [ED]

@@ -75,6 +75,10 @@ func (s PeerConnectionState) String() string {
 	})
 }
 
+func (s PeerConnectionState) String() string {
+	return EnumToStringSafe(int(s), PeerConnectionStateString)
+}
+
 const (
 	IceConnectionStateNew IceConnectionState = iota
 	IceConnectionStateChecking
@@ -97,6 +101,10 @@ func (s IceConnectionState) String() string {
 	})
 }
 
+func (s IceConnectionState) String() string {
+	return EnumToStringSafe(int(s), IceConnectionStateString)
+}
+
 const (
 	IceGatheringStateNew IceGatheringState = iota
 	IceGatheringStateGathering
@@ -109,6 +117,10 @@ func (s IceGatheringState) String() string {
 		"Gathering",
 		"Complete",
 	})
+}
+
+func (s IceGatheringState) String() string {
+	return EnumToStringSafe(int(s), IceGatheringStateString)
 }
 
 var PCMap = NewCGOMap()

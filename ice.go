@@ -24,6 +24,10 @@ func (p IceProtocol) String() string {
 	})
 }
 
+func (p IceProtocol) String() string {
+	return EnumToStringSafe(int(p), IceProtocolString)
+}
+
 const (
 	IceCandidateTypeHost IceCandidateType = iota
 	IceCandidateTypeSrflx
@@ -40,6 +44,10 @@ func (t IceCandidateType) String() string {
 	})
 }
 
+func (t IceCandidateType) String() string {
+	return EnumToStringSafe(int(t), IceCandidateTypeString)
+}
+
 const (
 	IceTcpCandidateTypeActive IceTcpCandidateType = iota
 	IceTcpCandidateTypePassive
@@ -52,6 +60,10 @@ func (t IceTcpCandidateType) String() string {
 		"passive",
 		"so",
 	})
+}
+
+func (t IceTcpCandidateType) String() string {
+	return EnumToStringSafe(int(t), IceTcpCandidateTypeString)
 }
 
 type IceCandidate struct {

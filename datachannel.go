@@ -39,6 +39,10 @@ func (s DataState) String() string {
 	})
 }
 
+func (s DataState) String() string {
+	return EnumToStringSafe(int(s), DataStateString)
+}
+
 var DCMap = NewCGOMap()
 
 /* DataChannel
