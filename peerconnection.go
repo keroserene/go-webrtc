@@ -38,12 +38,14 @@ package webrtc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
 #include "peerconnection.h"
+#include "rtpreceiver.h"
 #include "ctestenums.h"
 */
 import "C"
 import (
 	"errors"
 	"fmt"
+	"time"
 	"unsafe"
 )
 
@@ -127,6 +129,7 @@ type PeerConnection struct {
 
 	// Event handlers
 	OnNegotiationNeeded        func()
+	OnAddTrack                 func(*RtpReceiver, []*MediaStream)
 	OnIceCandidate             func(IceCandidate)
 	OnIceCandidateError        func()
 	OnIceComplete              func() // Possibly to be removed.
@@ -165,7 +168,28 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 		return nil, errors.New("PeerConnection: could not create from config.")
 	}
 	INFO.Println("Created PeerConnection: ", pc, pc.cgoPeer)
+	go pc.pullAudio()
 	return pc, nil
+}
+
+/*
+The webrtc.org mechanism for decoding audio data and passing it to audio tracks
+is driven by an audio device periodically requesting audio for playout.
+Instead of requiring a real audio device, we implement this mechanism here.
+*/
+func (pc *PeerConnection) pullAudio() {
+	const (
+		samplesPerSec = 48000
+		pullsPerSec   = 100
+	)
+	audioSamples := [samplesPerSec / pullsPerSec]uint16{}
+
+	next := time.Now()
+	for {
+		C.CGO_PullAudio(pc.cgoPeer, (*C.uint16_t)(&audioSamples[0]), C.int(len(audioSamples)), samplesPerSec)
+		next = next.Add(time.Second / pullsPerSec)
+		time.Sleep(next.Sub(time.Now()))
+	}
 }
 
 //
@@ -323,6 +347,22 @@ func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 	return nil
 }
 
+func (pc *PeerConnection) AddTrack(t MediaStreamTrack, s []*MediaStream) *RtpSender {
+	var sp *C.CGO_MediaStream
+	if len(s) > 0 {
+		ss := make([]C.CGO_MediaStream, len(s))
+		for i, s := range s {
+			ss[i] = s.s
+		}
+		sp = &ss[0]
+	}
+	return newRtpSender(C.CGO_PeerConnection_AddTrack(pc.cgoPeer, t.cgo_MediaStreamTrack(), sp, C.int(len(s))))
+}
+
+func (pc *PeerConnection) RemoveTrack(s *RtpSender) {
+	C.CGO_PeerConnection_RemoveTrack(pc.cgoPeer, s.s)
+}
+
 /*
 Create and return a DataChannel.
 
@@ -422,6 +462,22 @@ func cgoOnSignalingStateChange(p int, s SignalingState) {
 	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnSignalingStateChange {
 		pc.OnSignalingStateChange(s)
+	}
+}
+
+//export cgoOnAddTrack
+func cgoOnAddTrack(p int, r C.CGO_RtpReceiver, s *C.CGO_MediaStream, ns int) {
+	INFO.Println("fired OnAddTrack: ", p, r, s, ns)
+	pc := PCMap.Get(p).(*PeerConnection)
+	receiver := newRtpReceiver(r)
+	streams := make([]*MediaStream, ns)
+	sp := uintptr(unsafe.Pointer(s))
+	for i := range streams {
+		s := *(*C.CGO_MediaStream)(unsafe.Pointer(sp + uintptr(i)))
+		streams[i] = newMediaStream(s)
+	}
+	if nil != pc.OnAddTrack {
+		pc.OnAddTrack(receiver, streams)
 	}
 }
 
