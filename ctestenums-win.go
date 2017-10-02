@@ -2,6 +2,7 @@
 package webrtc
 
 /*
+#ifdef _WIN32
 int CGO_IceTransportPolicyNone = 0;
 int CGO_IceTransportPolicyRelay = 0;
 int CGO_IceTransportPolicyNoHost = 0;
@@ -25,5 +26,6 @@ int CGO_IceConnectionStateClosed = 0;
 int CGO_IceGatheringStateNew = 0;
 int CGO_IceGatheringStateGathering = 0;
 int CGO_IceGatheringStateComplete = 0;
+#endif
 */
 import "C"

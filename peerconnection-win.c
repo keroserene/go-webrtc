@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include <_cgo_export.h> // Allow calling certain Go functions.
 
 int CGO_AddIceCandidate(CGO_Peer cgoPeer, CGO_IceCandidate *cgoIC) {
@@ -71,3 +72,4 @@ CGO_sdp CGO_DeserializeSDP(const char *type, const char *msg) {
 CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
   return dll_SerializeSDP(sdp);
 }
+#endif

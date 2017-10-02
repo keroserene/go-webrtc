@@ -1,3 +1,4 @@
+#ifdef  _WIN32
 #include <_cgo_export.h> // Allow calling certain Go functions.
 
 #include "datachannel.h"
@@ -77,3 +78,4 @@ void CGO_fakeMessage(CGO_Channel channel, void *data, int size) {
 void CGO_fakeStateChange(CGO_Channel channel, int state) {
   return dll_fakeStateChange(channel, state);
 }
+#endif
