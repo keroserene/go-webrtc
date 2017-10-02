@@ -1,7 +1,13 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #ifndef _C_PEERCONNECTION_H_
 #define _C_PEERCONNECTION_H_
 
+#ifndef _WIN32
 #define WEBRTC_POSIX 1
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +78,10 @@ extern "C" {
 
   // Test helpers
   void CGO_fakeIceCandidateError(CGO_Peer peer);
+
+#ifdef WIN_WEBRTC
+extern void cgoOnIceCandidate(int, CGO_IceCandidate);
+#endif
 
 #ifdef __cplusplus
 }

@@ -274,7 +274,12 @@ func main() {
 
 	// Input loop.
 	for {
-		text, _ := reader.ReadString('\n')
+		text := ""
+		if runtime.GOOS == "windows" {
+			text, _ = reader.ReadString('\r')
+		} else {
+			text, _ = reader.ReadString('\n')
+		}
 		switch mode {
 		case ModeInit:
 			if strings.HasPrefix(text, "start") {

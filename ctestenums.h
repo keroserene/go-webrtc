@@ -1,7 +1,13 @@
+#ifndef NOMINMAX
+# define NOMINMAX
+#endif
+
 #ifndef _C_TEST_ENUMS_H_
 #define _C_TEST_ENUMS_H_
 
+#ifndef _WIN32
 #define WEBRTC_POSIX 1
+#endif
 
 #ifdef __cplusplus
 extern "C" {

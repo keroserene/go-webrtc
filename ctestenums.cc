@@ -1,3 +1,4 @@
+#if !_WIN32 || WIN_WEBRTC
 #include "ctestenums.h"
 #include "webrtc/api/peerconnectioninterface.h"
 
@@ -64,3 +65,4 @@ const int CGO_IceGatheringStateGathering =
     PeerConnectionInterface::IceGatheringState::kIceGatheringGathering;
 const int CGO_IceGatheringStateComplete =
     PeerConnectionInterface::IceGatheringState::kIceGatheringComplete;
+#endif

@@ -1,3 +1,4 @@
+#if !_WIN32 || WIN_WEBRTC
 #include "datachannel.h"
 #include "datachannel.hpp"
 
@@ -28,7 +29,7 @@ void CGO_Channel_Close(CGO_Channel channel) {
 const char *CGO_Channel_Label(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  return strdup(dc->label().c_str());
+  return _strdup(dc->label().c_str());
 }
 
 const bool CGO_Channel_Ordered(CGO_Channel channel) {
@@ -52,7 +53,7 @@ int CGO_Channel_MaxRetransmits(CGO_Channel channel) {
 const char *CGO_Channel_Protocol(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  return strdup(dc->protocol().c_str());
+  return _strdup(dc->protocol().c_str());
 }
 
 const bool CGO_Channel_Negotiated(CGO_Channel channel) {
@@ -186,3 +187,4 @@ const int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting
 const int CGO_DataStateOpen = DataChannelInterface::DataState::kOpen;
 const int CGO_DataStateClosing = DataChannelInterface::DataState::kClosing;
 const int CGO_DataStateClosed = DataChannelInterface::DataState::kClosed;
+#endif

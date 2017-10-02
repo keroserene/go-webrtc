@@ -10,10 +10,10 @@ import (
 func TestDataStateEnums(t *testing.T) {
 
 	Convey("Enum: DataState", t, func() {
-		So(DataStateConnecting, ShouldEqual, _cgoDataStateConnecting)
-		So(DataStateOpen, ShouldEqual, _cgoDataStateOpen)
-		So(DataStateClosing, ShouldEqual, _cgoDataStateClosing)
-		So(DataStateClosed, ShouldEqual, _cgoDataStateClosed)
+		So(_cgoDataStateConnecting, ShouldEqual, DataStateConnecting)
+		So(_cgoDataStateOpen, ShouldEqual, DataStateOpen)
+		So(_cgoDataStateClosing, ShouldEqual, DataStateClosing)
+		So(_cgoDataStateClosed, ShouldEqual, DataStateClosed)
 	})
 
 	Convey("DataChannel", t, func() {

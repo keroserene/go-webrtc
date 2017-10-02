@@ -1,11 +1,17 @@
 #ifndef _DATACHANNEL_H_
 #define _DATACHANNEL_H_
 
-#include <_cgo_export.h>  // Allow calling certain Go functions.
+
 #include <assert.h>
 
 #include "webrtc/api/peerconnectioninterface.h"
 #include "webrtc/api/datachannelinterface.h"
+
+#ifdef _WIN32
+#include "externs.h"
+#else
+#include <_cgo_export.h> // Allow calling certain Go functions.
+#endif
 
 typedef rtc::scoped_refptr<webrtc::DataChannelInterface> DataChannel;
 
