@@ -29,7 +29,7 @@ void CGO_Channel_Close(CGO_Channel channel) {
 const char *CGO_Channel_Label(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  return _strdup(dc->label().c_str());
+  return strdup(dc->label().c_str());
 }
 
 const bool CGO_Channel_Ordered(CGO_Channel channel) {
@@ -53,7 +53,7 @@ int CGO_Channel_MaxRetransmits(CGO_Channel channel) {
 const char *CGO_Channel_Protocol(CGO_Channel channel) {
   auto dc = (webrtc::DataChannelInterface*)channel;
   assert(NULL != dc);
-  return _strdup(dc->protocol().c_str());
+  return strdup(dc->protocol().c_str());
 }
 
 const bool CGO_Channel_Negotiated(CGO_Channel channel) {

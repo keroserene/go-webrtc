@@ -341,7 +341,7 @@ CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
   SDP cSDP = (SDP)sdp;
   std::string s;
   cSDP->ToString(&s);
-  return (CGO_sdpString)_strdup(s.c_str());
+  return (CGO_sdpString)strdup(s.c_str());
 }
 
 // Given a fully serialized SDP string |msg|, return a CGO sdp object.
