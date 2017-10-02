@@ -36,10 +36,10 @@ extern "C" {
   int CGO_Channel_ReadyState(CGO_Channel);
   int CGO_Channel_BufferedAmount(CGO_Channel channel);
 
-  extern const int CGO_DataStateConnecting;
-  extern const int CGO_DataStateOpen;
-  extern const int CGO_DataStateClosing;
-  extern const int CGO_DataStateClosed;
+  extern int CGO_DataStateConnecting;
+  extern int CGO_DataStateOpen;
+  extern int CGO_DataStateClosing;
+  extern int CGO_DataStateClosed;
 
   // Testing helpers:
   CGO_Channel CGO_getFakeDataChannel();

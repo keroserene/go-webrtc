@@ -62,7 +62,7 @@ class Peer
     signalling_thread_->Start();  // Must start before being passed to
     worker_thread_->Start();      // PeerConnectionFactory.
 
-    this->fake_audio_ = FakeAudioCaptureModule::Create();
+    this->fake_audio_ = NULL;//FakeAudioCaptureModule::Create();
     pc_factory = CreatePeerConnectionFactory(
       worker_thread_,
       signalling_thread_,

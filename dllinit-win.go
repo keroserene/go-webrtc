@@ -8,7 +8,6 @@ package webrtc
 */
 import "C"
 import (
-	"ourlog"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -28,7 +27,6 @@ func loadMyDll() {
 	if err != nil {
 		panic(err)
 	}
-	ourlog.Info("DLL loaded successfully")
 	myfuncs = make(map[string]*syscall.Proc)
 	funcs := []string{
 		// Enums
@@ -167,14 +165,12 @@ func loadMyDll() {
 
 	// We cannot pass a struct to NewCallback(), so we must use a pointer
 	cb = syscall.NewCallback(func(p int, cIC *C.CGO_IceCandidate) uintptr {
-		ourlog.Info("dllinit: cgoOnIceCandidate() fired. cIC=", *cIC)
 		cgoOnIceCandidate(p, *cIC)
 		return 0
 	})
 	myfuncs["SetCallbackOnIceCandidate"].Call(cb)
 
 	cb = syscall.NewCallback(func(p int) uintptr {
-		ourlog.Info("dllinit: cgoOnIceCandidateError() fired")
 		cgoOnIceCandidateError(p)
 		return 0
 	})

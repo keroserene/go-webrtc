@@ -7,7 +7,6 @@ package webrtc
 */
 import "C"
 import (
-	"ourlog"
 	"unsafe"
 )
 
@@ -34,14 +33,12 @@ func dll_CreateAnswer(cgoPeer C.CGO_Peer) C.CGO_sdpString {
 //export dll_CreateDataChannel
 func dll_CreateDataChannel(cgoPeer C.CGO_Peer, label *C.char, dict unsafe.Pointer) unsafe.Pointer {
 	r1, _, _ := myfuncs["dll_CreateDataChannel"].Call(uintptr(cgoPeer), uintptr(unsafe.Pointer(label)), uintptr(unsafe.Pointer(dict)))
-	ourlog.Info("WIN PC: dll_CreateDataChannel. res=", r1)
 	return unsafe.Pointer(r1)
 }
 
 //export dll_CreateOffer
 func dll_CreateOffer(cgoPeer C.CGO_Peer) C.CGO_sdpString {
 	r1, _, _ := myfuncs["dll_CreateOffer"].Call(uintptr(cgoPeer))
-	ourlog.Info("WIN PC: dll_CreateOffer. res=", r1)
 	// The caller is going to call free using C.free, that will invoke gcc's free which
 	// is NOT the same as MSVC's free
 	res := C.strdup((*C.char)(unsafe.Pointer(r1)))
@@ -52,14 +49,12 @@ func dll_CreateOffer(cgoPeer C.CGO_Peer) C.CGO_sdpString {
 //export dll_GetLocalDescription
 func dll_GetLocalDescription(cgoPeer C.CGO_Peer) C.CGO_sdp {
 	r1, _, _ := myfuncs["dll_GetLocalDescription"].Call(uintptr(cgoPeer))
-	ourlog.Info("WIN PC: dll_GetLocalDescription. res=", r1)
 	return C.CGO_sdp(r1)
 }
 
 //export dll_GetRemoteDescription
 func dll_GetRemoteDescription(cgoPeer C.CGO_Peer) C.CGO_sdp {
 	r1, _, _ := myfuncs["dll_GetRemoteDescription"].Call(uintptr(cgoPeer))
-	ourlog.Info("WIN PC: dll_GetRemoteDescription. res=", r1)
 	return C.CGO_sdp(r1)
 }
 
@@ -90,14 +85,12 @@ func dll_InitializePeer(goPc C.int) C.CGO_Peer {
 //export dll_SetLocalDescription
 func dll_SetLocalDescription(cgoPeer C.CGO_Peer, sdp C.CGO_sdp) C.int {
 	r1, _, _ := myfuncs["dll_SetLocalDescription"].Call(uintptr(cgoPeer), uintptr(unsafe.Pointer(sdp)))
-	ourlog.Info("WIN PC: dll_SetLocalDescription. res=", r1)
 	return C.int(r1)
 }
 
 //export dll_SetRemoteDescription
 func dll_SetRemoteDescription(cgoPeer C.CGO_Peer, sdp C.CGO_sdp) C.int {
 	r1, _, _ := myfuncs["dll_SetRemoteDescription"].Call(uintptr(cgoPeer), uintptr(unsafe.Pointer(sdp)))
-	ourlog.Info("WIN PC: dll_SetRemoteDescription. res=", r1)
 	return C.int(r1)
 }
 
@@ -120,21 +113,18 @@ func dll_Close(peer C.CGO_Peer) {
 
 //export dll_fakeIceCandidateError
 func dll_fakeIceCandidateError(peer C.CGO_Peer) {
-	_, _, err := myfuncs["dll_fakeIceCandidateError"].Call(uintptr(peer))
-	ourlog.Info("PC WIN: dll_fakeIceCandidateError. err=", err)
+	myfuncs["dll_fakeIceCandidateError"].Call(uintptr(peer))
 }
 
 //export dll_DeserializeSDP
 func dll_DeserializeSDP(sdpType *C.char, msg *C.char) C.CGO_sdp {
 	r1, _, _ := myfuncs["dll_DeserializeSDP"].Call(uintptr(unsafe.Pointer(sdpType)), uintptr(unsafe.Pointer(msg)))
-	ourlog.Info("WIN PC: dll_DeserializeSDP. res=", r1)
 	return C.CGO_sdp(unsafe.Pointer(r1))
 }
 
 //export dll_SerializeSDP
 func dll_SerializeSDP(sdp C.CGO_sdp) C.CGO_sdpString {
 	r1, _, _ := myfuncs["dll_SerializeSDP"].Call(uintptr(sdp))
-	ourlog.Info("WIN PC: dll_SerializeSDP. res=", r1)
 	// The caller is going to call free using C.free, that will invoke gcc's free which
 	// is NOT the same as MSVC's free
 	res := C.strdup((*C.char)(unsafe.Pointer(r1)))

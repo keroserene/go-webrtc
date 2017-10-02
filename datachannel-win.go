@@ -7,7 +7,6 @@ package webrtc
 */
 import "C"
 import (
-	"ourlog"
 	"unsafe"
 )
 
@@ -45,9 +44,7 @@ func dll_Channel_Protocol(channel C.CGO_Channel) *C.char {
 
 //export dll_Channel_RegisterObserver
 func dll_Channel_RegisterObserver(o unsafe.Pointer, index C.int) unsafe.Pointer {
-	ourlog.Info("dll_Channel_RegisterObserver called")
 	r1, _, _ := myfuncs["dll_Channel_RegisterObserver"].Call(uintptr(o), uintptr(index))
-	ourlog.Infof("dll_Channel_RegisterObserver returned %v", r1)
 	return unsafe.Pointer(r1)
 }
 
