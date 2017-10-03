@@ -24,9 +24,7 @@
 
 namespace webrtc {
 
-class CriticalSectionWrapper;
 class RtcEventLog;
-struct PacketInfo;
 
 // Deprecated
 // TODO(perkj): Remove BitrateObserver when no implementations use it.
@@ -40,11 +38,18 @@ class BitrateObserver {
   virtual void OnNetworkChanged(uint32_t bitrate_bps,
                                 uint8_t fraction_loss,  // 0 - 255.
                                 int64_t rtt_ms) = 0;
-
+  // TODO(gnish): Merge these two into one function.
+  virtual void OnNetworkChanged(uint32_t bitrate_for_encoder_bps,
+                                uint32_t bitrate_for_pacer_bps,
+                                bool in_probe_rtt,
+                                int64_t target_set_time,
+                                uint64_t congestion_window) {}
+  virtual void OnBytesAcked(size_t bytes) {}
+  virtual size_t pacer_queue_size_in_bytes() { return 0; }
   virtual ~BitrateObserver() {}
 };
 
-class BitrateController : public Module {
+class BitrateController : public Module, public RtcpBandwidthObserver {
   // This class collects feedback from all streams sent to a peer (via
   // RTCPBandwidthObservers). It does one  aggregated send side bandwidth
   // estimation and divide the available bitrate between all its registered
@@ -55,15 +60,16 @@ class BitrateController : public Module {
   // Deprecated:
   // TODO(perkj): BitrateObserver has been deprecated and is not used in WebRTC.
   // Remove this method once other other projects does not use it.
-  static BitrateController* CreateBitrateController(Clock* clock,
+  static BitrateController* CreateBitrateController(const Clock* clock,
                                                     BitrateObserver* observer,
                                                     RtcEventLog* event_log);
 
-  static BitrateController* CreateBitrateController(Clock* clock,
+  static BitrateController* CreateBitrateController(const Clock* clock,
                                                     RtcEventLog* event_log);
 
   virtual ~BitrateController() {}
 
+  // Creates RtcpBandwidthObserver caller responsible to delete.
   virtual RtcpBandwidthObserver* CreateRtcpBandwidthObserver() = 0;
 
   // Deprecated

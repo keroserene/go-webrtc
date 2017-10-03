@@ -19,13 +19,13 @@
 #include <vector>
 
 #include "webrtc/api/audio_codecs/audio_decoder_factory.h"
+#include "webrtc/api/audio_codecs/audio_encoder_factory.h"
 #include "webrtc/api/rtpparameters.h"
-#include "webrtc/base/fileutils.h"
-#include "webrtc/base/sigslotrepeater.h"
 #include "webrtc/call/audio_state.h"
 #include "webrtc/media/base/codec.h"
 #include "webrtc/media/base/mediachannel.h"
 #include "webrtc/media/base/videocommon.h"
+#include "webrtc/rtc_base/fileutils.h"
 
 #if defined(GOOGLE_CHROME_BUILD) || defined(CHROMIUM_BUILD)
 #define DISABLE_MEDIA_ENGINE_FACTORY
@@ -34,6 +34,7 @@
 namespace webrtc {
 class AudioDeviceModule;
 class AudioMixer;
+class AudioProcessing;
 class Call;
 }
 
@@ -111,13 +112,22 @@ class MediaEngineFactory {
 template<class VOICE, class VIDEO>
 class CompositeMediaEngine : public MediaEngineInterface {
  public:
-  CompositeMediaEngine(webrtc::AudioDeviceModule* adm,
-                       const rtc::scoped_refptr<webrtc::AudioDecoderFactory>&
-                           audio_decoder_factory,
-                       rtc::scoped_refptr<webrtc::AudioMixer> audio_mixer)
-      : voice_(adm, audio_decoder_factory, audio_mixer) {}
+  CompositeMediaEngine(
+      webrtc::AudioDeviceModule* adm,
+      const rtc::scoped_refptr<webrtc::AudioEncoderFactory>&
+          audio_encoder_factory,
+      const rtc::scoped_refptr<webrtc::AudioDecoderFactory>&
+          audio_decoder_factory,
+      rtc::scoped_refptr<webrtc::AudioMixer> audio_mixer,
+      rtc::scoped_refptr<webrtc::AudioProcessing> audio_processing)
+      : voice_(adm,
+               audio_encoder_factory,
+               audio_decoder_factory,
+               audio_mixer,
+               audio_processing) {}
   virtual ~CompositeMediaEngine() {}
   virtual bool Init() {
+    voice_.Init();
     video_.Init();
     return true;
   }

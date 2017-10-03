@@ -13,17 +13,16 @@
 
 #include <fstream>
 #include <memory>
-#include <gflags/gflags.h>
 
+#include "webrtc/common_types.h"
 #include "webrtc/modules/audio_coding/neteq/include/neteq.h"
 #include "webrtc/modules/audio_coding/neteq/tools/audio_sink.h"
 #include "webrtc/modules/audio_coding/neteq/tools/input_audio_file.h"
 #include "webrtc/modules/audio_coding/neteq/tools/rtp_generator.h"
 #include "webrtc/modules/include/module_common_types.h"
+#include "webrtc/rtc_base/flags.h"
 #include "webrtc/test/gtest.h"
 #include "webrtc/typedefs.h"
-
-using google::RegisterFlagValidator;
 
 namespace webrtc {
 namespace test {
@@ -130,7 +129,7 @@ class NetEqQualityTest : public ::testing::Test {
   std::unique_ptr<int16_t[]> in_data_;
   rtc::Buffer payload_;
   AudioFrame out_frame_;
-  WebRtcRTPHeader rtp_header_;
+  RTPHeader rtp_header_;
 
   size_t total_payload_size_bytes_;
 };

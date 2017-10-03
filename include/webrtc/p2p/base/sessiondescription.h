@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "webrtc/p2p/base/transportinfo.h"
-#include "webrtc/base/constructormagic.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 namespace cricket {
 

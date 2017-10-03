@@ -14,10 +14,10 @@
 #include <array>
 #include <memory>
 
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/optional.h"
 #include "webrtc/modules/audio_processing/aec3/aec3_common.h"
-#include "webrtc/modules/audio_processing/aec3/fft_buffer.h"
+#include "webrtc/modules/audio_processing/aec3/render_buffer.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/optional.h"
 
 namespace webrtc {
 
@@ -28,7 +28,7 @@ class RenderSignalAnalyzer {
   ~RenderSignalAnalyzer();
 
   // Updates the render signal analysis with the most recent render signal.
-  void Update(const FftBuffer& X_buffer,
+  void Update(const RenderBuffer& render_buffer,
               const rtc::Optional<size_t>& delay_partitions);
 
   // Returns true if the render signal is poorly exciting.
@@ -43,8 +43,12 @@ class RenderSignalAnalyzer {
   void MaskRegionsAroundNarrowBands(
       std::array<float, kFftLengthBy2Plus1>* v) const;
 
+  rtc::Optional<int> NarrowPeakBand() const { return narrow_peak_band_; }
+
  private:
   std::array<size_t, kFftLengthBy2 - 1> narrow_band_counters_;
+  rtc::Optional<int> narrow_peak_band_;
+  size_t narrow_peak_counter_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(RenderSignalAnalyzer);
 };

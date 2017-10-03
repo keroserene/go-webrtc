@@ -14,7 +14,7 @@
 
 #include <vector>
 
-#include "webrtc/base/basictypes.h"
+#include "webrtc/rtc_base/basictypes.h"
 
 namespace webrtc {
 namespace rtcp {
@@ -33,9 +33,9 @@ class Dlrr {
  public:
   static const uint8_t kBlockType = 5;
 
-  Dlrr() {}
-  Dlrr(const Dlrr& other) = default;
-  ~Dlrr() {}
+  Dlrr();
+  Dlrr(const Dlrr& other);
+  ~Dlrr();
 
   Dlrr& operator=(const Dlrr& other) = default;
 

@@ -14,17 +14,17 @@
 
 #include <vector>
 
-#include "webrtc/base/basictypes.h"
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet.h"
+#include "webrtc/rtc_base/basictypes.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 namespace rtcp {
 
 class CompoundPacket : public RtcpPacket {
  public:
-  CompoundPacket() {}
-  ~CompoundPacket() override {}
+  CompoundPacket();
+  ~CompoundPacket() override;
 
   void Append(RtcpPacket* packet);
 

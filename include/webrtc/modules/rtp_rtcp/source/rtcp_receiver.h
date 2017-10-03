@@ -16,11 +16,11 @@
 #include <string>
 #include <vector>
 
-#include "webrtc/base/criticalsection.h"
-#include "webrtc/base/thread_annotations.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_nack_stats.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/dlrr.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/thread_annotations.h"
 #include "webrtc/system_wrappers/include/ntp_time.h"
 #include "webrtc/typedefs.h"
 
@@ -85,8 +85,6 @@ class RTCPReceiver {
               int64_t* avg_rtt_ms,
               int64_t* min_rtt_ms,
               int64_t* max_rtt_ms) const;
-
-  int32_t SenderInfoReceived(RTCPSenderInfo* sender_info) const;
 
   void SetRtcpXrRrtrStatus(bool enable);
   bool GetAndResetXrRrRtt(int64_t* rtt_ms);
@@ -167,7 +165,8 @@ class RTCPReceiver {
   void HandleXrDlrrReportBlock(const rtcp::ReceiveTimeInfo& rti)
       EXCLUSIVE_LOCKS_REQUIRED(rtcp_receiver_lock_);
 
-  void HandleXrTargetBitrate(const rtcp::TargetBitrate& target_bitrate,
+  void HandleXrTargetBitrate(uint32_t ssrc,
+                             const rtcp::TargetBitrate& target_bitrate,
                              PacketInformation* packet_information)
       EXCLUSIVE_LOCKS_REQUIRED(rtcp_receiver_lock_);
 
@@ -180,14 +179,6 @@ class RTCPReceiver {
 
   void HandlePli(const rtcp::CommonHeader& rtcp_block,
                  PacketInformation* packet_information)
-      EXCLUSIVE_LOCKS_REQUIRED(rtcp_receiver_lock_);
-
-  void HandleSli(const rtcp::CommonHeader& rtcp_block,
-                 PacketInformation* packet_information)
-      EXCLUSIVE_LOCKS_REQUIRED(rtcp_receiver_lock_);
-
-  void HandleRpsi(const rtcp::CommonHeader& rtcp_block,
-                  PacketInformation* packet_information)
       EXCLUSIVE_LOCKS_REQUIRED(rtcp_receiver_lock_);
 
   void HandlePsfbApp(const rtcp::CommonHeader& rtcp_block,
@@ -230,9 +221,10 @@ class RTCPReceiver {
   std::set<uint32_t> registered_ssrcs_ GUARDED_BY(rtcp_receiver_lock_);
 
   // Received sender report.
-  RTCPSenderInfo remote_sender_info_;
+  NtpTime remote_sender_ntp_time_ GUARDED_BY(rtcp_receiver_lock_);
+  uint32_t remote_sender_rtp_time_ GUARDED_BY(rtcp_receiver_lock_);
   // When did we receive the last send report.
-  NtpTime last_received_sr_ntp_;
+  NtpTime last_received_sr_ntp_ GUARDED_BY(rtcp_receiver_lock_);
 
   // Received XR receive time report.
   rtcp::ReceiveTimeInfo remote_time_info_;

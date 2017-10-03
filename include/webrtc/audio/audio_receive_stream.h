@@ -12,18 +12,22 @@
 #define WEBRTC_AUDIO_AUDIO_RECEIVE_STREAM_H_
 
 #include <memory>
+#include <vector>
 
 #include "webrtc/api/audio/audio_mixer.h"
 #include "webrtc/audio/audio_state.h"
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/thread_checker.h"
 #include "webrtc/call/audio_receive_stream.h"
+#include "webrtc/call/rtp_packet_sink_interface.h"
 #include "webrtc/call/syncable.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/thread_checker.h"
 
 namespace webrtc {
 class PacketRouter;
 class RtcEventLog;
 class RtpPacketReceived;
+class RtpStreamReceiverControllerInterface;
+class RtpStreamReceiverInterface;
 
 namespace voe {
 class ChannelProxy;
@@ -36,7 +40,8 @@ class AudioReceiveStream final : public webrtc::AudioReceiveStream,
                                  public AudioMixer::Source,
                                  public Syncable {
  public:
-  AudioReceiveStream(PacketRouter* packet_router,
+  AudioReceiveStream(RtpStreamReceiverControllerInterface* receiver_controller,
+                     PacketRouter* packet_router,
                      const webrtc::AudioReceiveStream::Config& config,
                      const rtc::scoped_refptr<webrtc::AudioState>& audio_state,
                      webrtc::RtcEventLog* event_log);
@@ -46,10 +51,15 @@ class AudioReceiveStream final : public webrtc::AudioReceiveStream,
   void Start() override;
   void Stop() override;
   webrtc::AudioReceiveStream::Stats GetStats() const override;
+  int GetOutputLevel() const override;
   void SetSink(std::unique_ptr<AudioSinkInterface> sink) override;
   void SetGain(float gain) override;
+  std::vector<webrtc::RtpSource> GetSources() const override;
 
-  // TODO(nisse): Intended to be part of an RtpPacketReceiver interface.
+  // TODO(nisse): We don't formally implement RtpPacketSinkInterface, and this
+  // method shouldn't be needed. But it's currently used by the
+  // AudioReceiveStreamTest.ReceiveRtpPacket unittest. Figure out if that test
+  // shuld be refactored or deleted, and then delete this method.
   void OnRtpPacket(const RtpPacketReceived& packet);
 
   // AudioMixer::Source
@@ -81,6 +91,8 @@ class AudioReceiveStream final : public webrtc::AudioReceiveStream,
   std::unique_ptr<voe::ChannelProxy> channel_proxy_;
 
   bool playing_ ACCESS_ON(worker_thread_checker_) = false;
+
+  std::unique_ptr<RtpStreamReceiverInterface> rtp_stream_receiver_;
 
   RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(AudioReceiveStream);
 };

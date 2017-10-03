@@ -15,9 +15,9 @@
 #include <string>
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/logging/rtc_event_log/mock/mock_rtc_event_log.h"
 #include "webrtc/modules/remote_bitrate_estimator/test/bwe.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 
@@ -70,9 +70,7 @@ class RembReceiver : public BweReceiver, public RemoteBitrateObserver {
   bool LatestEstimate(uint32_t* estimate_bps);
 
   std::string estimate_log_prefix_;
-#if BWE_TEST_LOGGING_COMPILE_TIME_ENABLE
   bool plot_estimate_ = false;
-#endif
   SimulatedClock clock_;
   std::unique_ptr<ReceiveStatistics> recv_stats_;
   int64_t latest_estimate_bps_;

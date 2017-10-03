@@ -19,11 +19,6 @@
 #include <vector>
 
 #include "webrtc/api/call/transport.h"
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/criticalsection.h"
-#include "webrtc/base/optional.h"
-#include "webrtc/base/random.h"
-#include "webrtc/base/thread_annotations.h"
 #include "webrtc/modules/remote_bitrate_estimator/include/bwe_defines.h"
 #include "webrtc/modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h"
 #include "webrtc/modules/rtp_rtcp/include/receive_statistics.h"
@@ -33,6 +28,11 @@
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/dlrr.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/report_block.h"
 #include "webrtc/modules/rtp_rtcp/source/rtcp_packet/tmmb_item.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/optional.h"
+#include "webrtc/rtc_base/random.h"
+#include "webrtc/rtc_base/thread_annotations.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
@@ -60,7 +60,6 @@ class RTCPSender {
   struct FeedbackState {
     FeedbackState();
 
-    uint8_t send_payload_type;
     uint32_t packets_sent;
     size_t media_bytes_sent;
     uint32_t send_bitrate;
@@ -78,7 +77,7 @@ class RTCPSender {
 
   RTCPSender(bool audio,
              Clock* clock,
-             ReceiveStatistics* receive_statistics,
+             ReceiveStatisticsProvider* receive_statistics,
              RtcpPacketTypeCounterObserver* packet_type_counter_observer,
              RtcEventLog* event_log,
              Transport* outgoing_transport);
@@ -97,6 +96,8 @@ class RTCPSender {
 
   void SetLastRtpTime(uint32_t rtp_timestamp, int64_t capture_time_ms);
 
+  uint32_t SSRC() const;
+
   void SetSSRC(uint32_t ssrc);
 
   void SetRemoteSSRC(uint32_t ssrc);
@@ -112,14 +113,12 @@ class RTCPSender {
   int32_t SendRTCP(const FeedbackState& feedback_state,
                    RTCPPacketType packetType,
                    int32_t nackSize = 0,
-                   const uint16_t* nackList = 0,
-                   uint64_t pictureID = 0);
+                   const uint16_t* nackList = 0);
 
   int32_t SendCompoundRTCP(const FeedbackState& feedback_state,
                            const std::set<RTCPPacketType>& packetTypes,
                            int32_t nackSize = 0,
-                           const uint16_t* nackList = 0,
-                           uint64_t pictureID = 0);
+                           const uint16_t* nackList = 0);
 
   bool REMB() const;
 
@@ -158,9 +157,8 @@ class RTCPSender {
   void PrepareReport(const FeedbackState& feedback_state)
       EXCLUSIVE_LOCKS_REQUIRED(critical_section_rtcp_sender_);
 
-  bool AddReportBlock(const FeedbackState& feedback_state,
-                      uint32_t ssrc,
-                      StreamStatistician* statistician)
+  std::vector<rtcp::ReportBlock> CreateReportBlocks(
+      const FeedbackState& feedback_state)
       EXCLUSIVE_LOCKS_REQUIRED(critical_section_rtcp_sender_);
 
   std::unique_ptr<rtcp::RtcpPacket> BuildSR(const RtcpContext& context)
@@ -185,10 +183,6 @@ class RTCPSender {
   std::unique_ptr<rtcp::RtcpPacket> BuildBYE(const RtcpContext& context)
       EXCLUSIVE_LOCKS_REQUIRED(critical_section_rtcp_sender_);
   std::unique_ptr<rtcp::RtcpPacket> BuildFIR(const RtcpContext& context)
-      EXCLUSIVE_LOCKS_REQUIRED(critical_section_rtcp_sender_);
-  std::unique_ptr<rtcp::RtcpPacket> BuildSLI(const RtcpContext& context)
-      EXCLUSIVE_LOCKS_REQUIRED(critical_section_rtcp_sender_);
-  std::unique_ptr<rtcp::RtcpPacket> BuildRPSI(const RtcpContext& context)
       EXCLUSIVE_LOCKS_REQUIRED(critical_section_rtcp_sender_);
   std::unique_ptr<rtcp::RtcpPacket> BuildNACK(const RtcpContext& context)
       EXCLUSIVE_LOCKS_REQUIRED(critical_section_rtcp_sender_);
@@ -217,9 +211,7 @@ class RTCPSender {
   uint32_t remote_ssrc_ GUARDED_BY(critical_section_rtcp_sender_);
   std::string cname_ GUARDED_BY(critical_section_rtcp_sender_);
 
-  ReceiveStatistics* receive_statistics_
-      GUARDED_BY(critical_section_rtcp_sender_);
-  std::map<uint32_t, rtcp::ReportBlock> report_blocks_
+  ReceiveStatisticsProvider* receive_statistics_
       GUARDED_BY(critical_section_rtcp_sender_);
   std::map<uint32_t, std::string> csrc_cnames_
       GUARDED_BY(critical_section_rtcp_sender_);

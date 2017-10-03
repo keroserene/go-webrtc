@@ -13,17 +13,17 @@
 
 #include <memory>
 
-#include "webrtc/base/criticalsection.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "webrtc/modules/rtp_rtcp/include/ulpfec_receiver.h"
 #include "webrtc/modules/rtp_rtcp/source/forward_error_correction.h"
+#include "webrtc/rtc_base/criticalsection.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
 
 class UlpfecReceiverImpl : public UlpfecReceiver {
  public:
-  explicit UlpfecReceiverImpl(RtpData* callback);
+  explicit UlpfecReceiverImpl(uint32_t ssrc, RecoveredPacketReceiver* callback);
   virtual ~UlpfecReceiverImpl();
 
   int32_t AddReceivedRedPacket(const RTPHeader& rtp_header,
@@ -36,8 +36,10 @@ class UlpfecReceiverImpl : public UlpfecReceiver {
   FecPacketCounter GetPacketCounter() const override;
 
  private:
+  const uint32_t ssrc_;
+
   rtc::CriticalSection crit_sect_;
-  RtpData* recovered_packet_callback_;
+  RecoveredPacketReceiver* recovered_packet_callback_;
   std::unique_ptr<ForwardErrorCorrection> fec_;
   // TODO(holmer): In the current version |received_packets_| is never more
   // than one packet, since we process FEC every time a new packet

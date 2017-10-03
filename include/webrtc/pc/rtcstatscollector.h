@@ -19,16 +19,17 @@
 #include "webrtc/api/stats/rtcstats_objects.h"
 #include "webrtc/api/stats/rtcstatscollectorcallback.h"
 #include "webrtc/api/stats/rtcstatsreport.h"
-#include "webrtc/base/asyncinvoker.h"
-#include "webrtc/base/optional.h"
-#include "webrtc/base/refcount.h"
-#include "webrtc/base/scoped_ref_ptr.h"
-#include "webrtc/base/sigslot.h"
-#include "webrtc/base/sslidentity.h"
-#include "webrtc/base/timeutils.h"
+#include "webrtc/call/call.h"
 #include "webrtc/media/base/mediachannel.h"
 #include "webrtc/pc/datachannel.h"
 #include "webrtc/pc/trackmediainfomap.h"
+#include "webrtc/rtc_base/asyncinvoker.h"
+#include "webrtc/rtc_base/optional.h"
+#include "webrtc/rtc_base/refcount.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
+#include "webrtc/rtc_base/sigslot.h"
+#include "webrtc/rtc_base/sslidentity.h"
+#include "webrtc/rtc_base/timeutils.h"
 
 namespace cricket {
 class Candidate;
@@ -104,8 +105,10 @@ class RTCStatsCollector : public virtual rtc::RefCountInterface,
       int64_t timestamp_us, RTCStatsReport* report) const;
   // Produces |RTCIceCandidatePairStats| and |RTCIceCandidateStats|.
   void ProduceIceCandidateAndPairStats_n(
-      int64_t timestamp_us, const SessionStats& session_stats,
+      int64_t timestamp_us,
+      const SessionStats& session_stats,
       const cricket::VideoMediaInfo* video_media_info,
+      const Call::Stats& call_stats,
       RTCStatsReport* report) const;
   // Produces |RTCMediaStreamStats| and |RTCMediaStreamTrackStats|.
   void ProduceMediaStreamAndTrackStats_s(
@@ -154,6 +157,7 @@ class RTCStatsCollector : public virtual rtc::RefCountInterface,
   std::unique_ptr<ChannelNamePairs> channel_name_pairs_;
   std::unique_ptr<TrackMediaInfoMap> track_media_info_map_;
   std::map<MediaStreamTrackInterface*, std::string> track_to_id_;
+  Call::Stats call_stats_;
 
   // A timestamp, in microseconds, that is based on a timer that is
   // monotonically increasing. That is, even if the system clock is modified the

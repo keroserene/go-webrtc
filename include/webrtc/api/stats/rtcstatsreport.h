@@ -17,8 +17,8 @@
 #include <vector>
 
 #include "webrtc/api/stats/rtcstats.h"
-#include "webrtc/base/refcount.h"
-#include "webrtc/base/scoped_ref_ptr.h"
+#include "webrtc/rtc_base/refcount.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
 
 namespace webrtc {
 
@@ -81,9 +81,9 @@ class RTCStatsReport : public rtc::RefCountInterface {
     return stats_of_type;
   }
 
-  // Creates a human readable string representation of the report, listing all
-  // of its stats objects.
-  std::string ToString() const;
+  // Creates a JSON readable string representation of the report,
+  // listing all of its stats objects.
+  std::string ToJson() const;
 
   friend class rtc::RefCountedObject<RTCStatsReport>;
 

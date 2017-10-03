@@ -23,16 +23,18 @@
 #include <vector>
 
 #include "webrtc/api/video/video_frame.h"
-// TODO(nisse): Transition hack, Chrome expects that including this
-// file declares I420Buffer. Delete after users of I420Buffer are
-// fixed to include the new header.
-#include "webrtc/api/video/i420_buffer.h"
-#include "webrtc/base/refcount.h"
-#include "webrtc/base/scoped_ref_ptr.h"
-#include "webrtc/base/optional.h"
-#include "webrtc/media/base/mediachannel.h"
+#include "webrtc/rtc_base/optional.h"
+// TODO(zhihuang): Remove unrelated headers once downstream applications stop
+// relying on them; they were previously transitively included by
+// mediachannel.h, which is no longer a dependency of this file.
+#include "webrtc/media/base/streamparams.h"
 #include "webrtc/media/base/videosinkinterface.h"
 #include "webrtc/media/base/videosourceinterface.h"
+#include "webrtc/rtc_base/ratetracker.h"
+#include "webrtc/rtc_base/refcount.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
+#include "webrtc/rtc_base/thread.h"
+#include "webrtc/rtc_base/timeutils.h"
 
 namespace webrtc {
 
@@ -109,6 +111,11 @@ class MediaStreamTrackInterface : public rtc::RefCountInterface,
 
 // VideoTrackSourceInterface is a reference counted source used for
 // VideoTracks. The same source can be used by multiple VideoTracks.
+// VideoTrackSourceInterface is designed to be invoked on the signaling thread
+// except for rtc::VideoSourceInterface<VideoFrame> methods that will be invoked
+// on the worker thread via a VideoTrack. A custom implementation of a source
+// can inherit AdaptedVideoTrackSource instead of directly implementing this
+// interface.
 class VideoTrackSourceInterface
     : public MediaSourceInterface,
       public rtc::VideoSourceInterface<VideoFrame> {
@@ -143,6 +150,12 @@ class VideoTrackSourceInterface
   virtual ~VideoTrackSourceInterface() {}
 };
 
+// VideoTrackInterface is designed to be invoked on the signaling thread except
+// for rtc::VideoSourceInterface<VideoFrame> methods that must be invoked
+// on the worker thread.
+// PeerConnectionFactory::CreateVideoTrack can be used for creating a VideoTrack
+// that ensures thread safety and that all methods are called on the right
+// thread.
 class VideoTrackInterface
     : public MediaStreamTrackInterface,
       public rtc::VideoSourceInterface<VideoFrame> {

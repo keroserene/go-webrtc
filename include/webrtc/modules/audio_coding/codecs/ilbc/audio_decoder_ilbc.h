@@ -12,16 +12,16 @@
 #define WEBRTC_MODULES_AUDIO_CODING_CODECS_ILBC_AUDIO_DECODER_ILBC_H_
 
 #include "webrtc/api/audio_codecs/audio_decoder.h"
-#include "webrtc/base/constructormagic.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 typedef struct iLBC_decinst_t_ IlbcDecoderInstance;
 
 namespace webrtc {
 
-class AudioDecoderIlbc final : public AudioDecoder {
+class AudioDecoderIlbcImpl final : public AudioDecoder {
  public:
-  AudioDecoderIlbc();
-  ~AudioDecoderIlbc() override;
+  AudioDecoderIlbcImpl();
+  ~AudioDecoderIlbcImpl() override;
   bool HasDecodePlc() const override;
   size_t DecodePlc(size_t num_frames, int16_t* decoded) override;
   void Reset() override;
@@ -39,7 +39,7 @@ class AudioDecoderIlbc final : public AudioDecoder {
 
  private:
   IlbcDecoderInstance* dec_state_;
-  RTC_DISALLOW_COPY_AND_ASSIGN(AudioDecoderIlbc);
+  RTC_DISALLOW_COPY_AND_ASSIGN(AudioDecoderIlbcImpl);
 };
 
 }  // namespace webrtc

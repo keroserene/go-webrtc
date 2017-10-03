@@ -15,17 +15,18 @@
 #include <algorithm>
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/audio_processing/aec3/adaptive_fir_filter.h"
 #include "webrtc/modules/audio_processing/aec3/aec3_common.h"
 #include "webrtc/modules/audio_processing/aec3/aec3_fft.h"
+#include "webrtc/modules/audio_processing/aec3/aec_state.h"
 #include "webrtc/modules/audio_processing/aec3/echo_path_variability.h"
-#include "webrtc/modules/audio_processing/aec3/fft_buffer.h"
 #include "webrtc/modules/audio_processing/aec3/main_filter_update_gain.h"
+#include "webrtc/modules/audio_processing/aec3/render_buffer.h"
 #include "webrtc/modules/audio_processing/aec3/shadow_filter_update_gain.h"
 #include "webrtc/modules/audio_processing/aec3/subtractor_output.h"
 #include "webrtc/modules/audio_processing/logging/apm_data_dumper.h"
 #include "webrtc/modules/audio_processing/utility/ooura_fft.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 
@@ -36,33 +37,27 @@ class Subtractor {
   ~Subtractor();
 
   // Performs the echo subtraction.
-  void Process(const FftBuffer& render_buffer,
+  void Process(const RenderBuffer& render_buffer,
                const rtc::ArrayView<const float> capture,
                const RenderSignalAnalyzer& render_signal_analyzer,
-               bool saturation,
+               const AecState& aec_state,
                SubtractorOutput* output);
-
-  // Returns a vector with the number of blocks included in the render buffer
-  // sums.
-  std::vector<size_t> NumBlocksInRenderSums() const;
-
-  // Returns the minimum required farend buffer length.
-  size_t MinFarendBufferLength() const {
-    return std::max(kMainFilterSizePartitions, kShadowFilterSizePartitions);
-  }
 
   void HandleEchoPathChange(const EchoPathVariability& echo_path_variability);
 
-  // Returns the block-wise frequency response of the main adaptive filter.
+  // Returns the block-wise frequency response for the main adaptive filter.
   const std::vector<std::array<float, kFftLengthBy2Plus1>>&
   FilterFrequencyResponse() const {
     return main_filter_.FilterFrequencyResponse();
   }
 
- private:
-  const size_t kMainFilterSizePartitions = 12;
-  const size_t kShadowFilterSizePartitions = 12;
+  // Returns the estimate of the impulse response for the main adaptive filter.
+  const std::array<float, kAdaptiveFilterTimeDomainLength>&
+  FilterImpulseResponse() const {
+    return main_filter_.FilterImpulseResponse();
+  }
 
+ private:
   const Aec3Fft fft_;
   ApmDataDumper* data_dumper_;
   const Aec3Optimization optimization_;

@@ -11,9 +11,9 @@
 #ifndef WEBRTC_MODULES_AUDIO_CODING_NETEQ_SYNC_BUFFER_H_
 #define WEBRTC_MODULES_AUDIO_CODING_NETEQ_SYNC_BUFFER_H_
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/audio_coding/neteq/audio_multi_vector.h"
 #include "webrtc/modules/include/module_common_types.h"
+#include "webrtc/rtc_base/constructormagic.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
@@ -26,7 +26,7 @@ class SyncBuffer : public AudioMultiVector {
         end_timestamp_(0),
         dtmf_index_(0) {}
 
-  // Returns the number of samples yet to play out form the buffer.
+  // Returns the number of samples yet to play out from the buffer.
   size_t FutureLength() const;
 
   // Adds the contents of |append_this| to the back of the SyncBuffer. Removes

@@ -13,14 +13,21 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "webrtc/api/video/video_frame.h"
-#include "webrtc/base/checks.h"
 #include "webrtc/common_video/libyuv/include/webrtc_libyuv.h"
-#include "webrtc/modules/video_coding/include/video_codec_interface.h"
 #include "webrtc/modules/video_coding/codecs/test/packet_manipulator.h"
 #include "webrtc/modules/video_coding/codecs/test/stats.h"
+#include "webrtc/modules/video_coding/include/video_codec_interface.h"
 #include "webrtc/modules/video_coding/utility/ivf_file_writer.h"
+#include "webrtc/modules/video_coding/utility/vp8_header_parser.h"
+#include "webrtc/modules/video_coding/utility/vp9_uncompressed_header_parser.h"
+#include "webrtc/rtc_base/buffer.h"
+#include "webrtc/rtc_base/checks.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/sequenced_task_checker.h"
+#include "webrtc/rtc_base/task_queue.h"
 #include "webrtc/test/testsupport/frame_reader.h"
 #include "webrtc/test/testsupport/frame_writer.h"
 
@@ -45,22 +52,21 @@ const char* ExcludeFrameTypesToStr(ExcludeFrameTypes e);
 
 // Test configuration for a test run.
 struct TestConfig {
-  TestConfig();
-  ~TestConfig();
-
-  // Name of the test. This is purely metadata and does not affect
-  // the test in any way.
+  // Name of the test. This is purely metadata and does not affect the test.
   std::string name;
 
   // More detailed description of the test. This is purely metadata and does
-  // not affect the test in any way.
+  // not affect the test.
   std::string description;
 
   // Number of this test. Useful if multiple runs of the same test with
   // different configurations shall be managed.
-  int test_number;
+  int test_number = 0;
 
-  // File to process for the test. This must be a video file in the YUV format.
+  // Plain name of YUV file to process without file extension.
+  std::string filename;
+
+  // File to process. This must be a video file in the YUV format.
   std::string input_filename;
 
   // File to write to during processing for the test. Will be a video file
@@ -68,20 +74,19 @@ struct TestConfig {
   std::string output_filename;
 
   // Path to the directory where encoded files will be put
-  // (absolute or relative to the executable). Default: "out".
-  std::string output_dir;
+  // (absolute or relative to the executable).
+  std::string output_dir = "out";
 
   // Configurations related to networking.
   NetworkingConfig networking_config;
 
   // Decides how the packet loss simulations shall exclude certain frames
-  // from packet loss. Default: kExcludeOnlyFirstKeyFrame.
-  ExcludeFrameTypes exclude_frame_types;
+  // from packet loss.
+  ExcludeFrameTypes exclude_frame_types = kExcludeOnlyFirstKeyFrame;
 
-  // The length of a single frame of the input video file. This value is
-  // calculated out of the width and height according to the video format
-  // specification. Must be set before processing.
-  size_t frame_length_in_bytes;
+  // The length of a single frame of the input video file. Calculated out of the
+  // width and height according to the video format specification (i.e. YUV).
+  size_t frame_length_in_bytes = 0;
 
   // Force the encoder and decoder to use a single core for processing.
   // Using a single core is necessary to get a deterministic behavior for the
@@ -89,25 +94,25 @@ struct TestConfig {
   // since multiple cores are competing to consume the byte budget for each
   // frame in parallel.
   // If set to false, the maximum number of available cores will be used.
-  // Default: false.
-  bool use_single_core;
+  bool use_single_core = false;
 
-  // If set to a value >0 this setting forces the encoder to create a keyframe
-  // every Nth frame. Note that the encoder may create a keyframe in other
-  // locations in addition to the interval that is set using this parameter.
-  // Forcing key frames may also affect encoder planning optimizations in
-  // a negative way, since it will suddenly be forced to produce an expensive
-  // key frame.
-  // Default: 0.
-  int keyframe_interval;
+  // If > 0: forces the encoder to create a keyframe every Nth frame.
+  // Note that the encoder may create a keyframe in other locations in addition
+  // to this setting. Forcing key frames may also affect encoder planning
+  // optimizations in a negative way, since it will suddenly be forced to
+  // produce an expensive key frame.
+  int keyframe_interval = 0;
 
   // The codec settings to use for the test (target bitrate, video size,
-  // framerate and so on). This struct must be created and filled in using
-  // the VideoCodingModule::Codec() method.
-  webrtc::VideoCodec* codec_settings;
+  // framerate and so on). This struct should be filled in using the
+  // VideoCodingModule::Codec() method.
+  webrtc::VideoCodec codec_settings;
 
   // If printing of information to stdout shall be performed during processing.
-  bool verbose;
+  bool verbose = true;
+
+  // If HW or SW codec should be used.
+  bool hw_codec = false;
 };
 
 // Handles encoding/decoding of video using the VideoEncoder/VideoDecoder
@@ -130,173 +135,201 @@ struct TestConfig {
 // purposes.
 class VideoProcessor {
  public:
-  virtual ~VideoProcessor() {}
+  VideoProcessor(webrtc::VideoEncoder* encoder,
+                 webrtc::VideoDecoder* decoder,
+                 FrameReader* analysis_frame_reader,
+                 FrameWriter* analysis_frame_writer,
+                 PacketManipulator* packet_manipulator,
+                 const TestConfig& config,
+                 Stats* stats,
+                 IvfFileWriter* encoded_frame_writer,
+                 FrameWriter* decoded_frame_writer);
+  ~VideoProcessor();
 
-  // Performs initial calculations about frame size, sets up callbacks etc.
-  // Returns false if an error has occurred, in addition to printing to stderr.
-  virtual bool Init() = 0;
+  // Sets up callbacks and initializes the encoder and decoder.
+  void Init();
 
-  // Processes a single frame. Returns true as long as there's more frames
-  // available in the source clip.
-  // Frame number must be an integer >= 0.
-  virtual bool ProcessFrame(int frame_number) = 0;
+  // Tears down callbacks and releases the encoder and decoder.
+  void Release();
 
-  // Updates the encoder with the target bit rate and the frame rate.
-  virtual void SetRates(int bit_rate, int frame_rate) = 0;
+  // Processes a single frame. The frames must be processed in order, and the
+  // VideoProcessor must be initialized first.
+  void ProcessFrame(int frame_number);
 
-  // Return the size of the encoded frame in bytes. Dropped frames by the
-  // encoder are regarded as zero size.
-  virtual size_t EncodedFrameSize() = 0;
-
-  // Return the encoded frame type (key or delta).
-  virtual FrameType EncodedFrameType() = 0;
+  // Updates the encoder with target rates. Must be called at least once.
+  void SetRates(int bitrate_kbps, int framerate_fps);
 
   // Return the number of dropped frames.
-  virtual int NumberDroppedFrames() = 0;
+  int NumberDroppedFrames();
 
   // Return the number of spatial resizes.
-  virtual int NumberSpatialResizes() = 0;
-};
-
-class VideoProcessorImpl : public VideoProcessor {
- public:
-  VideoProcessorImpl(webrtc::VideoEncoder* encoder,
-                     webrtc::VideoDecoder* decoder,
-                     FrameReader* analysis_frame_reader,
-                     FrameWriter* analysis_frame_writer,
-                     PacketManipulator* packet_manipulator,
-                     const TestConfig& config,
-                     Stats* stats,
-                     FrameWriter* source_frame_writer,
-                     IvfFileWriter* encoded_frame_writer,
-                     FrameWriter* decoded_frame_writer);
-  virtual ~VideoProcessorImpl();
-  bool Init() override;
-  bool ProcessFrame(int frame_number) override;
+  int NumberSpatialResizes();
 
  private:
-  // Callback class required to implement according to the VideoEncoder API.
+  // Container that holds per-frame information that needs to be stored between
+  // calls to Encode and Decode, as well as the corresponding callbacks. It is
+  // not directly used for statistics -- for that, test::FrameStatistic is used.
+  // TODO(brandtr): Get rid of this struct and use the Stats class instead.
+  struct FrameInfo {
+    int64_t encode_start_ns = 0;
+    int64_t decode_start_ns = 0;
+    int decoded_width = 0;
+    int decoded_height = 0;
+    size_t manipulated_length = 0;
+  };
+
   class VideoProcessorEncodeCompleteCallback
       : public webrtc::EncodedImageCallback {
    public:
-    explicit VideoProcessorEncodeCompleteCallback(VideoProcessorImpl* vp)
-        : video_processor_(vp) {}
+    explicit VideoProcessorEncodeCompleteCallback(
+        VideoProcessor* video_processor)
+        : video_processor_(video_processor),
+          task_queue_(rtc::TaskQueue::Current()) {}
+
     Result OnEncodedImage(
         const webrtc::EncodedImage& encoded_image,
         const webrtc::CodecSpecificInfo* codec_specific_info,
         const webrtc::RTPFragmentationHeader* fragmentation) override {
-      // Forward to parent class.
       RTC_CHECK(codec_specific_info);
+
+      if (task_queue_ && !task_queue_->IsCurrent()) {
+        task_queue_->PostTask(
+            std::unique_ptr<rtc::QueuedTask>(new EncodeCallbackTask(
+                video_processor_, encoded_image, codec_specific_info)));
+        return Result(Result::OK, 0);
+      }
+
       video_processor_->FrameEncoded(codec_specific_info->codecType,
-                                     encoded_image, fragmentation);
+                                     encoded_image);
       return Result(Result::OK, 0);
     }
 
    private:
-    VideoProcessorImpl* const video_processor_;
+    class EncodeCallbackTask : public rtc::QueuedTask {
+     public:
+      EncodeCallbackTask(VideoProcessor* video_processor,
+                         const webrtc::EncodedImage& encoded_image,
+                         const webrtc::CodecSpecificInfo* codec_specific_info)
+          : video_processor_(video_processor),
+            buffer_(encoded_image._buffer, encoded_image._length),
+            encoded_image_(encoded_image),
+            codec_specific_info_(*codec_specific_info) {
+        encoded_image_._buffer = buffer_.data();
+      }
+
+      bool Run() override {
+        video_processor_->FrameEncoded(codec_specific_info_.codecType,
+                                       encoded_image_);
+        return true;
+      }
+
+     private:
+      VideoProcessor* const video_processor_;
+      rtc::Buffer buffer_;
+      webrtc::EncodedImage encoded_image_;
+      const webrtc::CodecSpecificInfo codec_specific_info_;
+    };
+
+    VideoProcessor* const video_processor_;
+    rtc::TaskQueue* const task_queue_;
   };
 
-  // Callback class required to implement according to the VideoDecoder API.
   class VideoProcessorDecodeCompleteCallback
       : public webrtc::DecodedImageCallback {
    public:
-    explicit VideoProcessorDecodeCompleteCallback(VideoProcessorImpl* vp)
-        : video_processor_(vp) {}
+    explicit VideoProcessorDecodeCompleteCallback(
+        VideoProcessor* video_processor)
+        : video_processor_(video_processor),
+          task_queue_(rtc::TaskQueue::Current()) {}
+
     int32_t Decoded(webrtc::VideoFrame& image) override {
-      // Forward to parent class.
+      if (task_queue_ && !task_queue_->IsCurrent()) {
+        task_queue_->PostTask(
+            [this, image]() { video_processor_->FrameDecoded(image); });
+        return 0;
+      }
       video_processor_->FrameDecoded(image);
       return 0;
     }
+
     int32_t Decoded(webrtc::VideoFrame& image,
                     int64_t decode_time_ms) override {
       return Decoded(image);
     }
+
     void Decoded(webrtc::VideoFrame& image,
                  rtc::Optional<int32_t> decode_time_ms,
                  rtc::Optional<uint8_t> qp) override {
-      Decoded(image,
-              decode_time_ms ? static_cast<int32_t>(*decode_time_ms) : -1);
+      Decoded(image);
     }
 
    private:
-    VideoProcessorImpl* const video_processor_;
+    VideoProcessor* const video_processor_;
+    rtc::TaskQueue* const task_queue_;
   };
 
-  // Invoked by the callback when a frame has completed encoding.
+  // Invoked by the callback adapter when a frame has completed encoding.
   void FrameEncoded(webrtc::VideoCodecType codec,
-                    const webrtc::EncodedImage& encodedImage,
-                    const webrtc::RTPFragmentationHeader* fragmentation);
+                    const webrtc::EncodedImage& encodedImage);
 
-  // Invoked by the callback when a frame has completed decoding.
+  // Invoked by the callback adapter when a frame has completed decoding.
   void FrameDecoded(const webrtc::VideoFrame& image);
 
-  // Used for getting a 32-bit integer representing time
-  // (checks the size is within signed 32-bit bounds before casting it)
-  int GetElapsedTimeMicroseconds(int64_t start, int64_t stop);
+  // Use the frame number as the basis for timestamp to identify frames. Let the
+  // first timestamp be non-zero, to not make the IvfFileWriter believe that we
+  // want to use capture timestamps in the IVF files.
+  uint32_t FrameNumberToTimestamp(int frame_number) const;
+  int TimestampToFrameNumber(uint32_t timestamp) const;
 
-  // Updates the encoder with the target bit rate and the frame rate.
-  void SetRates(int bit_rate, int frame_rate) override;
+  bool initialized_ GUARDED_BY(sequence_checker_);
 
-  // Return the size of the encoded frame in bytes.
-  size_t EncodedFrameSize() override;
-
-  // Return the encoded frame type (key or delta).
-  FrameType EncodedFrameType() override;
-
-  // Return the number of dropped frames.
-  int NumberDroppedFrames() override;
-
-  // Return the number of spatial resizes.
-  int NumberSpatialResizes() override;
+  TestConfig config_ GUARDED_BY(sequence_checker_);
 
   webrtc::VideoEncoder* const encoder_;
   webrtc::VideoDecoder* const decoder_;
   const std::unique_ptr<VideoBitrateAllocator> bitrate_allocator_;
 
   // Adapters for the codec callbacks.
-  const std::unique_ptr<EncodedImageCallback> encode_callback_;
-  const std::unique_ptr<DecodedImageCallback> decode_callback_;
+  VideoProcessorEncodeCompleteCallback encode_callback_;
+  VideoProcessorDecodeCompleteCallback decode_callback_;
 
+  // Fake network.
   PacketManipulator* const packet_manipulator_;
-  const TestConfig& config_;
 
   // These (mandatory) file manipulators are used for, e.g., objective PSNR and
   // SSIM calculations at the end of a test run.
   FrameReader* const analysis_frame_reader_;
   FrameWriter* const analysis_frame_writer_;
 
-  // These (optional) file writers are used for persistently storing the output
-  // of the coding pipeline at different stages: pre encode (source), post
-  // encode (encoded), and post decode (decoded). The purpose is to give the
-  // experimenter an option to subjectively evaluate the quality of the
-  // encoding, given the test settings. Each frame writer is enabled by being
-  // non-null.
-  FrameWriter* const source_frame_writer_;
+  // These (optional) file writers are used to persistently store the encoded
+  // and decoded bitstreams. The purpose is to give the experimenter an option
+  // to subjectively evaluate the quality of the processing. Each frame writer
+  // is enabled by being non-null.
   IvfFileWriter* const encoded_frame_writer_;
   FrameWriter* const decoded_frame_writer_;
 
-  // Keep track of the last successful frame, since we need to write that
-  // when decoding fails.
-  std::unique_ptr<uint8_t[]> last_successful_frame_buffer_;
-  // To keep track of if we have excluded the first key frame from packet loss.
-  bool first_key_frame_has_been_excluded_;
-  // To tell the decoder previous frame have been dropped due to packet loss.
-  bool last_frame_missing_;
-  // If Init() has executed successfully.
-  bool initialized_;
-  size_t encoded_frame_size_;
-  FrameType encoded_frame_type_;
-  int prev_time_stamp_;
-  int last_encoder_frame_width_;
-  int last_encoder_frame_height_;
+  // Frame metadata for all frames that have been added through a call to
+  // ProcessFrames(). We need to store this metadata over the course of the
+  // test run, to support pipelining HW codecs.
+  std::vector<FrameInfo> frame_infos_ GUARDED_BY(sequence_checker_);
+  int last_encoded_frame_num_ GUARDED_BY(sequence_checker_);
+  int last_decoded_frame_num_ GUARDED_BY(sequence_checker_);
+
+  // Keep track of if we have excluded the first key frame from packet loss.
+  bool first_key_frame_has_been_excluded_ GUARDED_BY(sequence_checker_);
+
+  // Keep track of the last successfully decoded frame, since we write that
+  // frame to disk when decoding fails.
+  rtc::Buffer last_decoded_frame_buffer_ GUARDED_BY(sequence_checker_);
 
   // Statistics.
   Stats* stats_;
-  int num_dropped_frames_;
-  int num_spatial_resizes_;
-  double bit_rate_factor_;  // Multiply frame length with this to get bit rate.
-  int64_t encode_start_ns_;
-  int64_t decode_start_ns_;
+  int num_dropped_frames_ GUARDED_BY(sequence_checker_);
+  int num_spatial_resizes_ GUARDED_BY(sequence_checker_);
+
+  rtc::SequencedTaskChecker sequence_checker_;
+
+  RTC_DISALLOW_COPY_AND_ASSIGN(VideoProcessor);
 };
 
 }  // namespace test

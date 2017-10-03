@@ -14,9 +14,9 @@
 #include <array>
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/audio_processing/aec3/aec3_common.h"
 #include "webrtc/modules/audio_processing/aec3/aec3_fft.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 
@@ -27,6 +27,7 @@ class SuppressionFilter {
   void ApplyGain(const FftData& comfort_noise,
                  const FftData& comfort_noise_high_bands,
                  const std::array<float, kFftLengthBy2Plus1>& suppression_gain,
+                 float high_bands_gain,
                  std::vector<std::vector<float>>* e);
 
  private:

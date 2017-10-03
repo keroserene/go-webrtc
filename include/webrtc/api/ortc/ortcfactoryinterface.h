@@ -23,13 +23,14 @@
 #include "webrtc/api/ortc/packettransportinterface.h"
 #include "webrtc/api/ortc/rtptransportcontrollerinterface.h"
 #include "webrtc/api/ortc/rtptransportinterface.h"
+#include "webrtc/api/ortc/srtptransportinterface.h"
 #include "webrtc/api/ortc/udptransportinterface.h"
 #include "webrtc/api/rtcerror.h"
 #include "webrtc/api/rtpparameters.h"
-#include "webrtc/base/network.h"
-#include "webrtc/base/scoped_ref_ptr.h"
-#include "webrtc/base/thread.h"
 #include "webrtc/p2p/base/packetsocketfactory.h"
+#include "webrtc/rtc_base/network.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
+#include "webrtc/rtc_base/thread.h"
 
 namespace webrtc {
 
@@ -112,16 +113,24 @@ class OrtcFactoryInterface {
   // |rtp| will be used for sending RTP packets, and |rtcp| for RTCP packets.
   //
   // |rtp| can't be null. |rtcp| must be non-null if and only if
-  // |rtcp_parameters.mux| is false, indicating that RTCP muxing isn't used.
+  // |rtp_parameters.rtcp.mux| is false, indicating that RTCP muxing isn't used.
   // Note that if RTCP muxing isn't enabled initially, it can still enabled
-  // later through SetRtcpParameters.
+  // later through SetParameters.
   //
   // If |transport_controller| is null, one will automatically be created, and
   // its lifetime managed by the returned RtpTransport. This should only be
   // done if a single RtpTransport is being used to communicate with the remote
   // endpoint.
   virtual RTCErrorOr<std::unique_ptr<RtpTransportInterface>> CreateRtpTransport(
-      const RtcpParameters& rtcp_parameters,
+      const RtpTransportParameters& rtp_parameters,
+      PacketTransportInterface* rtp,
+      PacketTransportInterface* rtcp,
+      RtpTransportControllerInterface* transport_controller) = 0;
+
+  // Creates an SrtpTransport which is an RTP transport that uses SRTP.
+  virtual RTCErrorOr<std::unique_ptr<SrtpTransportInterface>>
+  CreateSrtpTransport(
+      const RtpTransportParameters& rtp_parameters,
       PacketTransportInterface* rtp,
       PacketTransportInterface* rtcp,
       RtpTransportControllerInterface* transport_controller) = 0;

@@ -14,8 +14,8 @@
 #include <map>
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/audio_coding/audio_network_adaptor/controller.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 
@@ -54,14 +54,14 @@ class FrameLengthController final : public Controller {
 
   void UpdateNetworkMetrics(const NetworkMetrics& network_metrics) override;
 
-  void MakeDecision(AudioNetworkAdaptor::EncoderRuntimeConfig* config) override;
+  void MakeDecision(AudioEncoderRuntimeConfig* config) override;
 
  private:
   bool FrameLengthIncreasingDecision(
-      const AudioNetworkAdaptor::EncoderRuntimeConfig& config) const;
+      const AudioEncoderRuntimeConfig& config) const;
 
   bool FrameLengthDecreasingDecision(
-      const AudioNetworkAdaptor::EncoderRuntimeConfig& config) const;
+      const AudioEncoderRuntimeConfig& config) const;
 
   const Config config_;
 

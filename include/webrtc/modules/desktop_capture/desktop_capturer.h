@@ -104,6 +104,10 @@ class DesktopCapturer {
 
   // Gets a list of sources current capturer supports. Returns false in case of
   // a failure.
+  // For DesktopCapturer implementations to capture screens, this function
+  // should return monitors.
+  // For DesktopCapturer implementations to capture windows, this function
+  // should only return root windows owned by applications.
   virtual bool GetSourceList(SourceList* sources);
 
   // Selects a source to be captured. Returns false in case of a failure (e.g.
@@ -114,6 +118,13 @@ class DesktopCapturer {
   // Returns false in case of a failure or no source has been selected or the
   // implementation does not support this functionality.
   virtual bool FocusOnSelectedSource();
+
+  // Returns true if the |pos| on the selected source is covered by other
+  // elements on the display, and is not visible to the users.
+  // |pos| is in full desktop coordinates, i.e. the top-left monitor always
+  // starts from (0, 0).
+  // The return value if |pos| is out of the scope of the source is undefined.
+  virtual bool IsOccluded(const DesktopVector& pos);
 
   // Creates a DesktopCapturer instance which targets to capture windows.
   static std::unique_ptr<DesktopCapturer> CreateWindowCapturer(

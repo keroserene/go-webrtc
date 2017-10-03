@@ -13,17 +13,19 @@
 
 #include <queue>
 
-#include "webrtc/base/basictypes.h"
 #include "webrtc/modules/include/module_common_types.h"
+#include "webrtc/rtc_base/basictypes.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
+class RtcEventLog;
 
 // Note that this class isn't thread-safe by itself and therefore relies
 // on being protected by the caller.
 class BitrateProber {
  public:
   BitrateProber();
+  explicit BitrateProber(RtcEventLog* event_log);
 
   void SetEnabled(bool enable);
 
@@ -100,6 +102,7 @@ class BitrateProber {
   int64_t next_probe_time_ms_;
 
   int next_cluster_id_;
+  RtcEventLog* const event_log_;
 };
 
 }  // namespace webrtc

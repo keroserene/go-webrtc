@@ -15,8 +15,8 @@
 #include <string>
 #include <vector>
 
+#include "webrtc/api/video_codecs/video_encoder.h"
 #include "webrtc/media/base/codec.h"
-#include "webrtc/video_encoder.h"
 
 namespace webrtc {
 
@@ -25,8 +25,9 @@ namespace webrtc {
 // hardware restrictions, such as max resolution.
 class VideoEncoderSoftwareFallbackWrapper : public VideoEncoder {
  public:
-  VideoEncoderSoftwareFallbackWrapper(const cricket::VideoCodec& codec,
-                                      webrtc::VideoEncoder* encoder);
+  VideoEncoderSoftwareFallbackWrapper(
+      const cricket::VideoCodec& codec,
+      std::unique_ptr<webrtc::VideoEncoder> encoder);
 
   int32_t InitEncode(const VideoCodec* codec_settings,
                      int32_t number_of_cores,
@@ -49,6 +50,36 @@ class VideoEncoderSoftwareFallbackWrapper : public VideoEncoder {
  private:
   bool InitFallbackEncoder();
 
+  // If |forced_fallback_possible_| is true:
+  // The forced fallback is requested if the target bitrate is below |low_kbps|
+  // for more than |min_low_ms| and the input video resolution is not larger
+  // than |kMaxPixelsStart|.
+  // If the bitrate is above |high_kbps| and the resolution is not smaller than
+  // |kMinPixelsStop|, the forced fallback is requested to immediately be
+  // stopped.
+  class ForcedFallbackParams {
+   public:
+    bool ShouldStart(uint32_t bitrate_kbps, const VideoCodec& codec);
+    bool ShouldStop(uint32_t bitrate_kbps, const VideoCodec& codec) const;
+    void Reset() { start_ms.reset(); }
+    bool IsValid(const VideoCodec& codec) const {
+      return codec.width * codec.height <= kMaxPixelsStart;
+    }
+    rtc::Optional<int64_t> start_ms;  // Set when bitrate is below |low_kbps|.
+    uint32_t low_kbps = 100;
+    uint32_t high_kbps = 150;
+    int64_t min_low_ms = 10000;
+    const int kMaxPixelsStart = 320 * 240;
+    const int kMinPixelsStop = 320 * 180;
+  };
+
+  bool RequestForcedFallback();
+  bool TryReleaseForcedFallbackEncoder();
+  bool TryReInitForcedFallbackEncoder();
+  void ValidateSettingsForForcedFallback();
+  bool IsForcedFallbackActive() const;
+  void MaybeModifyCodecForFallback();
+
   // Settings used in the last InitEncode call and used if a dynamic fallback to
   // software is required.
   VideoCodec codec_settings_;
@@ -65,12 +96,15 @@ class VideoEncoderSoftwareFallbackWrapper : public VideoEncoder {
   uint32_t packet_loss_;
   int64_t rtt_;
 
-  const cricket::VideoCodec codec_;
-  webrtc::VideoEncoder* const encoder_;
+  cricket::VideoCodec codec_;
+  std::unique_ptr<webrtc::VideoEncoder> encoder_;
 
   std::unique_ptr<webrtc::VideoEncoder> fallback_encoder_;
   std::string fallback_implementation_name_;
   EncodedImageCallback* callback_;
+
+  bool forced_fallback_possible_;
+  ForcedFallbackParams forced_fallback_;
 };
 
 }  // namespace webrtc

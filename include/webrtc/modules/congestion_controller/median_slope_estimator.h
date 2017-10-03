@@ -16,8 +16,8 @@
 #include <deque>
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/numerics/percentile_filter.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/numerics/percentile_filter.h"
 
 namespace webrtc {
 
@@ -48,10 +48,8 @@ class MedianSlopeEstimator {
 
  private:
   struct DelayInfo {
-    DelayInfo(int64_t time, double delay, size_t slope_count)
-        : time(time), delay(delay) {
-      slopes.reserve(slope_count);
-    }
+    DelayInfo(int64_t time, double delay, size_t slope_count);
+    ~DelayInfo();
     int64_t time;
     double delay;
     std::vector<double> slopes;

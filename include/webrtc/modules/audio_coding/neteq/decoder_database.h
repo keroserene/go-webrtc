@@ -17,11 +17,12 @@
 
 #include "webrtc/api/audio_codecs/audio_decoder_factory.h"
 #include "webrtc/api/audio_codecs/audio_format.h"
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/common_types.h"  // NULL
 #include "webrtc/modules/audio_coding/codecs/cng/webrtc_cng.h"
 #include "webrtc/modules/audio_coding/neteq/audio_decoder_impl.h"
 #include "webrtc/modules/audio_coding/neteq/packet.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
@@ -147,6 +148,11 @@ class DecoderDatabase {
   // any AudioDecoder objects that were not externally created and inserted
   // using InsertExternal().
   virtual void Reset();
+
+  // Replaces the existing set of decoders with the given set. Returns the
+  // payload types that were reassigned or removed while doing so.
+  virtual std::vector<int> SetCodecs(
+      const std::map<int, SdpAudioFormat>& codecs);
 
   // Registers |rtp_payload_type| as a decoder of type |codec_type|. The |name|
   // is only used to populate the name field in the DecoderInfo struct in the

@@ -16,9 +16,8 @@
 
 #include <memory>
 
-#include "webrtc/base/numerics/exp_filter.h"
 #include "webrtc/modules/video_coding/internal_defines.h"
-#include "webrtc/system_wrappers/include/trace.h"
+#include "webrtc/rtc_base/numerics/exp_filter.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {

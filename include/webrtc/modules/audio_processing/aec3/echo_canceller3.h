@@ -11,9 +11,6 @@
 #ifndef WEBRTC_MODULES_AUDIO_PROCESSING_AEC3_ECHO_CANCELLER3_H_
 #define WEBRTC_MODULES_AUDIO_PROCESSING_AEC3_ECHO_CANCELLER3_H_
 
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/race_checker.h"
-#include "webrtc/base/swap_queue.h"
 #include "webrtc/modules/audio_processing/aec3/block_framer.h"
 #include "webrtc/modules/audio_processing/aec3/block_processor.h"
 #include "webrtc/modules/audio_processing/aec3/cascaded_biquad_filter.h"
@@ -21,6 +18,9 @@
 #include "webrtc/modules/audio_processing/audio_buffer.h"
 #include "webrtc/modules/audio_processing/include/audio_processing.h"
 #include "webrtc/modules/audio_processing/logging/apm_data_dumper.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/race_checker.h"
+#include "webrtc/rtc_base/swap_queue.h"
 
 namespace webrtc {
 
@@ -63,7 +63,9 @@ class Aec3RenderQueueItemVerifier {
 class EchoCanceller3 {
  public:
   // Normal c-tor to use.
-  EchoCanceller3(int sample_rate_hz, bool use_highpass_filter);
+  EchoCanceller3(const AudioProcessing::Config::EchoCanceller3& config,
+                 int sample_rate_hz,
+                 bool use_highpass_filter);
   // Testing c-tor that is used only for testing purposes.
   EchoCanceller3(int sample_rate_hz,
                  bool use_highpass_filter,
@@ -71,7 +73,7 @@ class EchoCanceller3 {
   ~EchoCanceller3();
   // Analyzes and stores an internal copy of the split-band domain render
   // signal.
-  bool AnalyzeRender(AudioBuffer* farend);
+  void AnalyzeRender(AudioBuffer* farend);
   // Analyzes the full-band domain capture signal to detect signal saturation.
   void AnalyzeCapture(AudioBuffer* capture);
   // Processes the split-band domain capture signal in order to remove any echo
@@ -96,9 +98,8 @@ class EchoCanceller3 {
  private:
   class RenderWriter;
 
-  // Empties the render SwapQueue. A bool is returned that indicates the success
-  // of the operation.
-  bool EmptyRenderQueue();
+  // Empties the render SwapQueue.
+  void EmptyRenderQueue();
 
   rtc::RaceChecker capture_race_checker_;
   rtc::RaceChecker render_race_checker_;

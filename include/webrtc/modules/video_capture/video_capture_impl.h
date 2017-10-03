@@ -16,14 +16,14 @@
  */
 
 #include "webrtc/api/video/video_frame.h"
-#include "webrtc/base/scoped_ref_ptr.h"
 #include "webrtc/common_video/libyuv/include/webrtc_libyuv.h"
 #include "webrtc/modules/video_capture/video_capture.h"
 #include "webrtc/modules/video_capture/video_capture_config.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
 
 namespace webrtc
 {
-class CriticalSectionWrapper;
 
 namespace videocapturemodule {
 // Class definitions
@@ -93,7 +93,7 @@ protected:
     int32_t DeliverCapturedFrame(VideoFrame& captureFrame);
 
     char* _deviceUniqueId; // current Device unique name;
-    CriticalSectionWrapper& _apiCs;
+    rtc::CriticalSection _apiCs;
     VideoCaptureCapability _requestedCapability; // Should be set by platform dependent code in StartCapture.
 private:
     void UpdateFrameCount();

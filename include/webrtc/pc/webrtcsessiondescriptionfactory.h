@@ -14,12 +14,12 @@
 #include <memory>
 
 #include "webrtc/api/peerconnectioninterface.h"
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/messagehandler.h"
-#include "webrtc/base/rtccertificate.h"
-#include "webrtc/base/rtccertificategenerator.h"
 #include "webrtc/p2p/base/transportdescriptionfactory.h"
 #include "webrtc/pc/mediasession.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/messagehandler.h"
+#include "webrtc/rtc_base/rtccertificate.h"
+#include "webrtc/rtc_base/rtccertificategenerator.h"
 
 namespace cricket {
 class ChannelManager;
@@ -105,6 +105,10 @@ class WebRtcSessionDescriptionFactory : public rtc::MessageHandler,
 
   void SetSdesPolicy(cricket::SecurePolicy secure_policy);
   cricket::SecurePolicy SdesPolicy() const;
+
+  void set_enable_encrypted_rtp_header_extensions(bool enable) {
+    session_desc_factory_.set_enable_encrypted_rtp_header_extensions(enable);
+  }
 
   sigslot::signal1<const rtc::scoped_refptr<rtc::RTCCertificate>&>
       SignalCertificateReady;

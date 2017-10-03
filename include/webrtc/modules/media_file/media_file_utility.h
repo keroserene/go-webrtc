@@ -25,7 +25,7 @@ class ModuleFileUtility
 {
 public:
 
-    ModuleFileUtility(const int32_t id);
+    ModuleFileUtility();
     ~ModuleFileUtility();
 
     // Prepare for playing audio from stream.
@@ -246,9 +246,7 @@ private:
         kCodecG726_40,
         kCodecG726_32,
         kCodecG726_24,
-        kCodecG726_16,
-        kCodecSpeex8Khz,
-        kCodecSpeex16Khz
+        kCodecG726_16
     };
 
     // TODO (hellner): why store multiple formats. Just store either codec_info_
@@ -258,8 +256,6 @@ private:
     // Number of bytes to read. I.e. frame size in bytes. May be multiple
     // chunks if reading WAV.
     size_t _readSizeBytes;
-
-    int32_t _id;
 
     uint32_t _stopPointInMs;
     uint32_t _startPointInMs;

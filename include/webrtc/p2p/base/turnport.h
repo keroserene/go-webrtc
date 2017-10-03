@@ -16,10 +16,10 @@
 #include <set>
 #include <string>
 
-#include "webrtc/base/asyncinvoker.h"
-#include "webrtc/base/asyncpacketsocket.h"
 #include "webrtc/p2p/base/port.h"
 #include "webrtc/p2p/client/basicportallocator.h"
+#include "webrtc/rtc_base/asyncinvoker.h"
+#include "webrtc/rtc_base/asyncpacketsocket.h"
 
 namespace rtc {
 class AsyncResolver;
@@ -42,6 +42,7 @@ class TurnPort : public Port {
     STATE_DISCONNECTED,  // TCP connection died, cannot send/receive any
                          // packets.
   };
+  // Create a TURN port using the shared UDP socket, |socket|.
   static TurnPort* Create(rtc::Thread* thread,
                           rtc::PacketSocketFactory* factory,
                           rtc::Network* network,
@@ -56,10 +57,11 @@ class TurnPort : public Port {
                         server_address, credentials, server_priority, origin);
   }
 
+  // Create a TURN port that will use a new socket, bound to |network| and
+  // using a port in the range between |min_port| and |max_port|.
   static TurnPort* Create(rtc::Thread* thread,
                           rtc::PacketSocketFactory* factory,
                           rtc::Network* network,
-                          const rtc::IPAddress& ip,
                           uint16_t min_port,
                           uint16_t max_port,
                           const std::string& username,  // ice username.
@@ -67,10 +69,11 @@ class TurnPort : public Port {
                           const ProtocolAddress& server_address,
                           const RelayCredentials& credentials,
                           int server_priority,
-                          const std::string& origin) {
-    return new TurnPort(thread, factory, network, ip, min_port, max_port,
-                        username, password, server_address, credentials,
-                        server_priority, origin);
+                          const std::string& origin,
+                          const std::vector<std::string>& tls_alpn_protocols) {
+    return new TurnPort(thread, factory, network, min_port, max_port, username,
+                        password, server_address, credentials, server_priority,
+                        origin, tls_alpn_protocols);
   }
 
   virtual ~TurnPort();
@@ -91,6 +94,10 @@ class TurnPort : public Port {
 
   virtual void SetTlsCertPolicy(TlsCertPolicy tls_cert_policy) {
     tls_cert_policy_ = tls_cert_policy;
+  }
+
+  virtual std::vector<std::string> GetTlsAlpnProtocols() const {
+    return tls_alpn_protocols_;
   }
 
   virtual void PrepareAddress();
@@ -177,7 +184,6 @@ class TurnPort : public Port {
   TurnPort(rtc::Thread* thread,
            rtc::PacketSocketFactory* factory,
            rtc::Network* network,
-           const rtc::IPAddress& ip,
            uint16_t min_port,
            uint16_t max_port,
            const std::string& username,
@@ -185,7 +191,8 @@ class TurnPort : public Port {
            const ProtocolAddress& server_address,
            const RelayCredentials& credentials,
            int server_priority,
-           const std::string& origin);
+           const std::string& origin,
+           const std::vector<std::string>& alpn_protocols);
 
  private:
   enum {
@@ -265,6 +272,7 @@ class TurnPort : public Port {
 
   ProtocolAddress server_address_;
   TlsCertPolicy tls_cert_policy_ = TlsCertPolicy::TLS_CERT_POLICY_SECURE;
+  std::vector<std::string> tls_alpn_protocols_;
   RelayCredentials credentials_;
   AttemptedServerSet attempted_server_addresses_;
 

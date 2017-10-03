@@ -22,6 +22,7 @@ namespace webrtc {
 class AudioDecoderFactory;
 class AudioDeviceModule;
 class AudioMixer;
+class AudioProcessing;
 }
 namespace cricket {
 class WebRtcVideoDecoderFactory;
@@ -32,6 +33,10 @@ namespace cricket {
 
 class WebRtcMediaEngineFactory {
  public:
+  // These Create methods may be called on any thread, though the engine is
+  // only expected to be used on one thread, internally called the "worker
+  // thread". This is the thread Init must be called on.
+
   // TODO(ossu): Backwards-compatible interface. Will be deprecated once the
   // audio decoder factory is fully plumbed and used throughout WebRTC.
   // See: crbug.com/webrtc/6000
@@ -55,7 +60,28 @@ class WebRtcMediaEngineFactory {
           audio_decoder_factory,
       WebRtcVideoEncoderFactory* video_encoder_factory,
       WebRtcVideoDecoderFactory* video_decoder_factory,
-      rtc::scoped_refptr<webrtc::AudioMixer> audio_mixer);
+      rtc::scoped_refptr<webrtc::AudioMixer> audio_mixer,
+      rtc::scoped_refptr<webrtc::AudioProcessing> apm);
+
+  static MediaEngineInterface* Create(
+      webrtc::AudioDeviceModule* adm,
+      const rtc::scoped_refptr<webrtc::AudioEncoderFactory>&
+          audio_encoder_factory,
+      const rtc::scoped_refptr<webrtc::AudioDecoderFactory>&
+          audio_decoder_factory,
+      WebRtcVideoEncoderFactory* video_encoder_factory,
+      WebRtcVideoDecoderFactory* video_decoder_factory);
+
+  static MediaEngineInterface* Create(
+      webrtc::AudioDeviceModule* adm,
+      const rtc::scoped_refptr<webrtc::AudioEncoderFactory>&
+          audio_encoder_factory,
+      const rtc::scoped_refptr<webrtc::AudioDecoderFactory>&
+          audio_decoder_factory,
+      WebRtcVideoEncoderFactory* video_encoder_factory,
+      WebRtcVideoDecoderFactory* video_decoder_factory,
+      rtc::scoped_refptr<webrtc::AudioMixer> audio_mixer,
+      rtc::scoped_refptr<webrtc::AudioProcessing> apm);
 };
 
 // Verify that extension IDs are within 1-byte extension range and are not

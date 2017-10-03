@@ -15,11 +15,12 @@
 
 #include <windows.h>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/desktop_capture/desktop_capturer.h"
 #include "webrtc/modules/desktop_capture/screen_capture_frame_queue.h"
 #include "webrtc/modules/desktop_capture/shared_desktop_frame.h"
+#include "webrtc/modules/desktop_capture/win/display_configuration_monitor.h"
 #include "webrtc/modules/desktop_capture/win/scoped_thread_desktop.h"
+#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 
@@ -69,9 +70,7 @@ class ScreenCapturerWinGdi : public DesktopCapturer {
   // Queue of the frames buffers.
   ScreenCaptureFrameQueue<SharedDesktopFrame> queue_;
 
-  // Rectangle describing the bounds of the desktop device context, relative to
-  // the primary display's top-left.
-  DesktopRect desktop_dc_rect_;
+  DisplayConfigurationMonitor display_configuration_monitor_;
 
   HMODULE dwmapi_library_ = NULL;
   DwmEnableCompositionFunc composition_func_ = nullptr;

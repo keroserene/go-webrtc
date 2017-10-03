@@ -16,9 +16,9 @@
 #include <vector>
 
 #include "webrtc/modules/desktop_capture/desktop_geometry.h"
-#include "webrtc/modules/desktop_capture/desktop_region.h"
 #include "webrtc/modules/desktop_capture/shared_desktop_frame.h"
 #include "webrtc/modules/desktop_capture/win/d3d_device.h"
+#include "webrtc/modules/desktop_capture/win/dxgi_context.h"
 #include "webrtc/modules/desktop_capture/win/dxgi_output_duplicator.h"
 
 namespace webrtc {
@@ -27,15 +27,7 @@ namespace webrtc {
 // single video card.
 class DxgiAdapterDuplicator {
  public:
-  struct Context {
-    Context();
-    Context(const Context& other);
-    ~Context();
-
-    // Child DxgiOutputDuplicator::Context belongs to this
-    // DxgiAdapterDuplicator::Context.
-    std::vector<DxgiOutputDuplicator::Context> contexts;
-  };
+  using Context = DxgiAdapterContext;
 
   // Creates an instance of DxgiAdapterDuplicator from a D3dDevice. Only
   // DxgiDuplicatorController can create an instance.
@@ -67,6 +59,10 @@ class DxgiAdapterDuplicator {
   // should be between [0, screen_count()).
   DesktopRect ScreenRect(int id) const;
 
+  // Returns the device name of one screen owned by this DxgiAdapterDuplicator
+  // in utf8 encoding. |id| should be between [0, screen_count()).
+  const std::string& GetDeviceName(int id) const;
+
   // Returns the count of screens owned by this DxgiAdapterDuplicator. These
   // screens can be retrieved by an interger in the range of
   // [0, screen_count()).
@@ -78,6 +74,10 @@ class DxgiAdapterDuplicator {
 
   // The minimum num_frames_captured() returned by |duplicators_|.
   int64_t GetNumFramesCaptured() const;
+
+  // Moves |desktop_rect_| and all underlying |duplicators_|. See
+  // DxgiDuplicatorController::TranslateRect().
+  void TranslateRect(const DesktopVector& position);
 
  private:
   bool DoInitialize();

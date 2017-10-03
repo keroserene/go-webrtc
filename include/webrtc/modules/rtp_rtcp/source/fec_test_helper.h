@@ -13,10 +13,10 @@
 
 #include <memory>
 
-#include "webrtc/base/basictypes.h"
-#include "webrtc/base/random.h"
 #include "webrtc/modules/include/module_common_types.h"
 #include "webrtc/modules/rtp_rtcp/source/forward_error_correction.h"
+#include "webrtc/rtc_base/basictypes.h"
+#include "webrtc/rtc_base/random.h"
 
 namespace webrtc {
 namespace test {
@@ -49,7 +49,7 @@ class MediaPacketGenerator {
   ForwardErrorCorrection::PacketList ConstructMediaPackets(
       int num_media_packets);
 
-  uint16_t GetFecSeqNum();
+  uint16_t GetNextSeqNum();
 
  private:
   uint32_t min_packet_size_;
@@ -58,7 +58,7 @@ class MediaPacketGenerator {
   Random* random_;
 
   ForwardErrorCorrection::PacketList media_packets_;
-  uint16_t fec_seq_num_;
+  uint16_t next_seq_num_;
 };
 
 // This class generates media packets with a certain structure of the payload.

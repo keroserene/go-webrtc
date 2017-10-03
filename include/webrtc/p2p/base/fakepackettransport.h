@@ -14,15 +14,14 @@
 #include <string>
 
 #include "webrtc/api/ortc/packettransportinterface.h"
-#include "webrtc/base/asyncinvoker.h"
-#include "webrtc/base/copyonwritebuffer.h"
 #include "webrtc/p2p/base/packettransportinternal.h"
+#include "webrtc/rtc_base/asyncinvoker.h"
+#include "webrtc/rtc_base/copyonwritebuffer.h"
 
 namespace rtc {
 
 // Used to simulate a packet-based transport.
-class FakePacketTransport : public PacketTransportInternal,
-                            public webrtc::PacketTransportInterface {
+class FakePacketTransport : public PacketTransportInternal {
  public:
   explicit FakePacketTransport(const std::string& debug_name)
       : debug_name_(debug_name) {}
@@ -86,9 +85,6 @@ class FakePacketTransport : public PacketTransportInternal,
   int SetOption(Socket::Option opt, int value) override { return true; }
   bool GetOption(Socket::Option opt, int* value) override { return true; }
   int GetError() override { return 0; }
-
- protected:
-  PacketTransportInternal* GetInternal() override { return this; }
 
  private:
   void set_writable(bool writable) {

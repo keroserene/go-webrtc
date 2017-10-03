@@ -13,25 +13,29 @@
 
 #include <vector>
 
-#include "webrtc/base/optional.h"
 #include "webrtc/modules/audio_processing/aec3/echo_path_variability.h"
+#include "webrtc/modules/audio_processing/aec3/render_buffer.h"
+#include "webrtc/modules/audio_processing/include/audio_processing.h"
+#include "webrtc/rtc_base/optional.h"
 
 namespace webrtc {
 
 // Class for removing the echo from the capture signal.
 class EchoRemover {
  public:
-  static EchoRemover* Create(int sample_rate_hz);
+  static EchoRemover* Create(
+      const AudioProcessing::Config::EchoCanceller3& config,
+      int sample_rate_hz);
   virtual ~EchoRemover() = default;
 
   // Removes the echo from a block of samples from the capture signal. The
   // supplied render signal is assumed to be pre-aligned with the capture
   // signal.
-  virtual void ProcessBlock(
+  virtual void ProcessCapture(
       const rtc::Optional<size_t>& echo_path_delay_samples,
       const EchoPathVariability& echo_path_variability,
       bool capture_signal_saturation,
-      const std::vector<std::vector<float>>& render,
+      const RenderBuffer& render_buffer,
       std::vector<std::vector<float>>* capture) = 0;
 
   // Updates the status on whether echo leakage is detected in the output of the

@@ -16,11 +16,11 @@
 #include <sstream>
 #include <string>
 
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/gtest_prod_util.h"
-#include "webrtc/modules/remote_bitrate_estimator/test/packet.h"
 #include "webrtc/modules/bitrate_controller/include/bitrate_controller.h"
 #include "webrtc/modules/remote_bitrate_estimator/test/bwe_test_framework.h"
+#include "webrtc/modules/remote_bitrate_estimator/test/packet.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/gtest_prod_util.h"
 
 namespace webrtc {
 namespace testing {
@@ -177,10 +177,11 @@ enum BandwidthEstimatorType {
   kNadaEstimator,
   kRembEstimator,
   kSendSideEstimator,
-  kTcpEstimator
+  kTcpEstimator,
+  kBbrEstimator
 };
 
-const std::string bwe_names[] = {"Null", "NADA", "REMB", "GCC", "TCP"};
+const char* const bwe_names[] = {"Null", "NADA", "REMB", "GCC", "TCP", "BBR"};
 
 int64_t GetAbsSendTimeInMs(uint32_t abs_send_time);
 

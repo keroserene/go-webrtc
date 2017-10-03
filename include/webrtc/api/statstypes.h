@@ -20,12 +20,12 @@
 #include <string>
 #include <vector>
 
-#include "webrtc/base/basictypes.h"
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/refcount.h"
-#include "webrtc/base/scoped_ref_ptr.h"
-#include "webrtc/base/stringencode.h"
-#include "webrtc/base/thread_checker.h"
+#include "webrtc/rtc_base/basictypes.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/refcount.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
+#include "webrtc/rtc_base/stringencode.h"
+#include "webrtc/rtc_base/thread_checker.h"
 
 namespace webrtc {
 
@@ -104,6 +104,7 @@ class StatsReport {
     kStatsValueNameBytesReceived,
     kStatsValueNameBytesSent,
     kStatsValueNameCodecImplementationName,
+    kStatsValueNameConcealedSamples,
     kStatsValueNameDataChannelId,
     kStatsValueNameFramesDecoded,
     kStatsValueNameFramesEncoded,
@@ -117,6 +118,9 @@ class StatsReport {
     kStatsValueNameSelectedCandidatePairId,
     kStatsValueNameSsrc,
     kStatsValueNameState,
+    kStatsValueNameTotalAudioEnergy,
+    kStatsValueNameTotalSamplesDuration,
+    kStatsValueNameTotalSamplesReceived,
     kStatsValueNameTransportId,
     kStatsValueNameSentPingRequestsTotal,
     kStatsValueNameSentPingRequestsBeforeFirstResponse,
@@ -144,6 +148,7 @@ class StatsReport {
     kStatsValueNameCodecName,
     kStatsValueNameComponent,
     kStatsValueNameContentName,
+    kStatsValueNameContentType,
     kStatsValueNameCpuLimitedResolution,
     kStatsValueNameCurrentDelayMs,
     kStatsValueNameDecodeMs,
@@ -179,6 +184,7 @@ class StatsReport {
     kStatsValueNameFrameWidthReceived,
     kStatsValueNameFrameWidthSent,
     kStatsValueNameInitiator,
+    kStatsValueNameInterframeDelayMaxMs,  // Max over last 10 seconds.
     kStatsValueNameIssuerId,
     kStatsValueNameJitterBufferMs,
     kStatsValueNameJitterReceived,
@@ -205,11 +211,13 @@ class StatsReport {
     kStatsValueNameRetransmitBitrate,
     kStatsValueNameRtt,
     kStatsValueNameSecondaryDecodedRate,
+    kStatsValueNameSecondaryDiscardedRate,
     kStatsValueNameSendPacketsDiscarded,
     kStatsValueNameSpeechExpandRate,
     kStatsValueNameSrtpCipher,
     kStatsValueNameTargetDelayMs,
     kStatsValueNameTargetEncBitrate,
+    kStatsValueNameTimingFrameInfo,  // Result of |TimingFrameInfo::ToString|
     kStatsValueNameTrackId,
     kStatsValueNameTransmitBitrate,
     kStatsValueNameTransportType,

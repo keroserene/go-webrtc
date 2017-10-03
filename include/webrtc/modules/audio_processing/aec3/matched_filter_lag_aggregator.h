@@ -13,9 +13,9 @@
 
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/optional.h"
 #include "webrtc/modules/audio_processing/aec3/matched_filter.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/optional.h"
 
 namespace webrtc {
 
@@ -28,6 +28,9 @@ class MatchedFilterLagAggregator {
   MatchedFilterLagAggregator(ApmDataDumper* data_dumper,
                              size_t num_lag_estimates);
   ~MatchedFilterLagAggregator();
+
+  // Resets the aggregator.
+  void Reset();
 
   // Aggregates the provided lag estimates.
   rtc::Optional<size_t> Aggregate(

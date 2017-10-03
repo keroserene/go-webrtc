@@ -17,14 +17,13 @@
 #include <string>
 #include <vector>
 
-#include "webrtc/base/basictypes.h"
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/criticalsection.h"
-#include "webrtc/base/sigslotrepeater.h"
-#include "webrtc/base/sslstreamadapter.h"
-#include "webrtc/base/thread_checker.h"
 #include "webrtc/media/base/cryptoparams.h"
 #include "webrtc/p2p/base/sessiondescription.h"
+#include "webrtc/rtc_base/basictypes.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/sslstreamadapter.h"
+#include "webrtc/rtc_base/thread_checker.h"
 
 // Forward declaration to avoid pulling in libsrtp headers here
 struct srtp_event_data_t;
@@ -33,7 +32,6 @@ struct srtp_ctx_t_;
 namespace cricket {
 
 class SrtpSession;
-class SrtpStat;
 
 void ShutdownSrtp();
 
@@ -78,6 +76,10 @@ class SrtpFilter {
   bool SetAnswer(const std::vector<CryptoParams>& answer_params,
                  ContentSource source);
 
+  // Set the header extension ids that should be encrypted for the given source.
+  void SetEncryptedHeaderExtensionIds(ContentSource source,
+      const std::vector<int>& extension_ids);
+
   // Just set up both sets of keys directly.
   // Used with DTLS-SRTP.
   bool SetRtpParams(int send_cs,
@@ -86,6 +88,12 @@ class SrtpFilter {
                     int recv_cs,
                     const uint8_t* recv_key,
                     int recv_key_len);
+  bool UpdateRtpParams(int send_cs,
+                       const uint8_t* send_key,
+                       int send_key_len,
+                       int recv_cs,
+                       const uint8_t* recv_key,
+                       int recv_key_len);
   bool SetRtcpParams(int send_cs,
                      const uint8_t* send_key,
                      int send_key_len,
@@ -114,12 +122,20 @@ class SrtpFilter {
   // Returns srtp overhead for rtp packets.
   bool GetSrtpOverhead(int* srtp_overhead) const;
 
-  // Update the silent threshold (in ms) for signaling errors.
-  void set_signal_silent_time(int signal_silent_time_in_ms);
+  // If external auth is enabled, SRTP will write a dummy auth tag that then
+  // later must get replaced before the packet is sent out. Only supported for
+  // non-GCM cipher suites and can be checked through "IsExternalAuthActive"
+  // if it is actually used. This method is only valid before the RTP params
+  // have been set.
+  void EnableExternalAuth();
+  bool IsExternalAuthEnabled() const;
+
+  // A SRTP filter supports external creation of the auth tag if a non-GCM
+  // cipher is used. This method is only valid after the RTP params have
+  // been set.
+  bool IsExternalAuthActive() const;
 
   bool ResetParams();
-
-  sigslot::repeater3<uint32_t, Mode, Error> SignalSrtpError;
 
  protected:
   bool ExpectOffer(ContentSource source);
@@ -162,8 +178,8 @@ class SrtpFilter {
     // ST_INIT.
     ST_RECEIVEDPRANSWER
   };
-  State state_;
-  int signal_silent_time_in_ms_;
+  State state_ = ST_INIT;
+  bool external_auth_enabled_ = false;
   std::vector<CryptoParams> offer_params_;
   std::unique_ptr<SrtpSession> send_session_;
   std::unique_ptr<SrtpSession> recv_session_;
@@ -171,140 +187,8 @@ class SrtpFilter {
   std::unique_ptr<SrtpSession> recv_rtcp_session_;
   CryptoParams applied_send_params_;
   CryptoParams applied_recv_params_;
-};
-
-// Class that wraps a libSRTP session.
-class SrtpSession {
- public:
-  SrtpSession();
-  ~SrtpSession();
-
-  // Configures the session for sending data using the specified
-  // cipher-suite and key. Receiving must be done by a separate session.
-  bool SetSend(int cs, const uint8_t* key, size_t len);
-  // Configures the session for receiving data using the specified
-  // cipher-suite and key. Sending must be done by a separate session.
-  bool SetRecv(int cs, const uint8_t* key, size_t len);
-
-  // Encrypts/signs an individual RTP/RTCP packet, in-place.
-  // If an HMAC is used, this will increase the packet size.
-  bool ProtectRtp(void* data, int in_len, int max_len, int* out_len);
-  // Overloaded version, outputs packet index.
-  bool ProtectRtp(void* data,
-                  int in_len,
-                  int max_len,
-                  int* out_len,
-                  int64_t* index);
-  bool ProtectRtcp(void* data, int in_len, int max_len, int* out_len);
-  // Decrypts/verifies an invidiual RTP/RTCP packet.
-  // If an HMAC is used, this will decrease the packet size.
-  bool UnprotectRtp(void* data, int in_len, int* out_len);
-  bool UnprotectRtcp(void* data, int in_len, int* out_len);
-
-  // Helper method to get authentication params.
-  bool GetRtpAuthParams(uint8_t** key, int* key_len, int* tag_len);
-
-  int GetSrtpOverhead() const;
-
-  // Update the silent threshold (in ms) for signaling errors.
-  void set_signal_silent_time(int signal_silent_time_in_ms);
-
-  // Calls srtp_shutdown if it's initialized.
-  static void Terminate();
-
-  sigslot::repeater3<uint32_t, SrtpFilter::Mode, SrtpFilter::Error>
-      SignalSrtpError;
-
- private:
-  bool SetKey(int type, int cs, const uint8_t* key, size_t len);
-    // Returns send stream current packet index from srtp db.
-  bool GetSendStreamPacketIndex(void* data, int in_len, int64_t* index);
-
-  static bool Init();
-  void HandleEvent(const srtp_event_data_t* ev);
-  static void HandleEventThunk(srtp_event_data_t* ev);
-
-  rtc::ThreadChecker thread_checker_;
-  srtp_ctx_t_* session_;
-  int rtp_auth_tag_len_;
-  int rtcp_auth_tag_len_;
-  std::unique_ptr<SrtpStat> srtp_stat_;
-  static bool inited_;
-  static rtc::GlobalLockPod lock_;
-  int last_send_seq_num_;
-  RTC_DISALLOW_COPY_AND_ASSIGN(SrtpSession);
-};
-
-// Class that collects failures of SRTP.
-class SrtpStat {
- public:
-  SrtpStat();
-
-  // Report RTP protection results to the handler.
-  void AddProtectRtpResult(uint32_t ssrc, int result);
-  // Report RTP unprotection results to the handler.
-  void AddUnprotectRtpResult(uint32_t ssrc, int result);
-  // Report RTCP protection results to the handler.
-  void AddProtectRtcpResult(int result);
-  // Report RTCP unprotection results to the handler.
-  void AddUnprotectRtcpResult(int result);
-
-  // Get silent time (in ms) for SRTP statistics handler.
-  int signal_silent_time() const { return signal_silent_time_; }
-  // Set silent time (in ms) for SRTP statistics handler.
-  void set_signal_silent_time(int signal_silent_time) {
-    signal_silent_time_ = signal_silent_time;
-  }
-
-  // Sigslot for reporting errors.
-  sigslot::signal3<uint32_t, SrtpFilter::Mode, SrtpFilter::Error>
-      SignalSrtpError;
-
- private:
-  // For each different ssrc and error, we collect statistics separately.
-  struct FailureKey {
-    FailureKey()
-        : ssrc(0),
-          mode(SrtpFilter::PROTECT),
-          error(SrtpFilter::ERROR_NONE) {
-    }
-    FailureKey(uint32_t in_ssrc,
-               SrtpFilter::Mode in_mode,
-               SrtpFilter::Error in_error)
-        : ssrc(in_ssrc), mode(in_mode), error(in_error) {}
-    bool operator <(const FailureKey& key) const {
-      return
-          (ssrc < key.ssrc) ||
-          (ssrc == key.ssrc && mode < key.mode) ||
-          (ssrc == key.ssrc && mode == key.mode && error < key.error);
-    }
-    uint32_t ssrc;
-    SrtpFilter::Mode mode;
-    SrtpFilter::Error error;
-  };
-  // For tracing conditions for signaling, currently we only use
-  // last_signal_time.  Wrap this as a struct so that later on, if we need any
-  // other improvements, it will be easier.
-  struct FailureStat {
-    FailureStat()
-        : last_signal_time(0) {
-    }
-    explicit FailureStat(uint32_t in_last_signal_time)
-        : last_signal_time(in_last_signal_time) {}
-    void Reset() {
-      last_signal_time = 0;
-    }
-    int64_t last_signal_time;
-  };
-
-  // Inspect SRTP result and signal error if needed.
-  void HandleSrtpResult(const FailureKey& key);
-
-  std::map<FailureKey, FailureStat> failures_;
-  // Threshold in ms to silent the signaling errors.
-  int signal_silent_time_;
-
-  RTC_DISALLOW_COPY_AND_ASSIGN(SrtpStat);
+  std::vector<int> send_encrypted_header_extension_ids_;
+  std::vector<int> recv_encrypted_header_extension_ids_;
 };
 
 }  // namespace cricket

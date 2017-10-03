@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "webrtc/api/peerconnectioninterface.h"
+#include "webrtc/pc/iceserverparsing.h"
 #include "webrtc/pc/peerconnectionfactory.h"
 #include "webrtc/pc/rtcstatscollector.h"
 #include "webrtc/pc/rtpreceiver.h"
@@ -31,35 +32,11 @@ class MediaStreamObserver;
 class VideoRtpReceiver;
 class RtcEventLog;
 
-// Populates |session_options| from |rtc_options|, and returns true if options
-// are valid.
-// |session_options|->transport_options map entries must exist in order for
-// them to be populated from |rtc_options|.
-bool ExtractMediaSessionOptions(
+// TODO(zhihuang): Remove this declaration when the WebRtcSession tests don't
+// need it.
+void ExtractSharedMediaSessionOptions(
     const PeerConnectionInterface::RTCOfferAnswerOptions& rtc_options,
-    bool is_offer,
     cricket::MediaSessionOptions* session_options);
-
-// Populates |session_options| from |constraints|, and returns true if all
-// mandatory constraints are satisfied.
-// Assumes that |session_options|->transport_options map entries exist.
-// Will also set defaults if corresponding constraints are not present:
-// recv_audio=true, recv_video=true, bundle_enabled=true.
-// Other fields will be left with existing values.
-//
-// Deprecated. Will be removed once callers that use constraints are gone.
-// TODO(hta): Remove when callers are gone.
-// https://bugs.chromium.org/p/webrtc/issues/detail?id=5617
-bool ParseConstraintsForAnswer(const MediaConstraintsInterface* constraints,
-                               cricket::MediaSessionOptions* session_options);
-
-// Parses the URLs for each server in |servers| to build |stun_servers| and
-// |turn_servers|. Can return SYNTAX_ERROR if the URL is malformed, or
-// INVALID_PARAMETER if a TURN server is missing |username| or |password|.
-RTCErrorType ParseIceServers(
-    const PeerConnectionInterface::IceServers& servers,
-    cricket::ServerAddresses* stun_servers,
-    std::vector<cricket::RelayServerConfig>* turn_servers);
 
 // PeerConnection implements the PeerConnectionInterface interface.
 // It uses WebRtcSession to implement the PeerConnection functionality.
@@ -68,7 +45,9 @@ class PeerConnection : public PeerConnectionInterface,
                        public rtc::MessageHandler,
                        public sigslot::has_slots<> {
  public:
-  explicit PeerConnection(PeerConnectionFactory* factory);
+  explicit PeerConnection(PeerConnectionFactory* factory,
+                          std::unique_ptr<RtcEventLog> event_log,
+                          std::unique_ptr<Call> call);
 
   bool Initialize(
       const PeerConnectionInterface::RTCConfiguration& configuration,
@@ -151,6 +130,8 @@ class PeerConnection : public PeerConnectionInterface,
 
   void RegisterUMAObserver(UMAObserver* observer) override;
 
+  RTCError SetBitrate(const BitrateParameters& bitrate) override;
+
   bool StartRtcEventLog(rtc::PlatformFile file,
                         int64_t max_size_bytes) override;
   void StopRtcEventLog() override;
@@ -196,16 +177,21 @@ class PeerConnection : public PeerConnectionInterface,
                            const std::string& track_id,
                            uint32_t ssrc);
   void DestroyReceiver(const std::string& track_id);
-  void DestroyAudioSender(MediaStreamInterface* stream,
-                          AudioTrackInterface* audio_track,
-                          uint32_t ssrc);
-  void DestroyVideoSender(MediaStreamInterface* stream,
-                          VideoTrackInterface* video_track);
+
+  // May be called either by AddStream/RemoveStream, or when a track is
+  // added/removed from a stream previously added via AddStream.
+  void AddAudioTrack(AudioTrackInterface* track, MediaStreamInterface* stream);
+  void RemoveAudioTrack(AudioTrackInterface* track,
+                        MediaStreamInterface* stream);
+  void AddVideoTrack(VideoTrackInterface* track, MediaStreamInterface* stream);
+  void RemoveVideoTrack(VideoTrackInterface* track,
+                        MediaStreamInterface* stream);
 
   // Implements IceObserver
-  void OnIceConnectionChange(IceConnectionState new_state) override;
+  void OnIceConnectionStateChange(IceConnectionState new_state) override;
   void OnIceGatheringChange(IceGatheringState new_state) override;
-  void OnIceCandidate(const IceCandidateInterface* candidate) override;
+  void OnIceCandidate(
+      std::unique_ptr<IceCandidateInterface> candidate) override;
   void OnIceCandidatesRemoved(
       const std::vector<cricket::Candidate>& candidates) override;
   void OnIceConnectionReceivingChange(bool receiving) override;
@@ -242,26 +228,24 @@ class PeerConnection : public PeerConnectionInterface,
 
   // Returns a MediaSessionOptions struct with options decided by |options|,
   // the local MediaStreams and DataChannels.
-  virtual bool GetOptionsForOffer(
+  void GetOptionsForOffer(
       const PeerConnectionInterface::RTCOfferAnswerOptions& rtc_options,
       cricket::MediaSessionOptions* session_options);
 
   // Returns a MediaSessionOptions struct with options decided by
   // |constraints|, the local MediaStreams and DataChannels.
-  // Deprecated, use version without constraints.
-  virtual bool GetOptionsForAnswer(
-      const MediaConstraintsInterface* constraints,
-      cricket::MediaSessionOptions* session_options);
-  virtual bool GetOptionsForAnswer(
-      const RTCOfferAnswerOptions& options,
-      cricket::MediaSessionOptions* session_options);
+  void GetOptionsForAnswer(const RTCOfferAnswerOptions& options,
+                           cricket::MediaSessionOptions* session_options);
 
-  void InitializeOptionsForAnswer(
-      cricket::MediaSessionOptions* session_options);
-
-  // Helper function for options processing.
-  // Deprecated.
-  virtual void FinishOptionsForAnswer(
+  // Generates MediaDescriptionOptions for the |session_opts| based on existing
+  // local description or remote description.
+  void GenerateMediaDescriptionOptions(
+      const SessionDescriptionInterface* session_desc,
+      cricket::RtpTransceiverDirection audio_direction,
+      cricket::RtpTransceiverDirection video_direction,
+      rtc::Optional<size_t>* audio_index,
+      rtc::Optional<size_t>* video_index,
+      rtc::Optional<size_t>* data_index,
       cricket::MediaSessionOptions* session_options);
 
   // Remove all local and remote tracks of type |media_type|.
@@ -359,6 +343,7 @@ class PeerConnection : public PeerConnectionInterface,
   void OnDataChannelOpenMessage(const std::string& label,
                                 const InternalDataChannelInit& config);
 
+  bool HasRtpSender(cricket::MediaType type) const;
   RtpSenderInternal* FindSenderById(const std::string& id);
 
   std::vector<rtc::scoped_refptr<
@@ -396,6 +381,12 @@ class PeerConnection : public PeerConnectionInterface,
   // This function should only be called from the worker thread.
   void StopRtcEventLog_w();
 
+  // Ensures the configuration doesn't have any parameters with invalid values,
+  // or values that conflict with other parameters.
+  //
+  // Returns RTCError::OK() if there are no issues.
+  RTCError ValidateConfiguration(const RTCConfiguration& config) const;
+
   // Storing the factory as a scoped reference pointer ensures that the memory
   // in the PeerConnectionFactoryImpl remains available as long as the
   // PeerConnection is running. It is passed to PeerConnection as a raw pointer.
@@ -405,15 +396,16 @@ class PeerConnection : public PeerConnectionInterface,
   rtc::scoped_refptr<PeerConnectionFactory> factory_;
   PeerConnectionObserver* observer_;
   UMAObserver* uma_observer_;
+
+  // The EventLog needs to outlive |call_| (and any other object that uses it).
+  std::unique_ptr<RtcEventLog> event_log_;
+
   SignalingState signaling_state_;
   IceConnectionState ice_connection_state_;
   IceGatheringState ice_gathering_state_;
   PeerConnectionInterface::RTCConfiguration configuration_;
 
   std::unique_ptr<cricket::PortAllocator> port_allocator_;
-  // The EventLog needs to outlive the media controller.
-  std::unique_ptr<RtcEventLog> event_log_;
-  std::unique_ptr<MediaControllerInterface> media_controller_;
 
   // One PeerConnection has only one RTCP CNAME.
   // https://tools.ietf.org/html/draft-ietf-rtcweb-rtp-usage-26#section-4.9
@@ -440,14 +432,16 @@ class PeerConnection : public PeerConnectionInterface,
 
   bool remote_peer_supports_msid_ = false;
 
+  std::unique_ptr<Call> call_;
+  std::unique_ptr<WebRtcSession> session_;
+  std::unique_ptr<StatsCollector> stats_;  // A pointer is passed to senders_
+  rtc::scoped_refptr<RTCStatsCollector> stats_collector_;
+
   std::vector<rtc::scoped_refptr<RtpSenderProxyWithInternal<RtpSenderInternal>>>
       senders_;
   std::vector<
       rtc::scoped_refptr<RtpReceiverProxyWithInternal<RtpReceiverInternal>>>
       receivers_;
-  std::unique_ptr<WebRtcSession> session_;
-  std::unique_ptr<StatsCollector> stats_;
-  rtc::scoped_refptr<RTCStatsCollector> stats_collector_;
 };
 
 }  // namespace webrtc

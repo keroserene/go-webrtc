@@ -16,9 +16,9 @@
 #include <memory>
 #include <vector>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/audio_coding/neteq/audio_decoder_impl.h"
 #include "webrtc/modules/audio_coding/neteq/tick_timer.h"
+#include "webrtc/rtc_base/constructormagic.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
@@ -94,6 +94,11 @@ class DelayManager {
   // Informs the delay manager whether or not the last decoded packet contained
   // speech.
   virtual void LastDecodedWasCngOrDtmf(bool it_was);
+
+  // Notify the delay manager that empty packets have been received. These are
+  // packets that are part of the sequence number series, so that an empty
+  // packet will shift the sequence numbers for the following packets.
+  virtual void RegisterEmptyPacket();
 
   // Accessors and mutators.
   // Assuming |delay| is in valid range.

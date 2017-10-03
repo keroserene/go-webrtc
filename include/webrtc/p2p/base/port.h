@@ -20,19 +20,20 @@
 #include "webrtc/p2p/base/candidate.h"
 #include "webrtc/p2p/base/candidatepairinterface.h"
 #include "webrtc/p2p/base/jseptransport.h"
+#include "webrtc/p2p/base/packetlossestimator.h"
 #include "webrtc/p2p/base/packetsocketfactory.h"
 #include "webrtc/p2p/base/portinterface.h"
 #include "webrtc/p2p/base/stun.h"
 #include "webrtc/p2p/base/stunrequest.h"
-#include "webrtc/base/asyncpacketsocket.h"
-#include "webrtc/base/checks.h"
-#include "webrtc/base/network.h"
-#include "webrtc/base/optional.h"
-#include "webrtc/base/proxyinfo.h"
-#include "webrtc/base/ratetracker.h"
-#include "webrtc/base/sigslot.h"
-#include "webrtc/base/socketaddress.h"
-#include "webrtc/base/thread.h"
+#include "webrtc/rtc_base/asyncpacketsocket.h"
+#include "webrtc/rtc_base/checks.h"
+#include "webrtc/rtc_base/network.h"
+#include "webrtc/rtc_base/optional.h"
+#include "webrtc/rtc_base/proxyinfo.h"
+#include "webrtc/rtc_base/ratetracker.h"
+#include "webrtc/rtc_base/sigslot.h"
+#include "webrtc/rtc_base/socketaddress.h"
+#include "webrtc/rtc_base/thread.h"
 
 namespace cricket {
 
@@ -141,14 +142,21 @@ class Port : public PortInterface, public rtc::MessageHandler,
        const std::string& type,
        rtc::PacketSocketFactory* factory,
        rtc::Network* network,
-       const rtc::IPAddress& ip,
        const std::string& username_fragment,
        const std::string& password);
+  // TODO(deadbeef): Delete this constructor once clients are moved off of it.
   Port(rtc::Thread* thread,
        const std::string& type,
        rtc::PacketSocketFactory* factory,
        rtc::Network* network,
        const rtc::IPAddress& ip,
+       const std::string& username_fragment,
+       const std::string& password)
+      : Port(thread, type, factory, network, username_fragment, password) {}
+  Port(rtc::Thread* thread,
+       const std::string& type,
+       rtc::PacketSocketFactory* factory,
+       rtc::Network* network,
        uint16_t min_port,
        uint16_t max_port,
        const std::string& username_fragment,
@@ -282,7 +290,6 @@ class Port : public PortInterface, public rtc::MessageHandler,
 
   // Debugging description of this port
   virtual std::string ToString() const;
-  const rtc::IPAddress& ip() const { return ip_; }
   uint16_t min_port() { return min_port_; }
   uint16_t max_port() { return max_port_; }
 
@@ -396,7 +403,6 @@ class Port : public PortInterface, public rtc::MessageHandler,
   std::string type_;
   bool send_retransmit_count_attribute_;
   rtc::Network* network_;
-  rtc::IPAddress ip_;
   uint16_t min_port_;
   uint16_t max_port_;
   std::string content_name_;
@@ -718,6 +724,8 @@ class Connection : public CandidatePairInterface,
   int64_t last_ping_response_received_;
   int64_t receiving_unchanged_since_ = 0;
   std::vector<SentPing> pings_since_last_response_;
+
+  PacketLossEstimator packet_loss_estimator_;
 
   bool reported_;
   IceCandidatePairState state_;

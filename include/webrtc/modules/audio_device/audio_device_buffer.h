@@ -11,16 +11,17 @@
 #ifndef WEBRTC_MODULES_AUDIO_DEVICE_AUDIO_DEVICE_BUFFER_H_
 #define WEBRTC_MODULES_AUDIO_DEVICE_AUDIO_DEVICE_BUFFER_H_
 
-#include "webrtc/base/buffer.h"
-#include "webrtc/base/criticalsection.h"
-#include "webrtc/base/task_queue.h"
-#include "webrtc/base/thread_annotations.h"
-#include "webrtc/base/thread_checker.h"
 #include "webrtc/modules/audio_device/include/audio_device.h"
+#include "webrtc/rtc_base/buffer.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/task_queue.h"
+#include "webrtc/rtc_base/thread_annotations.h"
+#include "webrtc/rtc_base/thread_checker.h"
 #include "webrtc/system_wrappers/include/file_wrapper.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
+
 // Delta times between two successive playout callbacks are limited to this
 // value before added to an internal array.
 const size_t kMaxDeltaTimeInMs = 500;
@@ -116,6 +117,12 @@ class AudioDeviceBuffer {
   int32_t StopOutputFileRecording();
 
   int32_t SetTypingStatus(bool typing_status);
+
+  // Called on iOS where the native audio layer can be interrupted by other
+  // audio applications. This method can then be used to reset internal
+  // states and detach thread checkers to allow for a new audio session where
+  // native callbacks may come from a new set of I/O threads.
+  void NativeAudioInterrupted();
 
  private:
   // Starts/stops periodic logging of audio stats.
@@ -251,6 +258,12 @@ class AudioDeviceBuffer {
   // Setting this member to false prevents (possiby invalid) log messages from
   // being printed in the LogStats() task.
   bool log_stats_ ACCESS_ON(task_queue_);
+
+// Should *never* be defined in production builds. Only used for testing.
+// When defined, the output signal will be replaced by a sinus tone at 440Hz.
+#ifdef AUDIO_DEVICE_PLAYS_SINUS_TONE
+  double phase_ ACCESS_ON(playout_thread_checker_);
+#endif
 };
 
 }  // namespace webrtc

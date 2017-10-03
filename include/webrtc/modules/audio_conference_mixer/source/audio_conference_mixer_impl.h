@@ -19,11 +19,11 @@
 #include "webrtc/modules/audio_conference_mixer/source/memory_pool.h"
 #include "webrtc/modules/audio_conference_mixer/source/time_scheduler.h"
 #include "webrtc/modules/include/module_common_types.h"
+#include "webrtc/rtc_base/criticalsection.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
 class AudioProcessing;
-class CriticalSectionWrapper;
 
 struct FrameAndMuteInfo {
   FrameAndMuteInfo(AudioFrame* f, bool m) : frame(f), muted(m) {}
@@ -148,8 +148,8 @@ private:
 
     bool LimitMixedAudio(AudioFrame* mixedAudio) const;
 
-    std::unique_ptr<CriticalSectionWrapper> _crit;
-    std::unique_ptr<CriticalSectionWrapper> _cbCrit;
+    rtc::CriticalSection _crit;
+    rtc::CriticalSection _cbCrit;
 
     int32_t _id;
 

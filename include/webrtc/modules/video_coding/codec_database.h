@@ -47,10 +47,6 @@ class VCMCodecDataBase {
   explicit VCMCodecDataBase(VCMEncodedFrameCallback* encoded_frame_callback);
   ~VCMCodecDataBase();
 
-  // Sender Side
-  // Returns the default settings for the codec with type |codec_type|.
-  static void Codec(VideoCodecType codec_type, VideoCodec* settings);
-
   // Sets the sender side codec and initiates the desired codec given the
   // VideoCodec struct.
   // Returns true if the codec was successfully registered, false otherwise.
@@ -98,12 +94,6 @@ class VCMCodecDataBase {
 
   bool DeregisterReceiveCodec(uint8_t payload_type);
 
-  // Get current receive side codec. Relevant for internal codecs only.
-  bool ReceiveCodec(VideoCodec* current_receive_codec) const;
-
-  // Get current receive side codec type. Relevant for internal codecs only.
-  VideoCodecType ReceiveCodec() const;
-
   // Returns a decoder specified by |payload_type|. The decoded frame callback
   // of the encoder is set to |decoded_frame_callback|. If no such decoder
   // already exists an instance will be created and initialized.
@@ -113,9 +103,9 @@ class VCMCodecDataBase {
       const VCMEncodedFrame& frame,
       VCMDecodedFrameCallback* decoded_frame_callback);
 
-  // Deletes the memory of the decoder instance |decoder|. Used to delete
-  // deep copies returned by CreateDecoderCopy().
-  void ReleaseDecoder(VCMGenericDecoder* decoder) const;
+  // Returns the current decoder (i.e. the same value as was last returned from
+  // GetDecoder();
+  VCMGenericDecoder* GetCurrentDecoder();
 
   // Returns true if the currently active decoder prefer to decode frames late.
   // That means that frames must be decoded near the render times stamp.
@@ -127,17 +117,15 @@ class VCMCodecDataBase {
   typedef std::map<uint8_t, VCMDecoderMapItem*> DecoderMap;
   typedef std::map<uint8_t, VCMExtDecoderMapItem*> ExternalDecoderMap;
 
-  VCMGenericDecoder* CreateAndInitDecoder(const VCMEncodedFrame& frame,
-                                          VideoCodec* new_codec) const;
+  std::unique_ptr<VCMGenericDecoder> CreateAndInitDecoder(
+      const VCMEncodedFrame& frame,
+      VideoCodec* new_codec) const;
 
   // Determines whether a new codec has to be created or not.
   // Checks every setting apart from maxFramerate and startBitrate.
   bool RequiresEncoderReset(const VideoCodec& send_codec);
 
   void DeleteEncoder();
-
-  // Create an internal Decoder given a codec type
-  VCMGenericDecoder* CreateDecoder(VideoCodecType type) const;
 
   const VCMDecoderMapItem* FindDecoderItem(uint8_t payload_type) const;
 
@@ -155,7 +143,7 @@ class VCMCodecDataBase {
   bool internal_source_;
   VCMEncodedFrameCallback* const encoded_frame_callback_;
   std::unique_ptr<VCMGenericEncoder> ptr_encoder_;
-  VCMGenericDecoder* ptr_decoder_;
+  std::unique_ptr<VCMGenericDecoder> ptr_decoder_;
   DecoderMap dec_map_;
   ExternalDecoderMap dec_external_map_;
 };  // VCMCodecDataBase

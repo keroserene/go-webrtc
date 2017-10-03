@@ -18,12 +18,16 @@
 #if defined(WEBRTC_WIN)
 // Due to a bug in the std::unique_ptr implementation that ships with MSVS,
 // we need the full definition of QueuedTask, on Windows.
-#include "webrtc/base/task_queue.h"
+#include "webrtc/rtc_base/task_queue.h"
 #else
 namespace rtc {
 class QueuedTask;
 }
 #endif
+
+namespace rtc {
+class Location;
+}
 
 namespace webrtc {
 class Module;
@@ -61,7 +65,7 @@ class ProcessThread {
 
   // Adds a module that will start to receive callbacks on the worker thread.
   // Can be called from any thread.
-  virtual void RegisterModule(Module* module) = 0;
+  virtual void RegisterModule(Module* module, const rtc::Location& from) = 0;
 
   // Removes a previously registered module.
   // Can be called from any thread.

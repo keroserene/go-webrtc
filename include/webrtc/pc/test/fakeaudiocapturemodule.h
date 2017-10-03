@@ -22,12 +22,12 @@
 
 #include <memory>
 
-#include "webrtc/base/basictypes.h"
-#include "webrtc/base/criticalsection.h"
-#include "webrtc/base/messagehandler.h"
-#include "webrtc/base/scoped_ref_ptr.h"
 #include "webrtc/common_types.h"
 #include "webrtc/modules/audio_device/include/audio_device.h"
+#include "webrtc/rtc_base/basictypes.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/messagehandler.h"
+#include "webrtc/rtc_base/scoped_ref_ptr.h"
 
 namespace rtc {
 class Thread;
@@ -103,11 +103,6 @@ class FakeAudioCaptureModule
 
   int32_t SetAGC(bool enable) override;
   bool AGC() const override;
-
-  int32_t SetWaveOutVolume(uint16_t volume_left,
-                           uint16_t volume_right) override;
-  int32_t WaveOutVolume(uint16_t* volume_left,
-                        uint16_t* volume_right) const override;
 
   int32_t InitSpeaker() override;
   bool SpeakerIsInitialized() const override;

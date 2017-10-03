@@ -14,14 +14,13 @@
 #include <list>
 #include <memory>
 
-#include "webrtc/base/constructormagic.h"
 #include "webrtc/common_types.h"
+#include "webrtc/rtc_base/constructormagic.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
 
 class RtpHeaderParser;
-struct WebRtcRTPHeader;
 
 namespace test {
 
@@ -89,10 +88,6 @@ class Packet {
   }
 
   const RTPHeader& header() const { return header_; }
-
-  // Copies the packet header information, converting from the native RTPHeader
-  // type to WebRtcRTPHeader.
-  void ConvertHeader(WebRtcRTPHeader* copy_to) const;
 
   void set_time_ms(double time) { time_ms_ = time; }
   double time_ms() const { return time_ms_; }

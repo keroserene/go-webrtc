@@ -17,18 +17,21 @@
 #include <math.h>
 #include <stddef.h>  // size_t
 #include <stdio.h>  // FILE
+#include <string.h>
 #include <vector>
 
-#include "webrtc/base/arraysize.h"
-#include "webrtc/base/platform_file.h"
 #include "webrtc/modules/audio_processing/beamformer/array_util.h"
 #include "webrtc/modules/audio_processing/include/config.h"
+#include "webrtc/rtc_base/arraysize.h"
+#include "webrtc/rtc_base/platform_file.h"
+#include "webrtc/rtc_base/refcount.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
 
 struct AecCore;
 
+class AecDump;
 class AudioFrame;
 
 class NonlinearBeamformer;
@@ -232,7 +235,7 @@ struct Intelligibility {
 // // Close the application...
 // delete apm;
 //
-class AudioProcessing {
+class AudioProcessing : public rtc::RefCountInterface {
  public:
   // The struct below constitutes the new parameter scheme for the audio
   // processing. It is being introduced gradually and until it is fully
@@ -265,8 +268,76 @@ class AudioProcessing {
     // The functionality is not yet activated in the code and turning this on
     // does not yet have the desired behavior.
     struct EchoCanceller3 {
+      struct Param {
+        struct Erle {
+          float min = 1.f;
+          float max_l = 8.f;
+          float max_h = 1.5f;
+        } erle;
+
+        struct EpStrength {
+          float lf = 100.f;
+          float mf = 1000.f;
+          float hf = 5000.f;
+          float default_len = 0.f;
+        } ep_strength;
+
+        struct Mask {
+          float m1 = 0.01f;
+          float m2 = 0.001f;
+          float m3 = 0.01f;
+          float m4 = 0.1f;
+        } gain_mask;
+
+        struct EchoAudibility {
+          float low_render_limit = 192.f;
+          float normal_render_limit = 64.f;
+          float active_render_limit = 100.f;
+        } echo_audibility;
+
+        struct RenderLevels {
+          float active_render_limit = 100.f;
+          float poor_excitation_render_limit = 150.f;
+        } render_levels;
+
+        struct GainUpdates {
+          struct GainChanges {
+            float max_inc;
+            float max_dec;
+            float rate_inc;
+            float rate_dec;
+            float min_inc;
+            float min_dec;
+          };
+
+          GainChanges low_noise = {8.f, 8.f, 2.f, 2.f, 4.f, 4.f};
+          GainChanges normal = {4.f, 4.f, 2.f, 2.f, 1.2f, 2.f};
+          GainChanges saturation = {1.2f, 1.2f, 1.5f, 1.5f, 1.f, 1.f};
+
+          float floor_first_increase = 0.001f;
+        } gain_updates;
+      } param;
       bool enabled = false;
     } echo_canceller3;
+
+    // Enables the next generation AGC functionality. This feature replaces the
+    // standard methods of gain control in the previous AGC.
+    // The functionality is not yet activated in the code and turning this on
+    // does not yet have the desired behavior.
+    struct GainController2 {
+      bool enabled = false;
+    } gain_controller2;
+
+    // Explicit copy assignment implementation to avoid issues with memory
+    // sanitizer complaints in case of self-assignment.
+    // TODO(peah): Add buildflag to ensure that this is only included for memory
+    // sanitizer builds.
+    Config& operator=(const Config& config) {
+      if (this != &config) {
+        memcpy(this, &config, sizeof(*this));
+      }
+      return *this;
+    }
   };
 
   // TODO(mgraczyk): Remove once all methods that use ChannelLayout are gone.
@@ -291,7 +362,7 @@ class AudioProcessing {
   // Only for testing.
   static AudioProcessing* Create(const webrtc::Config& config,
                                  NonlinearBeamformer* beamformer);
-  virtual ~AudioProcessing() {}
+  ~AudioProcessing() override {}
 
   // Initializes internal states, while retaining all user settings. This
   // should be called before beginning to process a new audio stream. However,
@@ -429,7 +500,7 @@ class AudioProcessing {
   //     t_render is the time the first sample of the same frame is rendered by
   //     the audio hardware.
   //   - t_capture is the time the first sample of a frame is captured by the
-  //     audio hardware and t_pull is the time the same frame is passed to
+  //     audio hardware and t_process is the time the same frame is passed to
   //     ProcessStream().
   virtual int set_stream_delay_ms(int delay) = 0;
   virtual int stream_delay_ms() const = 0;
@@ -447,32 +518,19 @@ class AudioProcessing {
   virtual void set_delay_offset_ms(int offset) = 0;
   virtual int delay_offset_ms() const = 0;
 
-  // Starts recording debugging information to a file specified by |filename|,
-  // a NULL-terminated string. If there is an ongoing recording, the old file
-  // will be closed, and recording will continue in the newly specified file.
-  // An already existing file will be overwritten without warning. A maximum
-  // file size (in bytes) for the log can be specified. The logging is stopped
-  // once the limit has been reached. If max_log_size_bytes is set to a value
-  // <= 0, no limit will be used.
-  static const size_t kMaxFilenameSize = 1024;
-  virtual int StartDebugRecording(const char filename[kMaxFilenameSize],
-                                  int64_t max_log_size_bytes) = 0;
+  // Attaches provided webrtc::AecDump for recording debugging
+  // information. Log file and maximum file size logic is supposed to
+  // be handled by implementing instance of AecDump. Calling this
+  // method when another AecDump is attached resets the active AecDump
+  // with a new one. This causes the d-tor of the earlier AecDump to
+  // be called. The d-tor call may block until all pending logging
+  // tasks are completed.
+  virtual void AttachAecDump(std::unique_ptr<AecDump> aec_dump) = 0;
 
-  // Same as above but uses an existing file handle. Takes ownership
-  // of |handle| and closes it at StopDebugRecording().
-  virtual int StartDebugRecording(FILE* handle, int64_t max_log_size_bytes) = 0;
-
-  // TODO(ivoc): Remove this function after Chrome stops using it.
-  virtual int StartDebugRecording(FILE* handle) = 0;
-
-  // Same as above but uses an existing PlatformFile handle. Takes ownership
-  // of |handle| and closes it at StopDebugRecording().
-  // TODO(xians): Make this interface pure virtual.
-  virtual int StartDebugRecordingForPlatformFile(rtc::PlatformFile handle) = 0;
-
-  // Stops recording debugging information, and closes the file. Recording
-  // cannot be resumed in the same file (without overwriting it).
-  virtual int StopDebugRecording() = 0;
+  // If no AecDump is attached, this has no effect. If an AecDump is
+  // attached, it's destructor is called. The d-tor may block until
+  // all pending logging tasks are completed.
+  virtual void DetachAecDump() = 0;
 
   // Use to send UMA histograms at end of a call. Note that all histogram
   // specific member variables are reset.
@@ -558,6 +616,9 @@ class AudioProcessing {
   virtual LevelEstimator* level_estimator() const = 0;
   virtual NoiseSuppression* noise_suppression() const = 0;
   virtual VoiceDetection* voice_detection() const = 0;
+
+  // Returns the last applied configuration.
+  virtual AudioProcessing::Config GetConfig() const = 0;
 
   enum Error {
     // Fatal errors.

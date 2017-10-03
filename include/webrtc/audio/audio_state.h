@@ -13,10 +13,10 @@
 
 #include "webrtc/audio/audio_transport_proxy.h"
 #include "webrtc/audio/scoped_voe_interface.h"
-#include "webrtc/base/constructormagic.h"
-#include "webrtc/base/criticalsection.h"
-#include "webrtc/base/thread_checker.h"
 #include "webrtc/call/audio_state.h"
+#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/thread_checker.h"
 #include "webrtc/voice_engine/include/voe_base.h"
 
 namespace webrtc {
@@ -28,8 +28,12 @@ class AudioState final : public webrtc::AudioState,
   explicit AudioState(const AudioState::Config& config);
   ~AudioState() override;
 
-  VoiceEngine* voice_engine();
+  AudioProcessing* audio_processing() override {
+    RTC_DCHECK(config_.audio_processing);
+    return config_.audio_processing.get();
+  }
 
+  VoiceEngine* voice_engine();
   rtc::scoped_refptr<AudioMixer> mixer();
   bool typing_noise_detected() const;
 

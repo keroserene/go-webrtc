@@ -13,11 +13,11 @@
 
 #include <memory>
 
-#include "webrtc/base/platform_thread.h"
-#include "webrtc/base/thread_checker.h"
 #include "webrtc/modules/audio_device/audio_device_generic.h"
 #include "webrtc/modules/audio_device/linux/audio_mixer_manager_pulse_linux.h"
-#include "webrtc/system_wrappers/include/critical_section_wrapper.h"
+#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/rtc_base/platform_thread.h"
+#include "webrtc/rtc_base/thread_checker.h"
 
 #include <X11/Xlib.h>
 #include <pulse/pulseaudio.h>
@@ -95,7 +95,7 @@ class EventWrapper;
 class AudioDeviceLinuxPulse: public AudioDeviceGeneric
 {
 public:
-    AudioDeviceLinuxPulse(const int32_t id);
+    AudioDeviceLinuxPulse();
     virtual ~AudioDeviceLinuxPulse();
 
     // Retrieve the currently utilized audio layer
@@ -144,12 +144,6 @@ public:
     // Microphone Automatic Gain Control (AGC)
     int32_t SetAGC(bool enable) override;
     bool AGC() const override;
-
-    // Volume control based on the Windows Wave API (Windows only)
-    int32_t SetWaveOutVolume(uint16_t volumeLeft,
-                             uint16_t volumeRight) override;
-    int32_t WaveOutVolume(uint16_t& volumeLeft,
-                          uint16_t& volumeRight) const override;
 
     // Audio mixer initialization
     int32_t InitSpeaker() override;
@@ -280,7 +274,7 @@ private:
 
     AudioDeviceBuffer* _ptrAudioBuffer;
 
-    CriticalSectionWrapper& _critSect;
+    rtc::CriticalSection _critSect;
     EventWrapper& _timeEventRec;
     EventWrapper& _timeEventPlay;
     EventWrapper& _recStartEvent;
@@ -289,7 +283,6 @@ private:
     // TODO(pbos): Remove unique_ptr and use directly without resetting.
     std::unique_ptr<rtc::PlatformThread> _ptrThreadPlay;
     std::unique_ptr<rtc::PlatformThread> _ptrThreadRec;
-    int32_t _id;
 
     AudioMixerManagerLinuxPulse _mixerManager;
 

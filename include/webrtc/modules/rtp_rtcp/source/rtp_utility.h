@@ -13,20 +13,18 @@
 
 #include <map>
 
-#include "webrtc/base/deprecation.h"
 #include "webrtc/modules/rtp_rtcp/include/receive_statistics.h"
+#include "webrtc/modules/rtp_rtcp/include/rtp_header_extension_map.h"
 #include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
-#include "webrtc/modules/rtp_rtcp/source/rtp_header_extension.h"
 #include "webrtc/modules/rtp_rtcp/source/rtp_rtcp_config.h"
+#include "webrtc/rtc_base/deprecation.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
 
 const uint8_t kRtpMarkerBitMask = 0x80;
 
-RtpData* NullObjectRtpData();
 RtpFeedback* NullObjectRtpFeedback();
-ReceiveStatistics* NullObjectReceiveStatistics();
 
 namespace RtpUtility {
 
