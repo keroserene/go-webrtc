@@ -35,67 +35,67 @@ REM 	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git 
 REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
 REM )
 
-REM IF EXIST %WEBRTC_DIR% (
-REM 	echo "Syncing webrtc ..."
-REM 	pushd %WEBRTC_SRC%
-REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM     REM ERS - not sure what this code does, and how to test it
-REM 	REM if ! git diff-index --quiet HEAD --; then
-REM 	REM 	echo -en "\nOpen files present in $WEBRTC_SRC\nReset them? (y/N): "
-REM 	REM 	read ANSWER
-REM 	REM 	if [ "$ANSWER" != "y" ]; then
-REM 	REM 		echo "*** Cancelled ***"
-REM 	REM 		exit 1
-REM 	REM 	fi
-REM     echo "Issuing a git reset --hard"
-REM 	git reset --hard HEAD
-REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM 	REM fi
-REM 	popd
+REM Clean errorlevel
+verify > nul
 
-REM 	pushd %WEBRTC_DIR%
-REM     echo "Syncing code base to" %COMMIT% "in dir" %WEBRTC_DIR%
-REM 	gclient sync --with_branch_heads -r %COMMIT%
-REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM 	popd
-REM ) ELSE (
-REM 	echo "Getting webrtc ..."
-REM 	md %WEBRTC_DIR%
-REM 	pushd $WEBRTC_DIR
-REM 	gclient config --name src %WEBRTC_REPO%
-REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM 	gclient sync --with_branch_heads -r %COMMIT%
-REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM 	popd
-REM )
+IF EXIST %WEBRTC_DIR% (
+	echo "Syncing webrtc ..."
+	pushd %WEBRTC_SRC%
+    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+    REM ERS - not sure what this code does, and how to test it
+	REM if ! git diff-index --quiet HEAD --; then
+	REM 	echo -en "\nOpen files present in $WEBRTC_SRC\nReset them? (y/N): "
+	REM 	read ANSWER
+	REM 	if [ "$ANSWER" != "y" ]; then
+	REM 		echo "*** Cancelled ***"
+	REM 		exit 1
+	REM 	fi
+    echo "Issuing a git reset --hard"
+	git reset --hard HEAD
+    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+	REM fi
+	popd
 
-REM gclient config --name src https://chromium.googlesource.com/external/webrtc
-REM gclient sync --with_branch_heads -r 6f21dc245689c29730002da09534a8d275e6aa92
+	pushd %WEBRTC_DIR%
+    echo "Syncing code base to" %COMMIT% "in dir" %WEBRTC_DIR%
+	gclient sync --with_branch_heads -r %COMMIT%
+    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+	popd
+) ELSE (
+	echo "Getting webrtc ..."
+	md %WEBRTC_DIR%
+	pushd $WEBRTC_DIR
+	gclient config --name src %WEBRTC_REPO%
+    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+	gclient sync --with_branch_heads -r %COMMIT%
+    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+	popd
+)
 
-REM echo "Checking out latest tested / compatible version of webrtc ..."
-REM pushd %WEBRTC_SRC%
-REM git checkout %COMMIT%
-REM IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM popd
+echo "Checking out latest tested / compatible version of webrtc ..."
+pushd %WEBRTC_SRC%
+git checkout %COMMIT%
+IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+popd
 
-REM echo "Cleaning webrtc ..."
-REM pushd %WEBRTC_SRC%
-REM IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM SET OUTDIR=out\%CONFIG%
-REM echo "Deleting build configs in" %OUTDIR%
-REM rmdir /S /Q %OUTDIR%
-REM popd
+echo "Cleaning webrtc ..."
+pushd %WEBRTC_SRC%
+IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+SET OUTDIR=out\%CONFIG%
+echo "Deleting build configs in" %OUTDIR%
+rmdir /S /Q %OUTDIR%
+popd
 
-REM echo "Building webrtc ..."
-REM pushd %WEBRTC_SRC%
-REM SET GNARGS=%WEBRTC_SRC%\out\%CONFIG% --args="is_debug=false"
-REM call gn gen %GNARGS%
-REM IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+echo "Building webrtc ..."
+pushd %WEBRTC_SRC%
+SET GNARGS=%WEBRTC_SRC%\out\%CONFIG% --args="is_debug=false"
+call gn gen %GNARGS%
+IF /I "%ERRORLEVEL%" NEQ "0" exit /b
 
-REM SET NINJAARGS=-C  %WEBRTC_SRC%\out\%CONFIG% webrtc field_trial metrics_default pc_test_utils
-REM ninja %NINJAARGS%
-REM IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-REM popd
+SET NINJAARGS=-C  %WEBRTC_SRC%\out\%CONFIG% webrtc field_trial metrics_default pc_test_utils
+ninja %NINJAARGS%
+IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+popd
 
 echo "Copying headers ..."
 pushd %WEBRTC_SRC%\webrtc
@@ -115,16 +115,34 @@ for /R . %%f in (*.h) do (
     SET REL=!B:%CD%\=!
     echo !REL!
     xcopy /S /Y /I !REL! !DST!
-REM   SET B=%%f
-REM   SET RELATIVE=!B:%CD%\=!
 )
-REM for h in $(find webrtc/ -type f -name '*.h')
-REM do
-REM 	mkdir -p "$INCLUDE_DIR/$(dirname $h)"
-REM 	cp $h "$INCLUDE_DIR/$h"
-REM done
-REM popd
+setlocal
+
 REM pushd $PROJECT_DIR || exit 1
 REM git clean -fd "$INCLUDE_DIR"
+
+"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
+
+echo "Concatenating libraries ..."
+pushd %WEBRTC_SRC%\out\%CONFIG%\obj\webrtc
+echo %CD%
+REM if [ "$OS" = "darwin" ]; then
+REM 	find . -name '*.o' > filelist
+REM 	libtool -static -o libwebrtc-magic.a -filelist filelist
+REM 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
+REM elif [ "$ARCH" = "arm" ]; then
+REM 	arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
+REM else
+REM 	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
+REM fi
+lib /OUT:libwebrtc-magic.lib webrtc.lib webrtc_common.lib
+SET OUT_LIBRARY=%LIB_DIR%\libwebrtc-%OS%-%ARCH%-magic.lib
+echo %OUT_LIBRARY%
+move libwebrtc-magic.lib %OUT_LIBRARY%
+echo Built %OUT_LIBRARY%
+popd
+
+echo "Build complete."
+
 popd
 
