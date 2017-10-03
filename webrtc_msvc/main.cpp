@@ -1,7 +1,6 @@
 #include "peerconnection.h"
 #include "datachannel.h"
 #include "ctestenums.h"
-#include "webrtc/base/scoped_ref_ptr.h"
 #include "dllExports.h"
 
 #include <stdio.h>

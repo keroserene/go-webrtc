@@ -12,7 +12,6 @@
 #include <future>
 
 #include "webrtc/api/test/fakeconstraints.h"
-#include "webrtc/pc/test/fakeaudiocapturemodule.h"
 #include "webrtc/api/jsepsessiondescription.h"
 #include "webrtc/pc/webrtcsdp.h"
 
@@ -62,11 +61,10 @@ class Peer
     signalling_thread_->Start();  // Must start before being passed to
     worker_thread_->Start();      // PeerConnectionFactory.
 
-    this->fake_audio_ = NULL;//FakeAudioCaptureModule::Create();
     pc_factory = CreatePeerConnectionFactory(
       worker_thread_,
       signalling_thread_,
-      this->fake_audio_, NULL, NULL);
+      NULL, NULL, NULL);
     if (!pc_factory.get()) {
       CGO_DBG("Could not create PeerConnectionFactory");
       return false;
@@ -111,11 +109,13 @@ class Peer
   }
 
   // This is required for the Media API.
-  void OnAddStream(webrtc::MediaStreamInterface* stream) {
-    CGO_DBG("unimplemented OnAddStream");
+  void OnAddStream(rtc::scoped_refptr<MediaStreamInterface> stream) {
+	  CGO_DBG("unimplemented OnAddStream");
   }
-  void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
-    CGO_DBG("unimplemented OnRemoveStream");
+
+  // Triggered when a remote peer close a stream.
+  void OnRemoveStream(rtc::scoped_refptr<MediaStreamInterface> stream) {
+	  CGO_DBG("unimplemented OnRemoveStream");
   }
 
   void OnRenegotiationNeeded() {
@@ -153,8 +153,9 @@ class Peer
     cgoOnIceGatheringStateChange(goPeerConnection, new_state);
   }
 
-  void OnDataChannel(DataChannelInterface* channel) {
-    DCObserver obs = new rtc::RefCountedObject<CGoDataChannelObserver>(channel);
+  // Triggered when a remote peer opens a data channel.
+  void OnDataChannel(rtc::scoped_refptr<DataChannelInterface> channel) {
+	DCObserver obs = new rtc::RefCountedObject<CGoDataChannelObserver>(channel);
     this->observers.push_back(obs);
     auto o = obs.get();
     channel->RegisterObserver(o);
@@ -197,7 +198,6 @@ class Peer
  private:
   rtc::Thread *signalling_thread_;
   rtc::Thread *worker_thread_;
-  rtc::scoped_refptr<AudioDeviceModule> fake_audio_;
 };  // class Peer
 
 // Keep track of Peers in global scope to prevent deallocation, due to the

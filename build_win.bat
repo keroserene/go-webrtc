@@ -38,43 +38,45 @@ REM )
 REM Clean errorlevel
 verify > nul
 
-IF EXIST %WEBRTC_DIR% (
-	echo "Syncing webrtc ..."
-	pushd %WEBRTC_SRC%
-    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-    REM ERS - not sure what this code does, and how to test it
-	REM if ! git diff-index --quiet HEAD --; then
-	REM 	echo -en "\nOpen files present in $WEBRTC_SRC\nReset them? (y/N): "
-	REM 	read ANSWER
-	REM 	if [ "$ANSWER" != "y" ]; then
-	REM 		echo "*** Cancelled ***"
-	REM 		exit 1
-	REM 	fi
-    echo "Issuing a git reset --hard"
-	git reset --hard HEAD
-    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-	REM fi
-	popd
+REM IF EXIST %WEBRTC_DIR% (
+REM 	echo "Syncing webrtc ..."
+REM 	pushd %WEBRTC_SRC%
+REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+REM     REM ERS - not sure what this code does, and how to test it
+REM 	REM if ! git diff-index --quiet HEAD --; then
+REM 	REM 	echo -en "\nOpen files present in $WEBRTC_SRC\nReset them? (y/N): "
+REM 	REM 	read ANSWER
+REM 	REM 	if [ "$ANSWER" != "y" ]; then
+REM 	REM 		echo "*** Cancelled ***"
+REM 	REM 		exit 1
+REM 	REM 	fi
+REM     echo "Issuing a git reset --hard"
+REM 	git reset --hard HEAD
+REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+REM 	REM fi
+REM 	popd
 
-	pushd %WEBRTC_DIR%
-    echo "Syncing code base to" %COMMIT% "in dir" %WEBRTC_DIR%
-	gclient sync --with_branch_heads -r %COMMIT%
-    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-	popd
-) ELSE (
-	echo "Getting webrtc ..."
-	md %WEBRTC_DIR%
-	pushd $WEBRTC_DIR
-	gclient config --name src %WEBRTC_REPO%
-    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-	gclient sync --with_branch_heads -r %COMMIT%
-    IF /I "%ERRORLEVEL%" NEQ "0" exit /b
-	popd
-)
+REM 	pushd %WEBRTC_DIR%
+REM     echo "Syncing code base to" %COMMIT% "in dir" %WEBRTC_DIR%
+REM 	gclient sync --with_branch_heads -r %COMMIT%
+REM     IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+REM 	popd
+REM ) ELSE (
+	REM echo "Getting webrtc ..."
+	REM md %WEBRTC_DIR%
+	REM pushd %WEBRTC_DIR%
+	REM verify > nul
+	REM echo "gclient config ..."
+	REM call gclient config --name src %WEBRTC_REPO%
+    REM IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+	REM call gclient sync --with_branch_heads -r %COMMIT%
+    REM IF /I "%ERRORLEVEL%" NEQ "0" exit /b
+	REM popd
+REM )
 
 echo "Checking out latest tested / compatible version of webrtc ..."
 pushd %WEBRTC_SRC%
-git checkout %COMMIT%
+call git checkout %COMMIT%
 IF /I "%ERRORLEVEL%" NEQ "0" exit /b
 popd
 
@@ -93,7 +95,7 @@ call gn gen %GNARGS%
 IF /I "%ERRORLEVEL%" NEQ "0" exit /b
 
 SET NINJAARGS=-C  %WEBRTC_SRC%\out\%CONFIG% webrtc field_trial metrics_default pc_test_utils
-ninja %NINJAARGS%
+call ninja %NINJAARGS%
 IF /I "%ERRORLEVEL%" NEQ "0" exit /b
 popd
 
