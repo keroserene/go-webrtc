@@ -54,12 +54,9 @@ class RtpToNtpEstimator {
 
   const Parameters& params() const { return params_; }
 
-  static const int kMaxInvalidSamples = 3;
-
  private:
   void UpdateParameters();
 
-  int consecutive_invalid_samples_;
   std::list<RtcpMeasurement> measurements_;
   Parameters params_;
 };

@@ -26,23 +26,27 @@ struct EncodedFrame {
       : data_(nullptr),
         length_(0),
         frame_type_(kEmptyFrame),
-        stream_id_(0),
+        encoded_width_(0),
+        encoded_height_(0),
         timestamp_(0) {}
   EncodedFrame(const uint8_t* data,
                size_t length,
                FrameType frame_type,
-               size_t stream_id,
+               uint32_t encoded_width,
+               uint32_t encoded_height,
                uint32_t timestamp)
       : data_(data),
         length_(length),
         frame_type_(frame_type),
-        stream_id_(stream_id),
+        encoded_width_(encoded_width),
+        encoded_height_(encoded_height),
         timestamp_(timestamp) {}
 
   const uint8_t* data_;
   const size_t length_;
   const FrameType frame_type_;
-  const size_t stream_id_;
+  const uint32_t encoded_width_;
+  const uint32_t encoded_height_;
   const uint32_t timestamp_;
 };
 

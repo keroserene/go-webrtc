@@ -17,18 +17,16 @@
 #include <DXGI1_2.h>
 
 #include <memory>
-#include <string>
 #include <vector>
 
-#include "webrtc/modules/desktop_capture/desktop_frame_rotation.h"
+#include "webrtc/base/criticalsection.h"
+#include "webrtc/base/thread_annotations.h"
 #include "webrtc/modules/desktop_capture/desktop_geometry.h"
 #include "webrtc/modules/desktop_capture/desktop_region.h"
+#include "webrtc/modules/desktop_capture/desktop_frame_rotation.h"
 #include "webrtc/modules/desktop_capture/shared_desktop_frame.h"
 #include "webrtc/modules/desktop_capture/win/d3d_device.h"
-#include "webrtc/modules/desktop_capture/win/dxgi_context.h"
 #include "webrtc/modules/desktop_capture/win/dxgi_texture.h"
-#include "webrtc/rtc_base/criticalsection.h"
-#include "webrtc/rtc_base/thread_annotations.h"
 
 namespace webrtc {
 
@@ -36,7 +34,12 @@ namespace webrtc {
 // video card. None of functions in this class is thread-safe.
 class DxgiOutputDuplicator {
  public:
-  using Context = DxgiOutputContext;
+  struct Context {
+    // The updated region DxgiOutputDuplicator::DetectUpdatedRegion() output
+    // during last Duplicate() function call. It's a DesktopRegion translated by
+    // offset of each DxgiOutputDuplicator instance.
+    DesktopRegion updated_region;
+  };
 
   // Creates an instance of DxgiOutputDuplicator from a D3dDevice and one of its
   // IDXGIOutput1. Caller must maintain the lifetime of device, to make sure it
@@ -69,9 +72,6 @@ class DxgiOutputDuplicator {
   // Returns the desktop rect covered by this DxgiOutputDuplicator.
   DesktopRect desktop_rect() const { return desktop_rect_; }
 
-  // Returns the device name from DXGI_OUTPUT_DESC in utf8 encoding.
-  const std::string& device_name() const { return device_name_; }
-
   void Setup(Context* context);
 
   void Unregister(const Context* const context);
@@ -79,13 +79,12 @@ class DxgiOutputDuplicator {
   // How many frames have been captured by this DxigOutputDuplicator.
   int64_t num_frames_captured() const;
 
-  // Moves |desktop_rect_|. See DxgiDuplicatorController::TranslateRect().
-  void TranslateRect(const DesktopVector& position);
-
  private:
-  // Calls DoDetectUpdatedRegion(). If it fails, this function sets the
-  // |updated_region| as entire UntranslatedDesktopRect().
+  // Detects updated region translated by offset from IDXGIOutput1. This
+  // function will set the |updated_region| as entire DesktopRect starts from
+  // offset if it failed to execute Windows APIs.
   void DetectUpdatedRegion(const DXGI_OUTDUPL_FRAME_INFO& frame_info,
+                           DesktopVector offset,
                            DesktopRegion* updated_region);
 
   // Returns untranslated updated region, which are directly returned by Windows
@@ -99,25 +98,17 @@ class DxgiOutputDuplicator {
   // Returns false if system does not support IDXGIOutputDuplication.
   bool DuplicateOutput();
 
-  // Returns a DesktopRect with the same size of desktop_size(), but translated
+  // Returns a DesktopRect with the same size of desktop_size_, but translated
   // by offset.
-  DesktopRect GetTranslatedDesktopRect(DesktopVector offset) const;
-
-  // Returns a DesktopRect with the same size of desktop_size(), but starts from
-  // (0, 0).
-  DesktopRect GetUntranslatedDesktopRect() const;
+  DesktopRect TranslatedDesktopRect(DesktopVector offset);
 
   // Spreads changes from |context| to other registered Context(s) in
   // contexts_.
   void SpreadContextChange(const Context* const context);
 
-  // Returns the size of desktop rectangle current instance representing.
-  DesktopSize desktop_size() const;
-
   const D3dDevice device_;
   const Microsoft::WRL::ComPtr<IDXGIOutput1> output_;
-  const std::string device_name_;
-  DesktopRect desktop_rect_;
+  const DesktopRect desktop_rect_;
   Microsoft::WRL::ComPtr<IDXGIOutputDuplication> duplication_;
   DXGI_OUTDUPL_DESC desc_;
   std::vector<uint8_t> metadata_;
@@ -137,7 +128,7 @@ class DxgiOutputDuplicator {
   std::unique_ptr<SharedDesktopFrame> last_frame_;
   DesktopVector last_frame_offset_;
 
-  int64_t num_frames_captured_ = 0;
+  int64_t num_frames_captured_;
 };
 
 }  // namespace webrtc

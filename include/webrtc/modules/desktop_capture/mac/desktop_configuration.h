@@ -57,11 +57,9 @@ struct MacDesktopConfiguration {
   MacDesktopConfiguration& operator=(const MacDesktopConfiguration& other);
   MacDesktopConfiguration& operator=(MacDesktopConfiguration&& other);
 
-  // Returns the desktop & display configurations.
-  // If BottomLeftOrigin is used, the output is in Cocoa-style "bottom-up"
+  // Returns the desktop & display configurations in Cocoa-style "bottom-up"
   // (the origin is the bottom-left of the primary monitor, and coordinates
-  // increase as you move up the screen). Otherwise, the configuration will be
-  // converted to follow top-left coordinate system as Windows and X11.
+  // increase as you move up the screen).
   static MacDesktopConfiguration GetCurrent(Origin origin);
 
   // Returns true if the given desktop configuration equals this one.

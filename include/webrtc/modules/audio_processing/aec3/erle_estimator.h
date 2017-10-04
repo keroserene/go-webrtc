@@ -13,15 +13,15 @@
 
 #include <array>
 
+#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/audio_processing/aec3/aec3_common.h"
-#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 
 // Estimates the echo return loss enhancement based on the signal spectra.
 class ErleEstimator {
  public:
-  ErleEstimator(float min_erle, float max_erle_lf, float max_erle_hf);
+  ErleEstimator();
   ~ErleEstimator();
 
   // Updates the ERLE estimate.
@@ -35,9 +35,6 @@ class ErleEstimator {
  private:
   std::array<float, kFftLengthBy2Plus1> erle_;
   std::array<int, kFftLengthBy2Minus1> hold_counters_;
-  const float min_erle_;
-  const float max_erle_lf_;
-  const float max_erle_hf_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(ErleEstimator);
 };

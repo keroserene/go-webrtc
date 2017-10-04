@@ -13,7 +13,6 @@
 
 #include <memory>
 
-#include "webrtc/modules/audio_processing/include/aec_dump.h"
 #include "webrtc/modules/audio_processing/include/audio_processing.h"
 #include "webrtc/test/gmock.h"
 
@@ -175,10 +174,14 @@ class MockAudioProcessing : public AudioProcessing {
   MOCK_METHOD1(set_stream_key_pressed, void(bool key_pressed));
   MOCK_METHOD1(set_delay_offset_ms, void(int offset));
   MOCK_CONST_METHOD0(delay_offset_ms, int());
-
-  virtual void AttachAecDump(std::unique_ptr<AecDump> aec_dump) {}
-  MOCK_METHOD0(DetachAecDump, void());
-
+  MOCK_METHOD2(StartDebugRecording, int(const char filename[kMaxFilenameSize],
+                                        int64_t max_log_size_bytes));
+  MOCK_METHOD2(StartDebugRecording, int(FILE* handle,
+                                        int64_t max_log_size_bytes));
+  MOCK_METHOD1(StartDebugRecording, int (FILE* handle));
+  MOCK_METHOD1(StartDebugRecordingForPlatformFile,
+               int(rtc::PlatformFile handle));
+  MOCK_METHOD0(StopDebugRecording, int());
   MOCK_METHOD0(UpdateHistogramsOnCallEnd, void());
   MOCK_CONST_METHOD0(GetStatistics, AudioProcessingStatistics());
   virtual MockEchoCancellation* echo_cancellation() const {
@@ -202,8 +205,6 @@ class MockAudioProcessing : public AudioProcessing {
   virtual MockVoiceDetection* voice_detection() const {
     return voice_detection_.get();
   }
-
-  MOCK_CONST_METHOD0(GetConfig, AudioProcessing::Config());
 
  private:
   std::unique_ptr<MockEchoCancellation> echo_cancellation_;

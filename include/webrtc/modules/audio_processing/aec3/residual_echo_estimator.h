@@ -15,65 +15,37 @@
 #include <array>
 #include <vector>
 
+#include "webrtc/base/array_view.h"
+#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/audio_processing/aec3/aec3_common.h"
 #include "webrtc/modules/audio_processing/aec3/aec_state.h"
-#include "webrtc/modules/audio_processing/aec3/render_buffer.h"
-#include "webrtc/modules/audio_processing/include/audio_processing.h"
-#include "webrtc/rtc_base/array_view.h"
-#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/modules/audio_processing/aec3/fft_buffer.h"
 
 namespace webrtc {
 
 class ResidualEchoEstimator {
  public:
-  explicit ResidualEchoEstimator(
-      const AudioProcessing::Config::EchoCanceller3& config);
+  ResidualEchoEstimator();
   ~ResidualEchoEstimator();
 
   void Estimate(bool using_subtractor_output,
                 const AecState& aec_state,
-                const RenderBuffer& render_buffer,
+                const FftBuffer& X_buffer,
+                const std::vector<std::array<float, kFftLengthBy2Plus1>>& H2,
+                const std::array<float, kFftLengthBy2Plus1>& E2_main,
+                const std::array<float, kFftLengthBy2Plus1>& E2_shadow,
                 const std::array<float, kFftLengthBy2Plus1>& S2_linear,
+                const std::array<float, kFftLengthBy2Plus1>& S2_fallback,
                 const std::array<float, kFftLengthBy2Plus1>& Y2,
                 std::array<float, kFftLengthBy2Plus1>* R2);
 
+  void HandleEchoPathChange(const EchoPathVariability& echo_path_variability);
+
  private:
-  // Resets the state.
-  void Reset();
+  std::array<float, kFftLengthBy2Plus1> echo_path_gain_;
+  size_t blocks_since_last_saturation_ = 1000;
 
-  // Estimates the residual echo power based on the echo return loss enhancement
-  // (ERLE) and the linear power estimate.
-  void LinearEstimate(const std::array<float, kFftLengthBy2Plus1>& S2_linear,
-                      const std::array<float, kFftLengthBy2Plus1>& erle,
-                      size_t delay,
-                      std::array<float, kFftLengthBy2Plus1>* R2);
-
-  // Estimates the residual echo power based on the estimate of the echo path
-  // gain.
-  void NonLinearEstimate(bool headset_detected,
-                         const std::array<float, kFftLengthBy2Plus1>& X2,
-                         const std::array<float, kFftLengthBy2Plus1>& Y2,
-                         std::array<float, kFftLengthBy2Plus1>* R2);
-
-  // Adds the estimated unmodelled echo power to the residual echo power
-  // estimate.
-  void AddEchoReverb(const std::array<float, kFftLengthBy2Plus1>& S2,
-                     bool saturated_echo,
-                     size_t delay,
-                     float reverb_decay_factor,
-                     std::array<float, kFftLengthBy2Plus1>* R2);
-
-  std::array<float, kFftLengthBy2Plus1> R2_old_;
-  std::array<int, kFftLengthBy2Plus1> R2_hold_counter_;
-  std::array<float, kFftLengthBy2Plus1> R2_reverb_;
-  int S2_old_index_ = 0;
-  std::array<std::array<float, kFftLengthBy2Plus1>, kAdaptiveFilterLength>
-      S2_old_;
-  std::array<float, kFftLengthBy2Plus1> X2_noise_floor_;
-  std::array<int, kFftLengthBy2Plus1> X2_noise_floor_counter_;
-  const AudioProcessing::Config::EchoCanceller3 config_;
-
-  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(ResidualEchoEstimator);
+  RTC_DISALLOW_COPY_AND_ASSIGN(ResidualEchoEstimator);
 };
 
 }  // namespace webrtc

@@ -24,8 +24,8 @@
 #include <endpointvolume.h>
 #include <mediaobj.h>        // IMediaObject
 
-#include "webrtc/rtc_base/criticalsection.h"
-#include "webrtc/rtc_base/scoped_ref_ptr.h"
+#include "webrtc/base/scoped_ref_ptr.h"
+#include "webrtc/system_wrappers/include/critical_section_wrapper.h"
 
 // Use Multimedia Class Scheduler Service (MMCSS) to boost the thread priority
 #pragma comment( lib, "avrt.lib" )
@@ -82,7 +82,7 @@ class ScopedCOMInitializer {
 class AudioDeviceWindowsCore : public AudioDeviceGeneric
 {
 public:
-    AudioDeviceWindowsCore();
+    AudioDeviceWindowsCore(const int32_t id);
     ~AudioDeviceWindowsCore();
 
     static bool CoreAudioIsSupported();
@@ -132,6 +132,10 @@ public:
     // Microphone Automatic Gain Control (AGC)
     virtual int32_t SetAGC(bool enable);
     virtual bool AGC() const;
+
+    // Volume control based on the Windows Wave API (Windows only)
+    virtual int32_t SetWaveOutVolume(uint16_t volumeLeft, uint16_t volumeRight);
+    virtual int32_t WaveOutVolume(uint16_t& volumeLeft, uint16_t& volumeRight) const;
 
     // Audio mixer initialization
     virtual int32_t InitSpeaker();
@@ -233,6 +237,10 @@ private:    // thread functions
     void _Lock() { _critSect.Enter(); };
     void _UnLock() { _critSect.Leave(); };
 
+private:
+    int32_t Id() {return _id;}
+
+private:
     int SetDMOProperties();
 
     int SetBoolProperty(IPropertyStore* ptrPS,
@@ -264,17 +272,21 @@ private:    // thread functions
 
     int32_t InitRecordingDMO();
 
+private:
     ScopedCOMInitializer                    _comInit;
     AudioDeviceBuffer*                      _ptrAudioBuffer;
-    rtc::CriticalSection                    _critSect;
-    rtc::CriticalSection                    _volumeMutex;
+    CriticalSectionWrapper&                 _critSect;
+    CriticalSectionWrapper&                 _volumeMutex;
+    int32_t                           _id;
 
+private:  // MMDevice
     IMMDeviceEnumerator*                    _ptrEnumerator;
     IMMDeviceCollection*                    _ptrRenderCollection;
     IMMDeviceCollection*                    _ptrCaptureCollection;
     IMMDevice*                              _ptrDeviceOut;
     IMMDevice*                              _ptrDeviceIn;
 
+private:  // WASAPI
     IAudioClient*                           _ptrClientOut;
     IAudioClient*                           _ptrClientIn;
     IAudioRenderClient*                     _ptrRenderClient;
@@ -306,8 +318,7 @@ private:    // thread functions
     UINT                                    _playAudioFrameSize;
     uint32_t                          _playSampleRate;
     uint32_t                          _devicePlaySampleRate;
-    uint32_t                          _playBlockSizeInFrames;
-    uint32_t                          _playBlockSizeInSamples;
+    uint32_t                          _playBlockSize;
     uint32_t                          _devicePlayBlockSize;
     uint32_t                          _playChannels;
     uint32_t                          _sndCardPlayDelay;
@@ -321,7 +332,7 @@ private:    // thread functions
     UINT64                                  _readSamples;
     uint32_t                          _sndCardRecDelay;
 
-    uint16_t                          _recChannelsPrioList[3];
+    uint16_t                          _recChannelsPrioList[2];
     uint16_t                          _playChannelsPrioList[2];
 
     LARGE_INTEGER                           _perfCounterFreq;

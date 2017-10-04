@@ -51,7 +51,7 @@ class LoopBackTransport : public Transport {
   RtpRtcp* rtp_rtcp_module_;
 };
 
-class TestRtpReceiver : public RtpData {
+class TestRtpReceiver : public NullRtpData {
  public:
   int32_t OnReceivedPayloadData(
       const uint8_t* payload_data,

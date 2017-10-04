@@ -14,7 +14,7 @@
 #include <assert.h>
 #include <list>
 
-#include "webrtc/rtc_base/criticalsection.h"
+#include "webrtc/system_wrappers/include/critical_section_wrapper.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
@@ -36,7 +36,7 @@ private:
     // Non-atomic function.
     int32_t CreateMemory(uint32_t amountToCreate);
 
-    rtc::CriticalSection _crit;
+    CriticalSectionWrapper* _crit;
 
     bool _terminate;
 
@@ -49,7 +49,8 @@ private:
 
 template<class MemoryType>
 MemoryPoolImpl<MemoryType>::MemoryPoolImpl(int32_t initialPoolSize)
-    : _terminate(false),
+    : _crit(CriticalSectionWrapper::CreateCriticalSection()),
+      _terminate(false),
       _initialPoolSize(initialPoolSize),
       _createdMemory(0),
       _outstandingMemory(0)
@@ -62,12 +63,13 @@ MemoryPoolImpl<MemoryType>::~MemoryPoolImpl()
     // Trigger assert if there is outstanding memory.
     assert(_createdMemory == 0);
     assert(_outstandingMemory == 0);
+    delete _crit;
 }
 
 template<class MemoryType>
 int32_t MemoryPoolImpl<MemoryType>::PopMemory(MemoryType*& memory)
 {
-    rtc::CritScope cs(&_crit);
+    CriticalSectionScoped cs(_crit);
     if(_terminate)
     {
         memory = NULL;
@@ -95,7 +97,7 @@ int32_t MemoryPoolImpl<MemoryType>::PushMemory(MemoryType*& memory)
     {
         return -1;
     }
-    rtc::CritScope cs(&_crit);
+    CriticalSectionScoped cs(_crit);
     _outstandingMemory--;
     if(_memoryPool.size() > (_initialPoolSize << 1))
     {
@@ -113,14 +115,14 @@ int32_t MemoryPoolImpl<MemoryType>::PushMemory(MemoryType*& memory)
 template<class MemoryType>
 bool MemoryPoolImpl<MemoryType>::Initialize()
 {
-    rtc::CritScope cs(&_crit);
+    CriticalSectionScoped cs(_crit);
     return CreateMemory(_initialPoolSize) == 0;
 }
 
 template<class MemoryType>
 int32_t MemoryPoolImpl<MemoryType>::Terminate()
 {
-    rtc::CritScope cs(&_crit);
+    CriticalSectionScoped cs(_crit);
     assert(_createdMemory == _outstandingMemory + _memoryPool.size());
 
     _terminate = true;

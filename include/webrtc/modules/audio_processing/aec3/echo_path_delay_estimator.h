@@ -13,13 +13,11 @@
 
 #include <vector>
 
-#include "webrtc/modules/audio_processing/aec3/decimator_by_4.h"
-#include "webrtc/modules/audio_processing/aec3/downsampled_render_buffer.h"
+#include "webrtc/base/constructormagic.h"
+#include "webrtc/base/optional.h"
 #include "webrtc/modules/audio_processing/aec3/matched_filter.h"
 #include "webrtc/modules/audio_processing/aec3/matched_filter_lag_aggregator.h"
-#include "webrtc/modules/audio_processing/include/audio_processing.h"
-#include "webrtc/rtc_base/constructormagic.h"
-#include "webrtc/rtc_base/optional.h"
+#include "webrtc/modules/audio_processing/aec3/decimator_by_4.h"
 
 namespace webrtc {
 
@@ -28,25 +26,21 @@ class ApmDataDumper;
 // Estimates the delay of the echo path.
 class EchoPathDelayEstimator {
  public:
-  EchoPathDelayEstimator(ApmDataDumper* data_dumper,
-                         const AudioProcessing::Config::EchoCanceller3& config);
+  explicit EchoPathDelayEstimator(ApmDataDumper* data_dumper);
   ~EchoPathDelayEstimator();
 
-  // Resets the estimation.
-  void Reset();
-
   // Produce a delay estimate if such is avaliable.
-  rtc::Optional<size_t> EstimateDelay(
-      const DownsampledRenderBuffer& render_buffer,
-      rtc::ArrayView<const float> capture);
+  rtc::Optional<size_t> EstimateDelay(rtc::ArrayView<const float> render,
+                                      rtc::ArrayView<const float> capture);
 
  private:
   ApmDataDumper* const data_dumper_;
+  DecimatorBy4 render_decimator_;
   DecimatorBy4 capture_decimator_;
   MatchedFilter matched_filter_;
   MatchedFilterLagAggregator matched_filter_lag_aggregator_;
 
-  RTC_DISALLOW_COPY_AND_ASSIGN(EchoPathDelayEstimator);
+  RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(EchoPathDelayEstimator);
 };
 }  // namespace webrtc
 

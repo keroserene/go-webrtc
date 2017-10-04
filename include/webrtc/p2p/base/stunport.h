@@ -16,7 +16,7 @@
 
 #include "webrtc/p2p/base/port.h"
 #include "webrtc/p2p/base/stunrequest.h"
-#include "webrtc/rtc_base/asyncpacketsocket.h"
+#include "webrtc/base/asyncpacketsocket.h"
 
 // TODO(mallinath) - Rename stunport.cc|h to udpport.cc|h.
 namespace rtc {
@@ -54,6 +54,7 @@ class UDPPort : public Port {
   static UDPPort* Create(rtc::Thread* thread,
                          rtc::PacketSocketFactory* factory,
                          rtc::Network* network,
+                         const rtc::IPAddress& ip,
                          uint16_t min_port,
                          uint16_t max_port,
                          const std::string& username,
@@ -61,7 +62,7 @@ class UDPPort : public Port {
                          const std::string& origin,
                          bool emit_local_for_anyaddress) {
     UDPPort* port =
-        new UDPPort(thread, factory, network, min_port, max_port, username,
+        new UDPPort(thread, factory, network, ip, min_port, max_port, username,
                     password, origin, emit_local_for_anyaddress);
     if (!port->Init()) {
       delete port;
@@ -126,6 +127,7 @@ class UDPPort : public Port {
   UDPPort(rtc::Thread* thread,
           rtc::PacketSocketFactory* factory,
           rtc::Network* network,
+          const rtc::IPAddress& ip,
           uint16_t min_port,
           uint16_t max_port,
           const std::string& username,
@@ -257,14 +259,17 @@ class StunPort : public UDPPort {
   static StunPort* Create(rtc::Thread* thread,
                           rtc::PacketSocketFactory* factory,
                           rtc::Network* network,
+                          const rtc::IPAddress& ip,
                           uint16_t min_port,
                           uint16_t max_port,
                           const std::string& username,
                           const std::string& password,
                           const ServerAddresses& servers,
                           const std::string& origin) {
-    StunPort* port = new StunPort(thread, factory, network, min_port, max_port,
-                                  username, password, servers, origin);
+    StunPort* port = new StunPort(thread, factory, network,
+                                  ip, min_port, max_port,
+                                  username, password, servers,
+                                  origin);
     if (!port->Init()) {
       delete port;
       port = NULL;
@@ -282,6 +287,7 @@ class StunPort : public UDPPort {
   StunPort(rtc::Thread* thread,
            rtc::PacketSocketFactory* factory,
            rtc::Network* network,
+           const rtc::IPAddress& ip,
            uint16_t min_port,
            uint16_t max_port,
            const std::string& username,
@@ -291,6 +297,7 @@ class StunPort : public UDPPort {
       : UDPPort(thread,
                 factory,
                 network,
+                ip,
                 min_port,
                 max_port,
                 username,

@@ -33,7 +33,7 @@
 #include <string>
 #include <vector>
 
-#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/base/constructormagic.h"
 
 namespace cricket {
 
@@ -252,13 +252,6 @@ const StreamParams* GetStream(const StreamParamsVec& streams,
   return found == streams.end() ? nullptr : &(*found);
 }
 
-template <class Condition>
-StreamParams* GetStream(StreamParamsVec& streams, Condition condition) {
-  StreamParamsVec::iterator found =
-      std::find_if(streams.begin(), streams.end(), condition);
-  return found == streams.end() ? nullptr : &(*found);
-}
-
 inline const StreamParams* GetStreamBySsrc(const StreamParamsVec& streams,
                                            uint32_t ssrc) {
   return GetStream(streams,
@@ -268,14 +261,6 @@ inline const StreamParams* GetStreamBySsrc(const StreamParamsVec& streams,
 inline const StreamParams* GetStreamByIds(const StreamParamsVec& streams,
                                           const std::string& groupid,
                                           const std::string& id) {
-  return GetStream(streams, [&groupid, &id](const StreamParams& sp) {
-    return sp.groupid == groupid && sp.id == id;
-  });
-}
-
-inline StreamParams* GetStreamByIds(StreamParamsVec& streams,
-                                    const std::string& groupid,
-                                    const std::string& id) {
   return GetStream(streams,
       [&groupid, &id](const StreamParams& sp) {
         return sp.groupid == groupid && sp.id == id;

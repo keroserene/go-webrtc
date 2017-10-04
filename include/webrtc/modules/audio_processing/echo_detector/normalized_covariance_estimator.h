@@ -28,7 +28,6 @@ class NormalizedCovarianceEstimator {
   float normalized_cross_correlation() const {
     return normalized_cross_correlation_;
   }
-  float covariance() const { return covariance_; }
   // This function resets the estimated values to zero.
   void Clear();
 

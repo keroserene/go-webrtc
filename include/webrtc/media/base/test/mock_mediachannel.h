@@ -18,15 +18,15 @@ namespace webrtc {
 
 class MockVideoMediaChannel : public cricket::FakeVideoMediaChannel {
  public:
-  MockVideoMediaChannel()
-      : cricket::FakeVideoMediaChannel(nullptr, cricket::VideoOptions()) {}
+  MockVideoMediaChannel() :
+      cricket::FakeVideoMediaChannel(NULL, cricket::VideoOptions()) {}
   MOCK_METHOD1(GetStats, bool(cricket::VideoMediaInfo*));
 };
 
 class MockVoiceMediaChannel : public cricket::FakeVoiceMediaChannel {
  public:
-  MockVoiceMediaChannel()
-      : cricket::FakeVoiceMediaChannel(nullptr, cricket::AudioOptions()) {}
+  MockVoiceMediaChannel() :
+      cricket::FakeVoiceMediaChannel(NULL, cricket::AudioOptions()) {}
   MOCK_METHOD1(GetStats, bool(cricket::VoiceMediaInfo*));
 };
 

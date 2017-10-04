@@ -13,7 +13,7 @@
 
 #include <vector>
 
-#include "webrtc/rtc_base/basictypes.h"
+#include "webrtc/base/basictypes.h"
 
 namespace webrtc {
 namespace rtcp {
@@ -45,11 +45,11 @@ class TargetBitrate {
 
   const std::vector<BitrateItem>& GetTargetBitrates() const;
 
-  void Parse(const uint8_t* block, uint16_t block_length);
-
-  size_t BlockLength() const;
+  bool Parse(const uint8_t* block, uint16_t block_length);
 
   void Create(uint8_t* buffer) const;
+
+  size_t BlockLength() const;
 
  private:
   std::vector<BitrateItem> bitrates_;

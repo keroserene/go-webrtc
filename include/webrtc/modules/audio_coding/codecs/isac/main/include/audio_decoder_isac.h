@@ -16,7 +16,7 @@
 
 namespace webrtc {
 
-using AudioDecoderIsacFloatImpl = AudioDecoderIsacT<IsacFloat>;
+using AudioDecoderIsac = AudioDecoderIsacT<IsacFloat>;
 
 }  // namespace webrtc
 #endif  // WEBRTC_MODULES_AUDIO_CODING_CODECS_ISAC_MAIN_INCLUDE_AUDIO_ENCODER_ISAC_H_

@@ -11,9 +11,9 @@
 #ifndef MODULES_AUDIO_DEVICE_INCLUDE_AUDIO_DEVICE_H_
 #define MODULES_AUDIO_DEVICE_INCLUDE_AUDIO_DEVICE_H_
 
+#include "webrtc/base/scoped_ref_ptr.h"
 #include "webrtc/modules/audio_device/include/audio_device_defines.h"
 #include "webrtc/modules/include/module.h"
-#include "webrtc/rtc_base/scoped_ref_ptr.h"
 
 namespace webrtc {
 
@@ -108,12 +108,11 @@ class AudioDeviceModule : public RefCountedModule {
   virtual int32_t SetAGC(bool enable) = 0;
   virtual bool AGC() const = 0;
 
-  // Deprecated.
-  // TODO(henrika): to be removed.
+  // Volume control based on the Windows Wave API (Windows only)
   virtual int32_t SetWaveOutVolume(uint16_t volumeLeft,
-                                   uint16_t volumeRight) { return -1; }
+                                   uint16_t volumeRight) = 0;
   virtual int32_t WaveOutVolume(uint16_t* volumeLeft,
-                                uint16_t* volumeRight) const { return -1; }
+                                uint16_t* volumeRight) const = 0;
 
   // Audio mixer initialization
   virtual int32_t InitSpeaker() = 0;

@@ -13,40 +13,40 @@
 
 #include <map>
 
+#include "webrtc/base/basictypes.h"
+#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/include/module_common_types.h"
-#include "webrtc/rtc_base/basictypes.h"
-#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 class Clock;
-struct PacketFeedback;
+struct PacketInfo;
 
 class SendTimeHistory {
  public:
-  SendTimeHistory(const Clock* clock, int64_t packet_age_limit_ms);
+  SendTimeHistory(Clock* clock, int64_t packet_age_limit_ms);
   ~SendTimeHistory();
 
+  void Clear();
+
   // Cleanup old entries, then add new packet info with provided parameters.
-  void AddAndRemoveOld(const PacketFeedback& packet);
+  void AddAndRemoveOld(uint16_t sequence_number,
+                       size_t payload_size,
+                       const PacedPacketInfo& pacing_info);
 
   // Updates packet info identified by |sequence_number| with |send_time_ms|.
   // Return false if not found.
   bool OnSentPacket(uint16_t sequence_number, int64_t send_time_ms);
 
-  // Look up PacketFeedback for a sent packet, based on the sequence number, and
+  // Look up PacketInfo for a sent packet, based on the sequence number, and
   // populate all fields except for arrival_time. The packet parameter must
   // thus be non-null and have the sequence_number field set.
-  bool GetFeedback(PacketFeedback* packet_feedback, bool remove);
-
-  size_t GetOutstandingBytes(uint16_t local_net_id,
-                             uint16_t remote_net_id) const;
+  bool GetInfo(PacketInfo* packet_info, bool remove);
 
  private:
-  const Clock* const clock_;
+  Clock* const clock_;
   const int64_t packet_age_limit_ms_;
   SequenceNumberUnwrapper seq_num_unwrapper_;
-  std::map<int64_t, PacketFeedback> history_;
-  rtc::Optional<int64_t> latest_acked_seq_num_;
+  std::map<int64_t, PacketInfo> history_;
 
   RTC_DISALLOW_IMPLICIT_CONSTRUCTORS(SendTimeHistory);
 };

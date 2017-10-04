@@ -12,15 +12,13 @@
 #define WEBRTC_MEDIA_BASE_VIDEOSOURCEINTERFACE_H_
 
 #include "webrtc/media/base/videosinkinterface.h"
-#include "webrtc/rtc_base/optional.h"
+#include "webrtc/base/optional.h"
 
 namespace rtc {
 
 // VideoSinkWants is used for notifying the source of properties a video frame
 // should have when it is delivered to a certain sink.
 struct VideoSinkWants {
-  VideoSinkWants();
-  ~VideoSinkWants();
   // Tells the source whether the sink wants frames with rotation applied.
   // By default, any rotation must be applied by the sink.
   bool rotation_applied = false;
@@ -29,15 +27,13 @@ struct VideoSinkWants {
   bool black_frames = false;
 
   // Tells the source the maximum number of pixels the sink wants.
-  int max_pixel_count = std::numeric_limits<int>::max();
+  rtc::Optional<int> max_pixel_count;
   // Tells the source the desired number of pixels the sinks wants. This will
   // typically be used when stepping the resolution up again when conditions
   // have improved after an earlier downgrade. The source should select the
   // closest resolution to this pixel count, but if max_pixel_count is set, it
   // still sets the absolute upper bound.
   rtc::Optional<int> target_pixel_count;
-  // Tells the source the maximum framerate the sink wants.
-  int max_framerate_fps = std::numeric_limits<int>::max();
 };
 
 template <typename VideoFrameT>

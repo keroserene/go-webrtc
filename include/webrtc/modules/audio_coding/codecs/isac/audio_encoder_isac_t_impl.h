@@ -11,8 +11,8 @@
 #ifndef WEBRTC_MODULES_AUDIO_CODING_CODECS_ISAC_AUDIO_ENCODER_ISAC_T_IMPL_H_
 #define WEBRTC_MODULES_AUDIO_CODING_CODECS_ISAC_AUDIO_ENCODER_ISAC_T_IMPL_H_
 
+#include "webrtc/base/checks.h"
 #include "webrtc/common_types.h"
-#include "webrtc/rtc_base/checks.h"
 
 namespace webrtc {
 

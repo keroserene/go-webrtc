@@ -16,10 +16,10 @@
 #include <vector>
 
 #include "webrtc/p2p/base/portallocator.h"
-#include "webrtc/rtc_base/checks.h"
-#include "webrtc/rtc_base/messagequeue.h"
-#include "webrtc/rtc_base/network.h"
-#include "webrtc/rtc_base/thread.h"
+#include "webrtc/base/checks.h"
+#include "webrtc/base/messagequeue.h"
+#include "webrtc/base/network.h"
+#include "webrtc/base/thread.h"
 
 namespace cricket {
 
@@ -112,7 +112,6 @@ class BasicPortAllocatorSession : public PortAllocatorSession,
   std::vector<Candidate> ReadyCandidates() const override;
   bool CandidatesAllocationDone() const override;
   void RegatherOnFailedNetworks() override;
-  void RegatherOnAllNetworks() override;
   void PruneAllPorts() override;
 
  protected:
@@ -186,7 +185,7 @@ class BasicPortAllocatorSession : public PortAllocatorSession,
   void OnConfigStop();
   void AllocatePorts();
   void OnAllocate();
-  void DoAllocate(bool disable_equivalent_phases);
+  void DoAllocate();
   void OnNetworksChanged();
   void OnAllocationSequenceObjectsCreated();
   void DisableEquivalentPhases(rtc::Network* network,
@@ -204,9 +203,6 @@ class BasicPortAllocatorSession : public PortAllocatorSession,
   PortData* FindPort(Port* port);
   std::vector<rtc::Network*> GetNetworks();
   std::vector<rtc::Network*> GetFailedNetworks();
-  void Regather(const std::vector<rtc::Network*>& networks,
-                bool disable_equivalent_phases,
-                IceRegatheringReason reason);
 
   bool CheckCandidateFilter(const Candidate& c) const;
   bool CandidatePairable(const Candidate& c, const Port* port) const;
@@ -365,8 +361,7 @@ class AllocationSequence : public rtc::MessageHandler,
   BasicPortAllocatorSession* session_;
   bool network_failed_ = false;
   rtc::Network* network_;
-  // Compared with the new best IP in DisableEquivalentPhases.
-  rtc::IPAddress previous_best_ip_;
+  rtc::IPAddress ip_;
   PortConfiguration* config_;
   State state_;
   uint32_t flags_;

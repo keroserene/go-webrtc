@@ -14,6 +14,10 @@
 #include <memory>
 #include <string>
 
+#include "webrtc/base/constructormagic.h"
+#include "webrtc/base/criticalsection.h"
+#include "webrtc/base/optional.h"
+#include "webrtc/base/thread_annotations.h"
 #include "webrtc/modules/audio_coding/neteq/audio_multi_vector.h"
 #include "webrtc/modules/audio_coding/neteq/defines.h"
 #include "webrtc/modules/audio_coding/neteq/include/neteq.h"
@@ -22,11 +26,6 @@
 #include "webrtc/modules/audio_coding/neteq/rtcp.h"
 #include "webrtc/modules/audio_coding/neteq/statistics_calculator.h"
 #include "webrtc/modules/audio_coding/neteq/tick_timer.h"
-#include "webrtc/modules/include/module_common_types.h"
-#include "webrtc/rtc_base/constructormagic.h"
-#include "webrtc/rtc_base/criticalsection.h"
-#include "webrtc/rtc_base/optional.h"
-#include "webrtc/rtc_base/thread_annotations.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
@@ -68,26 +67,6 @@ class NetEqImpl : public webrtc::NetEq {
     kVadPassive
   };
 
-  enum ErrorCodes {
-    kNoError = 0,
-    kOtherError,
-    kUnknownRtpPayloadType,
-    kDecoderNotFound,
-    kInvalidPointer,
-    kAccelerateError,
-    kPreemptiveExpandError,
-    kComfortNoiseErrorCode,
-    kDecoderErrorCode,
-    kOtherDecoderError,
-    kInvalidOperation,
-    kDtmfParsingError,
-    kDtmfInsertError,
-    kSampleUnderrun,
-    kDecodedTooMuch,
-    kRedundancySplitError,
-    kPacketBufferCorruption
-  };
-
   struct Dependencies {
     // The constructor populates the Dependencies struct with the default
     // implementations of the objects. They can all be replaced by the user
@@ -125,15 +104,11 @@ class NetEqImpl : public webrtc::NetEq {
   // of the time when the packet was received, and should be measured with
   // the same tick rate as the RTP timestamp of the current payload.
   // Returns 0 on success, -1 on failure.
-  int InsertPacket(const RTPHeader& rtp_header,
+  int InsertPacket(const WebRtcRTPHeader& rtp_header,
                    rtc::ArrayView<const uint8_t> payload,
                    uint32_t receive_timestamp) override;
 
-  void InsertEmptyPacket(const RTPHeader& rtp_header) override;
-
   int GetAudio(AudioFrame* audio_frame, bool* muted) override;
-
-  void SetCodecs(const std::map<int, SdpAudioFormat>& codecs) override;
 
   int RegisterPayloadType(NetEqDecoder codec,
                           const std::string& codec_name,
@@ -161,7 +136,7 @@ class NetEqImpl : public webrtc::NetEq {
 
   int SetTargetDelay() override;
 
-  int TargetDelayMs() override;
+  int TargetDelay() override;
 
   int CurrentDelayMs() const override;
 
@@ -184,8 +159,6 @@ class NetEqImpl : public webrtc::NetEq {
   // Writes the current RTCP statistics to |stats|. The statistics are reset
   // and a new report period is started with the call.
   void GetRtcpStatistics(RtcpStatistics* stats) override;
-
-  NetEqLifetimeStatistics GetLifetimeStatistics() const override;
 
   // Same as RtcpStatistics(), but does not reset anything.
   void GetRtcpStatisticsNoReset(RtcpStatistics* stats) override;
@@ -210,6 +183,15 @@ class NetEqImpl : public webrtc::NetEq {
 
   int SetTargetSampleRate() override;
 
+  // Returns the error code for the last occurred error. If no error has
+  // occurred, 0 is returned.
+  int LastError() const override;
+
+  // Returns the error code last returned by a decoder (audio or comfort noise).
+  // When LastError() returns kDecoderErrorCode or kComfortNoiseErrorCode, check
+  // this method to get the decoder's error code.
+  int LastDecoderError() override;
+
   // Flushes both the packet buffer and the sync buffer.
   void FlushBuffers() override;
 
@@ -221,10 +203,6 @@ class NetEqImpl : public webrtc::NetEq {
   void DisableNack() override;
 
   std::vector<uint16_t> GetNackList(int64_t round_trip_time_ms) const override;
-
-  std::vector<uint32_t> LastDecodedTimestamps() const override;
-
-  int SyncBufferSizeMs() const override;
 
   // This accessor method is only intended for testing purposes.
   const SyncBuffer* sync_buffer_for_test() const;
@@ -241,7 +219,7 @@ class NetEqImpl : public webrtc::NetEq {
   // Inserts a new packet into NetEq. This is used by the InsertPacket method
   // above. Returns 0 on success, otherwise an error code.
   // TODO(hlundin): Merge this with InsertPacket above?
-  int InsertPacketInternal(const RTPHeader& rtp_header,
+  int InsertPacketInternal(const WebRtcRTPHeader& rtp_header,
                            rtc::ArrayView<const uint8_t> payload,
                            uint32_t receive_timestamp)
       EXCLUSIVE_LOCKS_REQUIRED(crit_sect_);
@@ -421,6 +399,8 @@ class NetEqImpl : public webrtc::NetEq {
   rtc::Optional<uint8_t> current_cng_rtp_payload_type_ GUARDED_BY(crit_sect_);
   uint32_t ssrc_ GUARDED_BY(crit_sect_);
   bool first_packet_ GUARDED_BY(crit_sect_);
+  int error_code_ GUARDED_BY(crit_sect_);  // Store last error code.
+  int decoder_error_code_ GUARDED_BY(crit_sect_);
   const BackgroundNoiseMode background_noise_mode_ GUARDED_BY(crit_sect_);
   NetEqPlayoutMode playout_mode_ GUARDED_BY(crit_sect_);
   bool enable_fast_accelerate_ GUARDED_BY(crit_sect_);
@@ -431,7 +411,6 @@ class NetEqImpl : public webrtc::NetEq {
       AudioFrame::kVadPassive;
   std::unique_ptr<TickTimer::Stopwatch> generated_noise_stopwatch_
       GUARDED_BY(crit_sect_);
-  std::vector<uint32_t> last_decoded_timestamps_ GUARDED_BY(crit_sect_);
 
  private:
   RTC_DISALLOW_COPY_AND_ASSIGN(NetEqImpl);

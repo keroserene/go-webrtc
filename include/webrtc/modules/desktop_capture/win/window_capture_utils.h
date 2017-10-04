@@ -10,40 +10,18 @@
 
 #include <windows.h>
 
+#include "webrtc/base/constructormagic.h"
 #include "webrtc/modules/desktop_capture/desktop_geometry.h"
-#include "webrtc/rtc_base/constructormagic.h"
 
 namespace webrtc {
 
-// Outputs the window rect. The returned DesktopRect is in system coordinates,
-// i.e. the primary monitor on the system always starts from (0, 0). This
-// function returns false if native APIs fail.
-bool GetWindowRect(HWND window, DesktopRect* result);
-
-// Outputs the window rect, with the left/right/bottom frame border cropped if
+// Output the window rect, with the left/right/bottom frame border cropped if
 // the window is maximized. |cropped_rect| is the cropped rect relative to the
 // desktop. |original_rect| is the original rect returned from GetWindowRect.
-// Returns true if all API calls succeeded. The returned DesktopRect is in
-// system coordinates, i.e. the primary monitor on the system always starts from
-// (0, 0). |original_rect| can be nullptr.
+// Returns true if all API calls succeeded.
 bool GetCroppedWindowRect(HWND window,
                           DesktopRect* cropped_rect,
                           DesktopRect* original_rect);
-
-// Retrieves the rectangle of the content area of |window|. Usually it contains
-// title bar and window client area, but borders or shadow are excluded. The
-// returned DesktopRect is in system coordinates, i.e. the primary monitor on
-// the system always starts from (0, 0). This function returns false if native
-// APIs fail.
-bool GetWindowContentRect(HWND window, DesktopRect* result);
-
-// Returns the region type of the |window| and fill |rect| with the region of
-// |window| if region type is SIMPLEREGION.
-int GetWindowRegionTypeWithBoundary(HWND window, DesktopRect* result);
-
-// Retrieves the size of the |hdc|. This function returns false if native APIs
-// fail.
-bool GetDcSize(HDC hdc, DesktopSize* size);
 
 typedef HRESULT (WINAPI *DwmIsCompositionEnabledFunc)(BOOL* enabled);
 class AeroChecker {

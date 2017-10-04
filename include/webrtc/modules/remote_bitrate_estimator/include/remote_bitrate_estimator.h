@@ -34,6 +34,7 @@ class RemoteBitrateObserver {
   // incoming streams.
   virtual void OnReceiveBitrateChanged(const std::vector<uint32_t>& ssrcs,
                                        uint32_t bitrate) = 0;
+  virtual void OnProbeBitrate(uint32_t bitrate) {}
 
   virtual ~RemoteBitrateObserver() {}
 };
@@ -43,7 +44,12 @@ struct ReceiveBandwidthEstimatorStats {};
 
 class RemoteBitrateEstimator : public CallStatsObserver, public Module {
  public:
-  ~RemoteBitrateEstimator() override {}
+  virtual ~RemoteBitrateEstimator() {}
+
+  virtual void IncomingPacketFeedbackVector(
+      const std::vector<PacketInfo>& packet_feedback_vector) {
+    assert(false);
+  }
 
   // Called for each incoming packet. Updates the incoming payload bitrate
   // estimate and the over-use detector. If an over-use is detected the
@@ -64,7 +70,9 @@ class RemoteBitrateEstimator : public CallStatsObserver, public Module {
                               uint32_t* bitrate_bps) const = 0;
 
   // TODO(holmer): Remove when all implementations have been updated.
-  virtual bool GetStats(ReceiveBandwidthEstimatorStats* output) const;
+  virtual bool GetStats(ReceiveBandwidthEstimatorStats* output) const {
+    return false;
+  }
 
   virtual void SetMinBitrate(int min_bitrate_bps) = 0;
 
@@ -72,11 +80,6 @@ class RemoteBitrateEstimator : public CallStatsObserver, public Module {
   static const int64_t kProcessIntervalMs = 500;
   static const int64_t kStreamTimeOutMs = 2000;
 };
-
-inline bool RemoteBitrateEstimator::GetStats(
-    ReceiveBandwidthEstimatorStats* output) const {
-  return false;
-}
 
 }  // namespace webrtc
 

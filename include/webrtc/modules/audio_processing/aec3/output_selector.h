@@ -11,8 +11,8 @@
 #ifndef WEBRTC_MODULES_AUDIO_PROCESSING_AEC3_OUTPUT_SELECTOR_H_
 #define WEBRTC_MODULES_AUDIO_PROCESSING_AEC3_OUTPUT_SELECTOR_H_
 
-#include "webrtc/rtc_base/array_view.h"
-#include "webrtc/rtc_base/constructormagic.h"
+#include "webrtc/base/array_view.h"
+#include "webrtc/base/constructormagic.h"
 
 namespace webrtc {
 
@@ -24,8 +24,7 @@ class OutputSelector {
   ~OutputSelector();
 
   // Forms the most appropriate output signal.
-  void FormLinearOutput(bool use_subtractor_output,
-                        rtc::ArrayView<const float> subtractor_output,
+  void FormLinearOutput(rtc::ArrayView<const float> subtractor_output,
                         rtc::ArrayView<float> capture);
 
   // Returns true if the linear aec output is the one used.
@@ -33,6 +32,7 @@ class OutputSelector {
 
  private:
   bool use_subtractor_output_ = false;
+  int output_change_counter_ = 0;
   RTC_DISALLOW_COPY_AND_ASSIGN(OutputSelector);
 };
 

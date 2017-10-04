@@ -15,19 +15,18 @@
 #include <memory>
 #include <set>
 
-#include "webrtc/modules/pacing/pacer.h"
-#include "webrtc/rtc_base/criticalsection.h"
-#include "webrtc/rtc_base/optional.h"
-#include "webrtc/rtc_base/thread_annotations.h"
+#include "webrtc/base/optional.h"
+#include "webrtc/base/thread_annotations.h"
+#include "webrtc/modules/include/module.h"
+#include "webrtc/modules/rtp_rtcp/include/rtp_rtcp_defines.h"
 #include "webrtc/typedefs.h"
 
 namespace webrtc {
 class AlrDetector;
 class BitrateProber;
 class Clock;
+class CriticalSectionWrapper;
 class ProbeClusterCreatedObserver;
-class RtcEventLog;
-class IntervalBudget;
 
 namespace paced_sender {
 class IntervalBudget;
@@ -35,7 +34,7 @@ struct Packet;
 class PacketQueue;
 }  // namespace paced_sender
 
-class PacedSender : public Pacer {
+class PacedSender : public Module, public RtpPacketSender {
  public:
   class PacketSender {
    public:
@@ -69,11 +68,9 @@ class PacedSender : public Pacer {
   // overshoots from the encoder.
   static const float kDefaultPaceMultiplier;
 
-  PacedSender(const Clock* clock,
-              PacketSender* packet_sender,
-              RtcEventLog* event_log);
+  PacedSender(Clock* clock, PacketSender* packet_sender);
 
-  ~PacedSender() override;
+  virtual ~PacedSender();
 
   virtual void CreateProbeCluster(int bitrate_bps);
 
@@ -93,7 +90,7 @@ class PacedSender : public Pacer {
   // |bitrate_bps| is our estimate of what we are allowed to send on average.
   // We will pace out bursts of packets at a bitrate of
   // |bitrate_bps| * kDefaultPaceMultiplier.
-  void SetEstimatedBitrate(uint32_t bitrate_bps) override;
+  virtual void SetEstimatedBitrate(uint32_t bitrate_bps);
 
   // Sets the minimum send bitrate and maximum padding bitrate requested by send
   // streams.
@@ -119,10 +116,6 @@ class PacedSender : public Pacer {
 
   virtual size_t QueueSizePackets() const;
 
-  // Returns the time when the first packet was sent, or -1 if no packet is
-  // sent.
-  virtual int64_t FirstSentPacketTimeMs() const;
-
   // Returns the number of milliseconds it will take to send the current
   // packets in the queue, given the current size and bitrate, ignoring prio.
   virtual int64_t ExpectedQueueTimeMs() const;
@@ -136,8 +129,7 @@ class PacedSender : public Pacer {
   virtual rtc::Optional<int64_t> GetApplicationLimitedRegionStartTime() const;
 
   // Returns the average time since being enqueued, in milliseconds, for all
-  // packets currently in the pacer queue, excluding any time the pacer has been
-  // paused. Returns 0 if queue is empty.
+  // packets currently in the pacer queue, or 0 if queue is empty.
   virtual int64_t AverageQueueTimeMs();
 
   // Returns the number of milliseconds until the module want a worker thread
@@ -146,11 +138,6 @@ class PacedSender : public Pacer {
 
   // Process any pending packets in the queue(s).
   void Process() override;
-
-  // Called when the prober is associated with a process thread.
-  void ProcessThreadAttached(ProcessThread* process_thread) override;
-  void SetPacingFactor(float pacing_factor);
-  void SetQueueTimeLimit(int limit_ms);
 
  private:
   // Updates the number of bytes that can be sent for the next time interval.
@@ -165,19 +152,21 @@ class PacedSender : public Pacer {
   size_t SendPadding(size_t padding_needed, const PacedPacketInfo& cluster_info)
       EXCLUSIVE_LOCKS_REQUIRED(critsect_);
 
-  const Clock* const clock_;
+  Clock* const clock_;
   PacketSender* const packet_sender_;
   std::unique_ptr<AlrDetector> alr_detector_ GUARDED_BY(critsect_);
 
-  rtc::CriticalSection critsect_;
+  std::unique_ptr<CriticalSectionWrapper> critsect_;
   bool paused_ GUARDED_BY(critsect_);
   // This is the media budget, keeping track of how many bits of media
   // we can pace out during the current interval.
-  std::unique_ptr<IntervalBudget> media_budget_ GUARDED_BY(critsect_);
+  std::unique_ptr<paced_sender::IntervalBudget> media_budget_
+      GUARDED_BY(critsect_);
   // This is the padding budget, keeping track of how many bits of padding we're
   // allowed to send out during the current interval. This budget will be
   // utilized when there's no media to send.
-  std::unique_ptr<IntervalBudget> padding_budget_ GUARDED_BY(critsect_);
+  std::unique_ptr<paced_sender::IntervalBudget> padding_budget_
+      GUARDED_BY(critsect_);
 
   std::unique_ptr<BitrateProber> prober_ GUARDED_BY(critsect_);
   bool probing_send_failure_;
@@ -189,14 +178,9 @@ class PacedSender : public Pacer {
   uint32_t pacing_bitrate_kbps_ GUARDED_BY(critsect_);
 
   int64_t time_last_update_us_ GUARDED_BY(critsect_);
-  int64_t first_sent_packet_ms_ GUARDED_BY(critsect_);
 
   std::unique_ptr<paced_sender::PacketQueue> packets_ GUARDED_BY(critsect_);
   uint64_t packet_counter_;
-  ProcessThread* process_thread_ = nullptr;
-
-  float pacing_factor_ GUARDED_BY(critsect_);
-  int64_t queue_time_limit GUARDED_BY(critsect_);
 };
 }  // namespace webrtc
 #endif  // WEBRTC_MODULES_PACING_PACED_SENDER_H_

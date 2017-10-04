@@ -16,7 +16,7 @@
 #include <string>
 
 #include "webrtc/p2p/base/port.h"
-#include "webrtc/rtc_base/asyncpacketsocket.h"
+#include "webrtc/base/asyncpacketsocket.h"
 
 namespace cricket {
 
@@ -33,13 +33,19 @@ class TCPPort : public Port {
   static TCPPort* Create(rtc::Thread* thread,
                          rtc::PacketSocketFactory* factory,
                          rtc::Network* network,
+                         const rtc::IPAddress& ip,
                          uint16_t min_port,
                          uint16_t max_port,
                          const std::string& username,
                          const std::string& password,
                          bool allow_listen) {
-    return new TCPPort(thread, factory, network, min_port, max_port, username,
-                       password, allow_listen);
+    TCPPort* port = new TCPPort(thread, factory, network, ip, min_port,
+                                max_port, username, password, allow_listen);
+    if (!port->Init()) {
+      delete port;
+      port = NULL;
+    }
+    return port;
   }
   ~TCPPort() override;
 
@@ -61,11 +67,13 @@ class TCPPort : public Port {
   TCPPort(rtc::Thread* thread,
           rtc::PacketSocketFactory* factory,
           rtc::Network* network,
+          const rtc::IPAddress& ip,
           uint16_t min_port,
           uint16_t max_port,
           const std::string& username,
           const std::string& password,
           bool allow_listen);
+  bool Init();
 
   // Handles sending using the local TCP socket.
   int SendTo(const void* data,
@@ -83,8 +91,6 @@ class TCPPort : public Port {
     rtc::SocketAddress addr;
     rtc::AsyncPacketSocket* socket;
   };
-
-  void TryCreateServerSocket();
 
   rtc::AsyncPacketSocket* GetIncoming(
       const rtc::SocketAddress& addr, bool remove = false);

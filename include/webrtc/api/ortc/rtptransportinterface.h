@@ -15,14 +15,13 @@
 
 #include "webrtc/api/ortc/packettransportinterface.h"
 #include "webrtc/api/rtcerror.h"
-#include "webrtc/common_types.h"
-#include "webrtc/rtc_base/optional.h"
+#include "webrtc/base/optional.h"
 
 namespace webrtc {
 
 class RtpTransportAdapter;
 
-struct RtcpParameters final {
+struct RtcpParameters {
   // The SSRC to be used in the "SSRC of packet sender" field. If not set, one
   // will be chosen by the implementation.
   // TODO(deadbeef): Not implemented.
@@ -35,7 +34,7 @@ struct RtcpParameters final {
   // RtpTransports created by the same OrtcFactory will use the same generated
   // CNAME.
   //
-  // If empty when passed into SetParameters, the CNAME simply won't be
+  // If empty when passed into SetRtcpParameters, the CNAME simply won't be
   // modified.
   std::string cname;
 
@@ -50,21 +49,6 @@ struct RtcpParameters final {
            reduced_size == o.reduced_size && mux == o.mux;
   }
   bool operator!=(const RtcpParameters& o) const { return !(*this == o); }
-};
-
-struct RtpTransportParameters final {
-  RtcpParameters rtcp;
-
-  // Enabled periodic sending of keep-alive packets, that help prevent timeouts
-  // on the network level, such as NAT bindings. See RFC6263 section 4.6.
-  RtpKeepAliveConfig keepalive;
-
-  bool operator==(const RtpTransportParameters& o) const {
-    return rtcp == o.rtcp && keepalive == o.keepalive;
-  }
-  bool operator!=(const RtpTransportParameters& o) const {
-    return !(*this == o);
-  }
 };
 
 // Base class for different types of RTP transports that can be created by an
@@ -90,20 +74,16 @@ class RtpTransportInterface {
   // RTCP multiplexing is being used, returns null.
   virtual PacketTransportInterface* GetRtcpPacketTransport() const = 0;
 
-  // Set/get RTP/RTCP transport params. Can be used to enable RTCP muxing or
-  // reduced-size RTCP if initially not enabled.
+  // Set/get RTCP params. Can be used to enable RTCP muxing or reduced-size
+  // RTCP if initially not enabled.
   //
   // Changing |mux| from "true" to "false" is not allowed, and changing the
   // CNAME is currently unsupported.
-  // RTP keep-alive settings need to be set before before an RtpSender has
-  // started sending, altering the payload type or timeout interval after this
-  // point is not supported. The parameters must also match across all RTP
-  // transports for a given RTP transport controller.
-  virtual RTCError SetParameters(const RtpTransportParameters& parameters) = 0;
+  virtual RTCError SetRtcpParameters(const RtcpParameters& parameters) = 0;
   // Returns last set or constructed-with parameters. If |cname| was empty in
   // construction, the generated CNAME will be present in the returned
   // parameters (see above).
-  virtual RtpTransportParameters GetParameters() const = 0;
+  virtual RtcpParameters GetRtcpParameters() const = 0;
 
  protected:
   // Only for internal use. Returns a pointer to an internal interface, for use

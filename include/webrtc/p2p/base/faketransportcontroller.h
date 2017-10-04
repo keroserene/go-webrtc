@@ -15,12 +15,12 @@
 #include <string>
 #include <vector>
 
+#include "webrtc/base/bind.h"
+#include "webrtc/base/sslfingerprint.h"
+#include "webrtc/base/thread.h"
 #include "webrtc/p2p/base/fakedtlstransport.h"
 #include "webrtc/p2p/base/fakeicetransport.h"
 #include "webrtc/p2p/base/transportcontroller.h"
-#include "webrtc/rtc_base/bind.h"
-#include "webrtc/rtc_base/sslfingerprint.h"
-#include "webrtc/rtc_base/thread.h"
 
 namespace cricket {
 
@@ -35,39 +35,26 @@ class FakeTransportController : public TransportController {
   FakeTransportController()
       : TransportController(rtc::Thread::Current(),
                             rtc::Thread::Current(),
-                            nullptr,
-                            /*redetermine_role_on_ice_restart=*/true,
-                            rtc::CryptoOptions()) {}
+                            nullptr) {}
 
   explicit FakeTransportController(bool redetermine_role_on_ice_restart)
       : TransportController(rtc::Thread::Current(),
                             rtc::Thread::Current(),
                             nullptr,
-                            redetermine_role_on_ice_restart,
-                            rtc::CryptoOptions()) {}
+                            redetermine_role_on_ice_restart) {}
 
   explicit FakeTransportController(IceRole role)
       : TransportController(rtc::Thread::Current(),
                             rtc::Thread::Current(),
-                            nullptr,
-                            /*redetermine_role_on_ice_restart=*/true,
-                            rtc::CryptoOptions()) {
+                            nullptr) {
     SetIceRole(role);
   }
 
   explicit FakeTransportController(rtc::Thread* network_thread)
-      : TransportController(rtc::Thread::Current(),
-                            network_thread,
-                            nullptr,
-                            /*redetermine_role_on_ice_restart=*/true,
-                            rtc::CryptoOptions()) {}
+      : TransportController(rtc::Thread::Current(), network_thread, nullptr) {}
 
   FakeTransportController(rtc::Thread* network_thread, IceRole role)
-      : TransportController(rtc::Thread::Current(),
-                            network_thread,
-                            nullptr,
-                            /*redetermine_role_on_ice_restart=*/true,
-                            rtc::CryptoOptions()) {
+      : TransportController(rtc::Thread::Current(), network_thread, nullptr) {
     SetIceRole(role);
   }
 

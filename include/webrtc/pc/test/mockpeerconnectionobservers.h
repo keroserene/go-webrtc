@@ -17,7 +17,7 @@
 #include <string>
 
 #include "webrtc/api/datachannelinterface.h"
-#include "webrtc/rtc_base/checks.h"
+#include "webrtc/base/checks.h"
 
 namespace webrtc {
 
@@ -39,8 +39,8 @@ class MockCreateSessionDescriptionObserver
   }
   bool called() const { return called_; }
   bool result() const { return result_; }
-  std::unique_ptr<SessionDescriptionInterface> MoveDescription() {
-    return std::move(desc_);
+  SessionDescriptionInterface* release_desc() {
+    return desc_.release();
   }
 
  private:
@@ -223,25 +223,6 @@ class MockStatsObserver : public webrtc::StatsObserver {
     std::string dtls_cipher;
     std::string srtp_cipher;
   } stats_;
-};
-
-// Helper class that just stores the report from the callback.
-class MockRTCStatsCollectorCallback : public webrtc::RTCStatsCollectorCallback {
- public:
-  rtc::scoped_refptr<const RTCStatsReport> report() { return report_; }
-
-  bool called() const { return called_; }
-
- protected:
-  void OnStatsDelivered(
-      const rtc::scoped_refptr<const RTCStatsReport>& report) override {
-    report_ = report;
-    called_ = true;
-  }
-
- private:
-  bool called_ = false;
-  rtc::scoped_refptr<const RTCStatsReport> report_;
 };
 
 }  // namespace webrtc

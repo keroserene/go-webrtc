@@ -15,10 +15,9 @@
 #include <vector>
 
 // This is included for PacketOptions.
-#include "webrtc/api/ortc/packettransportinterface.h"
-#include "webrtc/rtc_base/asyncpacketsocket.h"
-#include "webrtc/rtc_base/sigslot.h"
-#include "webrtc/rtc_base/socket.h"
+#include "webrtc/base/asyncpacketsocket.h"
+#include "webrtc/base/sigslot.h"
+#include "webrtc/base/socket.h"
 
 namespace cricket {
 class TransportChannel;
@@ -29,8 +28,7 @@ struct PacketOptions;
 struct PacketTime;
 struct SentPacket;
 
-class PacketTransportInternal : public virtual webrtc::PacketTransportInterface,
-                                public sigslot::has_slots<> {
+class PacketTransportInternal : public sigslot::has_slots<> {
  public:
   // Identify the object for logging and debug purpose.
   virtual std::string debug_name() const = 0;
@@ -90,9 +88,6 @@ class PacketTransportInternal : public virtual webrtc::PacketTransportInterface,
   // Signalled each time a packet is sent on this channel.
   sigslot::signal2<PacketTransportInternal*, const rtc::SentPacket&>
       SignalSentPacket;
-
- protected:
-  PacketTransportInternal* GetInternal() override { return this; }
 };
 
 }  // namespace rtc

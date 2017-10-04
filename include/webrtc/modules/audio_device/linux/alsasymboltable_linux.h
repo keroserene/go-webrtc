@@ -30,8 +30,7 @@
 
 #include "webrtc/modules/audio_device/linux/latebindingsymboltable_linux.h"
 
-namespace webrtc {
-namespace adm_linux_alsa {
+namespace webrtc_adm_linux_alsa {
 
 // The ALSA symbols we need, as an X-Macro list.
 // This list must contain precisely every libasound function that is used in
@@ -143,7 +142,6 @@ ALSA_SYMBOLS_LIST
 #undef X
 LATE_BINDING_SYMBOL_TABLE_DECLARE_END(AlsaSymbolTable)
 
-}  // namespace adm_linux_alsa
-}  // namespace webrtc
+}  // namespace webrtc_adm_linux_alsa
 
 #endif  // WEBRTC_AUDIO_DEVICE_ALSASYMBOLTABLE_LINUX_H

@@ -11,17 +11,17 @@
 // The TimeScheduler class keeps track of periodic events. It is non-drifting
 // and keeps track of any missed periods so that it is possible to catch up.
 // (compare to a metronome)
-#include "webrtc/rtc_base/criticalsection.h"
 
 #ifndef WEBRTC_MODULES_AUDIO_CONFERENCE_MIXER_SOURCE_TIME_SCHEDULER_H_
 #define WEBRTC_MODULES_AUDIO_CONFERENCE_MIXER_SOURCE_TIME_SCHEDULER_H_
 
 namespace webrtc {
-
-class TimeScheduler {
+class CriticalSectionWrapper;
+class TimeScheduler
+{
 public:
     TimeScheduler(const int64_t periodicityInMs);
-    ~TimeScheduler() = default;
+    ~TimeScheduler();
 
     // Signal that a periodic event has been triggered.
     int32_t UpdateScheduler();
@@ -31,7 +31,7 @@ public:
     int32_t TimeToNextUpdate(int64_t& updateTimeInMS) const;
 
 private:
-    rtc::CriticalSection _crit;
+    CriticalSectionWrapper* _crit;
 
     bool _isStarted;
     int64_t _lastPeriodMark; // In ns

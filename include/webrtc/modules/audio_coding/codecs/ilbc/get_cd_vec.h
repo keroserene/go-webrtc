@@ -31,6 +31,6 @@ bool WebRtcIlbcfix_GetCbVec(
     size_t index,   /* (i) Codebook index */
     size_t lMem,    /* (i) Length of codebook buffer */
     size_t cbveclen /* (i) Codebook vector length */
-    ) RTC_WARN_UNUSED_RESULT;
+    ) WARN_UNUSED_RESULT;
 
 #endif
