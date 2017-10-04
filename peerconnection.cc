@@ -347,7 +347,8 @@ CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
 // Given a fully serialized SDP string |msg|, return a CGO sdp object.
 CGO_sdp CGO_DeserializeSDP(const char *type, const char *msg) {
   // TODO: Maybe use an enum instead of string for type.
-  auto jsep_sdp = new JsepSessionDescription(type);
+  const string typeS = string(type);
+  auto jsep_sdp = new JsepSessionDescription(typeS);
   SdpParseError err;
   std::string msg_str(msg);
   SdpDeserialize(msg_str, jsep_sdp, &err);
