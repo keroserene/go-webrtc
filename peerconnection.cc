@@ -3,14 +3,17 @@
  * allows compatibility with CGO's requirements so that everything may
  * ultimately be exposed in Go.
  */
+#include <_cgo_export.h>  // Allow calling certain Go functions.
+
 #include "peerconnection.h"
+#include "fauxaudiodevicemodule.hpp"
 #include "datachannel.hpp"
+#include "mediastream.h"
 
 #include <iostream>
 #include <future>
 
 #include "webrtc/api/test/fakeconstraints.h"
-#include "webrtc/pc/test/fakeaudiocapturemodule.h"
 #include "webrtc/api/jsepsessiondescription.h"
 #include "webrtc/pc/webrtcsdp.h"
 
@@ -56,11 +59,11 @@ class Peer
     signalling_thread_->Start();  // Must start before being passed to
     worker_thread_->Start();      // PeerConnectionFactory.
 
-    this->fake_audio_ = FakeAudioCaptureModule::Create();
+    this->faux_audio_ = new rtc::RefCountedObject<FauxAudioDeviceModule>;
     pc_factory = CreatePeerConnectionFactory(
       worker_thread_,
       signalling_thread_,
-      this->fake_audio_, NULL, NULL);
+      this->faux_audio_, NULL, NULL);
     if (!pc_factory.get()) {
       CGO_DBG("Could not create PeerConnectionFactory");
       return false;
@@ -73,6 +76,10 @@ class Peer
     c->AddOptional(MediaConstraintsInterface::kEnableDtlsSrtp, true);
     constraints = c;
     return true;
+  }
+
+  void pullAudio(uint16_t* audioSamples, size_t nSamples, uint32_t samplesPerSec) {
+    faux_audio_->Pull(audioSamples, nSamples, samplesPerSec);
   }
 
   void resetPromise() {
@@ -104,12 +111,13 @@ class Peer
     cgoOnSignalingStateChange(goPeerConnection, state);
   }
 
-  // This is required for the Media API.
-  void OnAddStream(webrtc::MediaStreamInterface* stream) {
-    CGO_DBG("unimplemented OnAddStream");
-  }
-  void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
-    CGO_DBG("unimplemented OnRemoveStream");
+  void OnAddTrack(rtc::scoped_refptr<RtpReceiverInterface> receiver,
+      const std::vector<rtc::scoped_refptr<MediaStreamInterface>>& streams) {
+    vector<MediaStreamInterface*> ss;
+    for(auto s : streams) {
+      ss.push_back(s.release());
+    }
+    cgoOnAddTrack(goPeerConnection, receiver.release(), (CGO_MediaStream*)ss.data(), ss.size());
   }
 
   void OnRenegotiationNeeded() {
@@ -191,7 +199,7 @@ class Peer
  private:
   rtc::Thread *signalling_thread_;
   rtc::Thread *worker_thread_;
-  rtc::scoped_refptr<AudioDeviceModule> fake_audio_;
+  rtc::scoped_refptr<FauxAudioDeviceModule> faux_audio_;
 };  // class Peer
 
 // Keep track of Peers in global scope to prevent deallocation, due to the
@@ -281,6 +289,10 @@ int CGO_CreatePeerConnection(CGO_Peer cgoPeer, CGO_Configuration *cgoConfig) {
     return FAILURE;
   }
   return SUCCESS;
+}
+
+void CGO_PullAudio(CGO_Peer cgoPeer, uint16_t* audioSamples, int nSamples, uint32_t samplesPerSec) {
+  ((Peer*)cgoPeer)->pullAudio(audioSamples, nSamples, samplesPerSec);
 }
 
 bool SDPtimeout(future<SDP> *f, int seconds) {
@@ -426,6 +438,16 @@ int CGO_SetConfiguration(CGO_Peer cgoPeer, CGO_Configuration* cgoConfig) {
   return (int) error->type();
 }
 
+CGO_RtpSender CGO_PeerConnection_AddTrack(CGO_Peer cgoPeer, CGO_MediaStreamTrack track, CGO_MediaStream* streams, int numStreams) {
+  auto s = (webrtc::MediaStreamInterface**)streams;
+  std::vector<webrtc::MediaStreamInterface*> ss(s, s+numStreams);
+  return ((Peer*)cgoPeer)->pc_->AddTrack((webrtc::MediaStreamTrackInterface*)track, ss);
+}
+
+void CGO_PeerConnection_RemoveTrack(CGO_Peer cgoPeer, CGO_RtpSender sender) {
+  ((Peer*)cgoPeer)->pc_->RemoveTrack((webrtc::RtpSenderInterface*)sender);
+}
+
 // PeerConnection::CreateDataChannel
 void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   auto cPeer = (Peer*)cgoPeer;
@@ -443,6 +465,12 @@ void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, void *dict) {
   auto o = obs.get();
   channel->RegisterObserver(o);
   return (void *)o;
+}
+
+// TODO: Move to mediastream.cc (when pc_factory is factored out of Peer).
+CGO_MediaStream CGO_NewMediaStream(CGO_Peer cgoPeer, const char* label) {
+  Peer *peer = (Peer*)cgoPeer;
+  return peer->pc_factory->CreateLocalMediaStream(label).release();
 }
 
 // PeerConnection::Close
