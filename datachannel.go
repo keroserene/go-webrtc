@@ -117,7 +117,7 @@ func (c *DataChannel) Protocol() string {
 	return C.GoString(p)
 }
 
-func (c *DataChannel) MaxPacketLifeTime() uint {
+func (c *DataChannel) MaxRetransmitTime() uint {
 	return uint(C.CGO_Channel_MaxRetransmitTime(c.cgoChannel))
 }
 
@@ -141,15 +141,13 @@ func (c *DataChannel) BufferedAmount() int {
 	return int(C.CGO_Channel_BufferedAmount(c.cgoChannel))
 }
 
-// TODO: Variadic options constructor, probably makes more sense for
-// CreateDataChannel in parent package PeerConnection.
-type Init struct {
+type DataChannelInit struct {
 	Ordered           bool
-	MaxPacketLifeTime uint
-	MaxRetransmits    uint
+	MaxRetransmitTime int
+	MaxRetransmits    int
 	Protocol          string
 	Negotiated        bool
-	ID                uint
+	ID                int
 }
 
 //
