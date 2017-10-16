@@ -85,7 +85,7 @@ extern "C" {
 
   CGO_RtpSender CGO_PeerConnection_AddTrack(CGO_Peer, CGO_MediaStreamTrack, CGO_MediaStream*, int);
   void CGO_PeerConnection_RemoveTrack(CGO_Peer, CGO_RtpSender);
-  void* CGO_CreateDataChannel(CGO_Peer, char*, void*);
+  void* CGO_CreateDataChannel(CGO_Peer, char*, CGO_DataChannelInit);
 
   // TODO: Move to mediastream.cc (when pc_factory is factored out of Peer).
   CGO_MediaStream CGO_NewMediaStream(CGO_Peer cgoPeer, const char* label);
