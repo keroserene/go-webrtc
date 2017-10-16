@@ -3,6 +3,12 @@
 
 #define WEBRTC_POSIX 1
 
+#include <stdint.h>
+
+#include "mediastreamtrack.h"
+#include "mediastream.h"
+#include "rtpsender.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,6 +64,8 @@ extern "C" {
 
   int CGO_CreatePeerConnection(CGO_Peer, CGO_Configuration*);
 
+  void CGO_PullAudio(CGO_Peer, uint16_t*, int, uint32_t);
+
   CGO_sdpString CGO_CreateOffer(CGO_Peer);
   CGO_sdpString CGO_CreateAnswer(CGO_Peer);
 
@@ -75,7 +83,12 @@ extern "C" {
   int CGO_IceGatheringState(CGO_Peer);
   int CGO_SetConfiguration(CGO_Peer, CGO_Configuration*);
 
-  void* CGO_CreateDataChannel(CGO_Peer, char*, CGO_DataChannelInit);
+  CGO_RtpSender CGO_PeerConnection_AddTrack(CGO_Peer, CGO_MediaStreamTrack, CGO_MediaStream*, int);
+  void CGO_PeerConnection_RemoveTrack(CGO_Peer, CGO_RtpSender);
+  void* CGO_CreateDataChannel(CGO_Peer, char*, void*);
+
+  // TODO: Move to mediastream.cc (when pc_factory is factored out of Peer).
+  CGO_MediaStream CGO_NewMediaStream(CGO_Peer cgoPeer, const char* label);
 
   void CGO_Close(CGO_Peer);
 
