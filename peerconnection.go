@@ -473,7 +473,8 @@ func cgoOnAddTrack(p int, r C.CGO_RtpReceiver, s *C.CGO_MediaStream, ns int) {
 	streams := make([]*MediaStream, ns)
 	sp := uintptr(unsafe.Pointer(s))
 	for i := range streams {
-		s := *(*C.CGO_MediaStream)(unsafe.Pointer(sp + uintptr(i)))
+		t := (*uintptr)(sp + uintptr(i))
+		s := *(*C.CGO_MediaStream)(unsafe.Pointer(t))
 		streams[i] = newMediaStream(s)
 	}
 	if nil != pc.OnAddTrack {
