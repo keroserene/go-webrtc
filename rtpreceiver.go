@@ -7,6 +7,7 @@ package webrtc
 */
 import "C"
 
+// RtpReceiver is receiver structure of RTP stream
 type RtpReceiver struct {
 	p *refptr
 	r C.CGO_RtpReceiver
@@ -19,6 +20,7 @@ func newRtpReceiver(r C.CGO_RtpReceiver) *RtpReceiver {
 	}
 }
 
+// Track returns one media track of the RTP receiver
 func (r *RtpReceiver) Track() MediaStreamTrack {
 	isAudio := false
 	t := C.CGO_RtpReceiver_Track(r.r, (*C.bool)(&isAudio))

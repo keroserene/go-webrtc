@@ -1,5 +1,5 @@
 /*
-Package webrtc/data contains the go wrapper for the Peer-to-Peer Data API
+Package webrtc contains the go wrapper for the Peer-to-Peer Data API
 portion of WebRTC spec.
 
 See: https://w3c.github.io/webrtc-pc/#idl-def-RTCDataChannel
@@ -21,15 +21,21 @@ import (
 	"unsafe"
 )
 
+// DataState shows the state of the data channel
 type DataState int
 
 const (
+	// DataStateConnecting shows connecting state
 	DataStateConnecting DataState = iota
+	// DataStateOpen shows open state
 	DataStateOpen
+	// DataStateClosing shows closing state
 	DataStateClosing
+	// DataStateClosed shows closed state
 	DataStateClosed
 )
 
+// String converts the state of data channel to corresponding string
 func (s DataState) String() string {
 	return EnumToStringSafe(int(s), []string{
 		"Connecting",
@@ -39,10 +45,11 @@ func (s DataState) String() string {
 	})
 }
 
+// DCMap maps data channels
 var DCMap = NewCGOMap()
 
-/* DataChannel
-
+// DataChannel is the structure of data channel object
+/*
 OnError - is not implemented because the underlying Send
 always returns true as specified for SCTP, there is no reasonable
 exposure of other specific errors from the native code, and OnClose
@@ -62,7 +69,7 @@ type DataChannel struct {
 	index      int           // Index into the DCMap
 }
 
-// Create a Go Channel struct, and prepare internal CGO references / observers.
+// NewDataChannel create a Go Channel struct, and prepare internal CGO references / observers.
 // The most reasonable place for this to be created is from PeerConnection,
 // which is not available in the subpackage.
 func NewDataChannel(o unsafe.Pointer) *DataChannel {
@@ -77,7 +84,7 @@ func NewDataChannel(o unsafe.Pointer) *DataChannel {
 	return c
 }
 
-// Send a message over a DataChannel in binary mode.
+// Send sends a message over a DataChannel in binary mode.
 func (c *DataChannel) Send(data []byte) {
 	c.sendInternal(data, true)
 }
@@ -96,51 +103,62 @@ func (c *DataChannel) sendInternal(data []byte, binary bool) {
 	C.CGO_Channel_Send(c.cgoChannel, unsafe.Pointer(&data[0]), C.int(len(data)), C.bool(binary))
 }
 
+// Close closes one data channel
 func (c *DataChannel) Close() error {
 	C.CGO_Channel_Close(c.cgoChannel)
 	return nil
 }
 
+// Label set label for one data channel
 func (c *DataChannel) Label() string {
 	s := C.CGO_Channel_Label(c.cgoChannel)
 	defer C.free(unsafe.Pointer(s))
 	return C.GoString(s)
 }
 
+// Ordered return ordered flag of one data channel
 func (c *DataChannel) Ordered() bool {
 	return bool(C.CGO_Channel_Ordered(c.cgoChannel))
 }
 
+// Protocol returns protocol of one data channel
 func (c *DataChannel) Protocol() string {
 	p := C.CGO_Channel_Protocol(c.cgoChannel)
 	defer C.free(unsafe.Pointer(p))
 	return C.GoString(p)
 }
 
+// MaxPacketLifeTime returns the max packet life type of one data channel
 func (c *DataChannel) MaxPacketLifeTime() uint {
 	return uint(C.CGO_Channel_MaxRetransmitTime(c.cgoChannel))
 }
 
+// MaxRetransmits returns the max number of retransmission of one data channel
 func (c *DataChannel) MaxRetransmits() uint {
 	return uint(C.CGO_Channel_MaxRetransmits(c.cgoChannel))
 }
 
+// Negotiated returns negotiation flag of one data channel
 func (c *DataChannel) Negotiated() bool {
 	return bool(C.CGO_Channel_Negotiated(c.cgoChannel))
 }
 
+// ID returns ID of one data channel
 func (c *DataChannel) ID() int {
 	return int(C.CGO_Channel_ID(c.cgoChannel))
 }
 
+// ReadyState returns the readiness state of one data channel
 func (c *DataChannel) ReadyState() DataState {
 	return (DataState)(C.CGO_Channel_ReadyState(c.cgoChannel))
 }
 
+// BufferedAmount returns the amount of buffered data in one data channel
 func (c *DataChannel) BufferedAmount() int {
 	return int(C.CGO_Channel_BufferedAmount(c.cgoChannel))
 }
 
+// DataChannelInit is the structure storing the data to init data channel
 type DataChannelInit struct {
 	Ordered           bool
 	MaxPacketLifeTime int

@@ -7,13 +7,17 @@ import (
 )
 
 var (
-	INFO  *log.Logger
-	WARN  *log.Logger
+	// INFO is for info level logger
+	INFO *log.Logger
+	// WARN is for warn level logger
+	WARN *log.Logger
+	// ERROR is for error level logger
 	ERROR *log.Logger
+	// TRACE is for trace level logger
 	TRACE *log.Logger
 )
 
-// Logging verbosity level, from 0 (nothing) upwards.
+// SetLoggingVerbosity set logging verbosity level, from 0 (nothing) upwards.
 func SetLoggingVerbosity(level int) {
 	// handle io.Writer
 	infoOut := ioutil.Discard

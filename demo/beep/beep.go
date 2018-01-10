@@ -28,6 +28,7 @@ func main() {
 }
 
 func handleWebSocket(ws *websocket.Conn) {
+	log.Printf("receive connection\n")
 	pc, err := webrtc.NewPeerConnection(webrtc.NewConfiguration())
 	if err != nil {
 		log.Fatal(err)
@@ -55,6 +56,8 @@ func handleWebSocket(ws *websocket.Conn) {
 			}
 			return
 		}
+
+		log.Printf("receive message: %v\n", msg)
 
 		switch msg.Type {
 		case "offer":

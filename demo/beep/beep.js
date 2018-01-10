@@ -31,7 +31,7 @@ window.onload = () => {
 
 function openWebSocket() {
 	return new Promise((resolve, reject) => {
-		ws = new WebSocket('ws://localhost:49372/ws');
+		ws = new WebSocket('ws://127.0.0.1:49372/ws');
 		ws.onopen = () => {
 			console.info("WS OPENED");
 			resolve();

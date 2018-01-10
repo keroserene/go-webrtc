@@ -7,16 +7,22 @@ import (
 // See: https://w3c.github.io/webrtc-pc/#idl-def-RTCIceCandidate
 
 type (
-	IceProtocol         int
-	IceCandidateType    int
-	IceTcpCandidateType int
+	// IceProtocol is protocol
+	IceProtocol int
+	// IceCandidateType is candidate type
+	IceCandidateType int
+	// IceTCPCandidateTyp is tcp candidate type
+	IceTCPCandidateTyp int
 )
 
 const (
-	IceProtocolUPD IceProtocol = iota
+	// IceProtocolUDP is UDP ice protocol
+	IceProtocolUDP IceProtocol = iota
+	// IceProtocolTCP is TCP ice protocol
 	IceProtocolTCP
 )
 
+// String is to convert IceProtocol to corresponding string
 func (p IceProtocol) String() string {
 	return EnumToStringSafe(int(p), []string{
 		"udp",
@@ -25,12 +31,17 @@ func (p IceProtocol) String() string {
 }
 
 const (
+	// IceCandidateTypeHost means ice candidate type is host
 	IceCandidateTypeHost IceCandidateType = iota
+	// IceCandidateTypeSrflx means ice candidate type is srflx
 	IceCandidateTypeSrflx
+	// IceCandidateTypePrflx means ice candidate type is prflx
 	IceCandidateTypePrflx
+	// IceCandidateTypeRelay means ice candidate type is relay
 	IceCandidateTypeRelay
 )
 
+// String is to convert IceCandidateType to corresponding string
 func (t IceCandidateType) String() string {
 	return EnumToStringSafe(int(t), []string{
 		"host",
@@ -41,12 +52,16 @@ func (t IceCandidateType) String() string {
 }
 
 const (
-	IceTcpCandidateTypeActive IceTcpCandidateType = iota
-	IceTcpCandidateTypePassive
-	IceTcpCandidateTypeSo
+	// IceTCPCandidateTypActive means active TCP candidate
+	IceTCPCandidateTypActive IceTCPCandidateTyp = iota
+	// IceTCPCandidateTypPassive means passive TCP candidate
+	IceTCPCandidateTypPassive
+	// IceTCPCandidateTypSo means so TCP candidate
+	IceTCPCandidateTypSo
 )
 
-func (t IceTcpCandidateType) String() string {
+// String is to convert IceTCPCandidateTyp to corresponding string
+func (t IceTCPCandidateTyp) String() string {
 	return EnumToStringSafe(int(t), []string{
 		"active",
 		"passive",
@@ -54,6 +69,7 @@ func (t IceTcpCandidateType) String() string {
 	})
 }
 
+// IceCandidate is structure to store candidate related parameter
 type IceCandidate struct {
 	Candidate     string `json:"candidate"`
 	SdpMid        string `json:"sdpMid"`
@@ -64,12 +80,12 @@ type IceCandidate struct {
 	// Protocol       IceProtocol
 	// Port           C.ushort
 	// Type           IceCandidateType
-	// TcpType        IceTcpCandidateType
+	// TcpType        IceTCPCandidateTyp
 	// RelatedAddress string
 	// RelatedPort    C.ushort
 }
 
-// Serialize an IceCandidate into a JSON string.
+// Serialize serialize an IceCandidate into a JSON string.
 func (candidate *IceCandidate) Serialize() string {
 	bytes, err := json.Marshal(candidate)
 	if nil != err {
@@ -79,7 +95,7 @@ func (candidate *IceCandidate) Serialize() string {
 	return string(bytes)
 }
 
-// Deserialize a received json string into an IceCandidate, if possible.
+// DeserializeIceCandidate deserialize a received json string into an IceCandidate, if possible.
 func DeserializeIceCandidate(msg string) *IceCandidate {
 	var parsed map[string]interface{}
 	err := json.Unmarshal([]byte(msg), &parsed)

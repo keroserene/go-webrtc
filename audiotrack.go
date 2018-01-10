@@ -35,6 +35,7 @@ func NewAudioTrack(label string, source AudioSource) *AudioTrack {
 	return newAudioTrack(t)
 }
 
+// AddSink adds one audio sink to one audio track
 func (t *AudioTrack) AddSink(s AudioSink) {
 	cAudioSinksMu.Lock()
 	defer cAudioSinksMu.Unlock()
@@ -46,6 +47,7 @@ func (t *AudioTrack) AddSink(s AudioSink) {
 	cAudioSinks[s] = csink
 }
 
+// RemoveSink removes one audio sink from one audio track
 func (t *AudioTrack) RemoveSink(s AudioSink) {
 	cAudioSinksMu.Lock()
 	defer cAudioSinksMu.Unlock()
@@ -98,6 +100,7 @@ type cAudioSink struct {
 	s C.CGO_AudioSink
 }
 
+// OnAudioData is the way to exchange audio data
 func (s cAudioSink) OnAudioData(data [][]float64, sampleRate float64) {
 	bitsPerSample := 16
 	numberOfChannels := len(data)

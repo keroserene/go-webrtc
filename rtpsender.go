@@ -7,6 +7,7 @@ package webrtc
 */
 import "C"
 
+// RtpSender is send of RTP stream
 type RtpSender struct {
 	p *refptr
 	s C.CGO_RtpSender
@@ -19,6 +20,7 @@ func newRtpSender(s C.CGO_RtpSender) *RtpSender {
 	}
 }
 
+// Track is track of one RTP sender
 func (s *RtpSender) Track() MediaStreamTrack {
 	isAudio := false
 	t := C.CGO_RtpSender_Track(s.s, (*C.bool)(&isAudio))

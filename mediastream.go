@@ -10,6 +10,7 @@ package webrtc
 import "C"
 import "unsafe"
 
+// MediaStream is structure to pass media stream data
 type MediaStream struct {
 	p *refptr
 	s C.CGO_MediaStream
@@ -22,12 +23,14 @@ func newMediaStream(s C.CGO_MediaStream) *MediaStream {
 	}
 }
 
+// NewMediaStream creates new media stream for the peer connection
 // TODO: Factor pc_factory out of Peer (and make it a single global instance?)
 func (pc *PeerConnection) NewMediaStream(label string) *MediaStream {
 	s := C.CGO_NewMediaStream(pc.cgoPeer, C.CString(label))
 	return newMediaStream(s)
 }
 
+// GetAudioTracks gets audio tracks
 func (s *MediaStream) GetAudioTracks() []*AudioTrack {
 	var n C.int
 	ctracks := uintptr(unsafe.Pointer(C.CGO_MediaStream_GetAudioTracks(s.s, &n)))
@@ -40,6 +43,7 @@ func (s *MediaStream) GetAudioTracks() []*AudioTrack {
 	return tracks
 }
 
+// AddTrack adds media stream track
 func (s *MediaStream) AddTrack(t MediaStreamTrack) {
 	switch t := t.(type) {
 	case *AudioTrack:
