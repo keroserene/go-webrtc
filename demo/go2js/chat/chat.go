@@ -15,7 +15,7 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/keroserene/go-webrtc"
+	"github.com/leslie-wang/go-webrtc"
 )
 
 var pc *webrtc.PeerConnection
@@ -109,6 +109,7 @@ func signalReceive(msg string) {
 	// Allow individual ICE candidate messages, but this won't be necessary if
 	// the remote peer also doesn't use trickle ICE.
 	if nil != parsed["candidate"] {
+		fmt.Printf("receive candidate message: %v\n", parsed)
 		ice := webrtc.DeserializeIceCandidate(msg)
 		if nil == ice {
 			fmt.Println("Invalid ICE candidate.")
@@ -244,7 +245,7 @@ func start(instigator bool) {
 }
 
 func main() {
-	webrtc.SetLoggingVerbosity(1)
+	webrtc.SetLoggingVerbosity(4)
 	mode = ModeInit
 	reader := bufio.NewReader(os.Stdin)
 

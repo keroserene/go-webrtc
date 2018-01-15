@@ -1,0 +1,29 @@
+=== go-webrtc chat demo ===
+What is your username?
+alice
+Welcome, alice!
+To initiate a WebRTC PeerConnection, type "start".
+(Alternatively, immediately input SDP messages from the peer.)
+start
+Starting up PeerConnection...
+INFO: configuration.go:193: Created Configuration at  &{[{[stun:stun.l.google.com:19302]  }] All Balanced }
+INFO: configuration.go:281: Converting Config:  &{[{[stun:stun.l.google.com:19302]  }] All Balanced }
+INFO: peerconnection.go:185: Created PeerConnection:  &{<nil> <nil> false <nil> <nil> <nil> <nil> <nil> <nil> <nil> <nil> <nil> <nil> {[{[stun:stun.l.google.com:19302]  }] 3 0 } 0x5a00020 1} 0x5a00020
+Initializing datachannel....
+INFO: peerconnection.go:490: fired OnNegotiationNeeded:  1
+Generating offer...
+INFO: peerconnection.go:465: fired OnSignalingStateChange:  1 HaveLocalOffer
+INFO: peerconnection.go:558: fired OnIceGatheringStateChange: 1
+INFO: peerconnection.go:504: fired OnIceCandidate:  1 candidate:193636436 1 udp 2122262783 2601:646:8882:d798:fdc6:18ee:7fb5:534 62361 typ host generation 0 ufrag Jach network-id 2 network-cost 50
+INFO: peerconnection.go:504: fired OnIceCandidate:  1 candidate:3650493900 1 udp 2122194687 10.0.1.45 51120 typ host generation 0 ufrag Jach network-id 1 network-cost 50
+INFO: peerconnection.go:504: fired OnIceCandidate:  1 candidate:2602296132 1 udp 1685987071 73.158.55.118 38958 typ srflx raddr 10.0.1.45 rport 51120 generation 0 ufrag Jach network-id 1 network-cost 50
+INFO: peerconnection.go:504: fired OnIceCandidate:  1 candidate:1158239396 1 tcp 1518283007 2601:646:8882:d798:fdc6:18ee:7fb5:534 65335 typ host tcptype passive generation 0 ufrag Jach network-id 2 network-cost 50
+INFO: peerconnection.go:504: fired OnIceCandidate:  1 candidate:2534793532 1 tcp 1518214911 10.0.1.45 65336 typ host tcptype passive generation 0 ufrag Jach network-id 1 network-cost 50
+INFO: peerconnection.go:558: fired OnIceGatheringStateChange: 1
+Finished gathering ICE candidates.
+
+ ---- Please copy the below to peer ---- 
+
+ {"type":"offer","sdp":"v=0\r\no=- 8818980606293970817 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE data\r\na=msid-semantic: WMS\r\nm=application 38958 DTLS/SCTP 5000\r\nc=IN IP4 73.158.55.118\r\na=candidate:193636436 1 udp 2122262783 2601:646:8882:d798:fdc6:18ee:7fb5:534 62361 typ host generation 0 network-id 2 network-cost 50\r\na=candidate:3650493900 1 udp 2122194687 10.0.1.45 51120 typ host generation 0 network-id 1 network-cost 50\r\na=candidate:2602296132 1 udp 1685987071 73.158.55.118 38958 typ srflx raddr 10.0.1.45 rport 51120 generation 0 network-id 1 network-cost 50\r\na=candidate:1158239396 1 tcp 1518283007 2601:646:8882:d798:fdc6:18ee:7fb5:534 65335 typ host tcptype passive generation 0 network-id 2 network-cost 50\r\na=candidate:2534793532 1 tcp 1518214911 10.0.1.45 65336 typ host tcptype passive generation 0 network-id 1 network-cost 50\r\na=ice-ufrag:Jach\r\na=ice-pwd:NzNdaxiDu4Y5ilbour2fdaHR\r\na=fingerprint:sha-256 0D:8C:00:66:38:DF:A4:76:E2:14:AB:A0:2E:5D:9B:7A:79:AA:12:0F:26:37:92:F0:A3:E9:C1:7E:82:F5:A7:75\r\na=setup:actpass\r\na=mid:data\r\na=sctpmap:5000 webrtc-datachannel 1024\r\n"}
+
+
