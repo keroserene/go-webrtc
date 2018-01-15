@@ -18,13 +18,19 @@ import (
 // See https://w3c.github.io/webrtc-pc/#idl-def-Configuration
 
 type (
-	BundlePolicy       int
+	// BundlePolicy is https://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.1
+	BundlePolicy int
+	// IceTransportPolicy is one transport policy
 	IceTransportPolicy int
-	RtcpMuxPolicy      int
-	IceCredentialType  int
-	SignalingState     int
+	// RtcpMuxPolicy is https://tools.ietf.org/html/draft-ietf-rtcweb-jsep-09#section-4.1.1
+	RtcpMuxPolicy int
+	// IceCredentialType is credentail type
+	IceCredentialType int
+	// SignalingState is http://dev.w3.org/2011/webrtc/editor/webrtc.html#state-definitions
+	SignalingState int
 )
 
+// Configuration is structure to store data for peer connection
 type Configuration struct {
 	IceServers []IceServer
 	IceTransportPolicy
@@ -46,6 +52,7 @@ const (
 	BundlePolicyMaxCompat
 )
 
+// String is to convert BundlePolicy to corresponding string
 func (p BundlePolicy) String() string {
 	return EnumToStringSafe(int(p), []string{
 		"Balanced",
@@ -55,15 +62,19 @@ func (p BundlePolicy) String() string {
 }
 
 const (
+	// IceTransportPolicyNone is no any transport policy
 	IceTransportPolicyNone IceTransportPolicy = iota
+	// IceTransportPolicyRelay is to relay ICE transport
 	IceTransportPolicyRelay
 	// TODO: Look into why nohost is not exposed in w3c spec, but is available
 	// in native code? If it does need to be exposed, capitalize the i.
 	// (It still needs to exist, to ensure the enum values match up.
 	iceTransportPolicyNoHost
+	// IceTransportPolicyAll is to allow all
 	IceTransportPolicyAll
 )
 
+// String is to convert TransportPolicy to corresponding string
 func (p IceTransportPolicy) String() string {
 	return EnumToStringSafe(int(p), []string{
 		"None",
@@ -74,14 +85,21 @@ func (p IceTransportPolicy) String() string {
 }
 
 const (
+	// SignalingStateStable is for stable state
 	SignalingStateStable SignalingState = iota
+	// SignalingStateHaveLocalOffer is for state having local offer
 	SignalingStateHaveLocalOffer
+	// SignalingStateHaveLocalPrAnswer is for state having local answer
 	SignalingStateHaveLocalPrAnswer
+	// SignalingStateHaveRemoteOffer is for state who have remote offer
 	SignalingStateHaveRemoteOffer
+	// SignalingStateHaveRemotePrAnswer is for state who have remote answer
 	SignalingStateHaveRemotePrAnswer
+	// SignalingStateClosed is for closed state
 	SignalingStateClosed
 )
 
+// String is to covert SignalingState to corresponding string
 func (s SignalingState) String() string {
 	return EnumToStringSafe(int(s), []string{
 		"Stable",
@@ -105,6 +123,7 @@ func (s SignalingState) String() string {
 	IceCredentialTypeToken
 ) */
 
+// IceServer is a structure to store ice server related data
 type IceServer struct {
 	Urls       []string // The only "required" element.
 	Username   string
@@ -112,7 +131,7 @@ type IceServer struct {
 	// [ED] CredentialType IceCredentialType
 }
 
-// Create a new IceServer object.
+// NewIceServer create a new IceServer object.
 // Expects anywhere from one to three strings, in this order:
 // - comma-separated list of urls.
 // - username
@@ -120,14 +139,14 @@ type IceServer struct {
 // TODO: For the ED version, may need to support CredentialType.
 func NewIceServer(params ...string) (*IceServer, error) {
 	if len(params) < 1 {
-		return nil, errors.New("IceServer: missing first comma-separated Urls string.")
+		return nil, errors.New("iceServer: missing first comma-separated Urls string")
 	}
 	if len(params) > 3 {
-		WARN.Printf("IceServer: got %d strings, expect <= 3. Ignoring extras.\n",
+		WARN.Printf("iceServer: got %d strings, expect <= 3. Ignoring extras.\n",
 			len(params))
 	}
 	if "" == params[0] {
-		return nil, errors.New("IceServer: requires at least one Url")
+		return nil, errors.New("iceServer: requires at least one Url")
 	}
 	urls := strings.Split(params[0], ",")
 	username := ""
@@ -137,7 +156,7 @@ func NewIceServer(params ...string) (*IceServer, error) {
 		// TODO: Better url validation.
 		if !strings.HasPrefix(url, "stun:") &&
 			!strings.HasPrefix(url, "turn:") {
-			msg := fmt.Sprintf("IceServer: received malformed url: <%s>", url)
+			msg := fmt.Sprintf("iceServer: received malformed url: <%s>", url)
 			ERROR.Println(msg)
 			return nil, errors.New(msg)
 		}
@@ -156,7 +175,7 @@ func NewIceServer(params ...string) (*IceServer, error) {
 	}, nil
 }
 
-// Create a new Configuration with default values according to spec.
+// NewConfiguration create a new Configuration with default values according to spec.
 // Accepts any number of |IceServer|s.
 // Returns nil if there's an error.
 func NewConfiguration(options ...ConfigurationOption) *Configuration {
@@ -180,15 +199,17 @@ func NewConfiguration(options ...ConfigurationOption) *Configuration {
 	return c
 }
 
-// Used in Configuration's variadic functional constructor
+// ConfigurationOption used in Configuration's variadic functional constructor
 type ConfigurationOption func(c *Configuration) error
 
+// OptionIceServer add IceServer related configuration option
 func OptionIceServer(params ...string) ConfigurationOption {
 	return func(config *Configuration) error {
 		return config.AddIceServer(params...)
 	}
 }
 
+// OptionIceTransportPolicy add IceTransportPolicy related configuration option
 func OptionIceTransportPolicy(policy IceTransportPolicy) ConfigurationOption {
 	return func(config *Configuration) error {
 		INFO.Println("OptionIceTransportPolicy: ", policy)
@@ -197,6 +218,7 @@ func OptionIceTransportPolicy(policy IceTransportPolicy) ConfigurationOption {
 	}
 }
 
+// OptionBundlePolicy set bundle policy
 func OptionBundlePolicy(policy BundlePolicy) ConfigurationOption {
 	return func(config *Configuration) error {
 		config.BundlePolicy = policy
@@ -204,6 +226,7 @@ func OptionBundlePolicy(policy BundlePolicy) ConfigurationOption {
 	}
 }
 
+// AddIceServer add ICE server
 func (config *Configuration) AddIceServer(params ...string) error {
 	server, err := NewIceServer(params...)
 	if nil != err {

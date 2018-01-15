@@ -8,25 +8,25 @@ import (
 	"unsafe"
 )
 
-/* WebRTC SessionDescription
-
-See: https://w3c.github.io/webrtc-pc/#idl-def-RTCSessionDescription
-*/
+// SessionDescription is structure of SDP parameters
+// https://w3c.github.io/webrtc-pc/#idl-def-RTCSessionDescription
 type SessionDescription struct {
 	Type string `json:"type"`
 	Sdp  string `json:"sdp"`
 }
 
+// SdpTypes is type of Sdp
 // TODO: Turn into Enum.
 var SdpTypes = []string{"offer", "pranswer", "answer", "rollback"}
 
+// CgoSdpToGoString convert SDP data to string
 func CgoSdpToGoString(sdp C.CGO_sdp) string {
 	serializedSDP := C.CGO_SerializeSDP(sdp)
 	defer C.free(unsafe.Pointer(serializedSDP))
 	return C.GoString(serializedSDP)
 }
 
-// Construct a SessionDescription object from a valid msg.
+// NewSessionDescription construct a SessionDescription object from a valid msg.
 func NewSessionDescription(sdpType string, serializedSDP C.CGO_sdpString) *SessionDescription {
 	defer C.free(unsafe.Pointer(serializedSDP))
 	in := false
@@ -45,7 +45,7 @@ func NewSessionDescription(sdpType string, serializedSDP C.CGO_sdpString) *Sessi
 	return sdp
 }
 
-// Serialize a SessionDescription into a JSON string.
+// Serialize serialize a SessionDescription into a JSON string.
 func (desc *SessionDescription) Serialize() string {
 	bytes, err := json.Marshal(desc)
 	if nil != err {
@@ -55,6 +55,7 @@ func (desc *SessionDescription) Serialize() string {
 	return string(bytes)
 }
 
+// GoStringToCgoSdp convert string to C
 func (desc *SessionDescription) GoStringToCgoSdp() C.CGO_sdp {
 	t := C.CString(desc.Type)
 	defer C.free(unsafe.Pointer(t))
@@ -63,7 +64,7 @@ func (desc *SessionDescription) GoStringToCgoSdp() C.CGO_sdp {
 	return C.CGO_DeserializeSDP(t, s)
 }
 
-// Deserialize a received json string into a SessionDescription, if possible.
+// DeserializeSessionDescription deserialize a received json string into a SessionDescription, if possible.
 func DeserializeSessionDescription(msg string) *SessionDescription {
 	var parsed map[string]interface{}
 	err := json.Unmarshal([]byte(msg), &parsed)
@@ -72,11 +73,11 @@ func DeserializeSessionDescription(msg string) *SessionDescription {
 		return nil
 	}
 	if _, ok := parsed["type"]; !ok {
-		ERROR.Println("Cannot deserialize SessionDescription without type field.")
+		ERROR.Println("cannot deserialize SessionDescription without type field")
 		return nil
 	}
 	if _, ok := parsed["sdp"]; !ok {
-		ERROR.Println("Cannot deserialize SessionDescription without sdp field.")
+		ERROR.Println("cannot deserialize SessionDescription without sdp field")
 		return nil
 	}
 	return &SessionDescription{

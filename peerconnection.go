@@ -38,12 +38,14 @@ package webrtc
 #cgo darwin,amd64 pkg-config: webrtc-darwin-amd64.pc
 #include <stdlib.h>  // Needed for C.free
 #include "peerconnection.h"
+#include "rtpreceiver.h"
 #include "ctestenums.h"
 */
 import "C"
 import (
 	"errors"
 	"fmt"
+	"time"
 	"unsafe"
 )
 
@@ -52,19 +54,28 @@ func init() {
 }
 
 type (
+	// PeerConnectionState is state of one peer connection
 	PeerConnectionState int
-	IceGatheringState   int
-	IceConnectionState  int
+	// IceGatheringState is state of ice gathering
+	IceGatheringState int
+	// IceConnectionState is state of ice connection
+	IceConnectionState int
 )
 
 const (
+	// PeerConnectionStateNew is new state of peer connection
 	PeerConnectionStateNew PeerConnectionState = iota
+	// PeerConnectionStateConnecting is connecting state of peer connection
 	PeerConnectionStateConnecting
+	// PeerConnectionStateConnected is connected state of peer connection
 	PeerConnectionStateConnected
+	// PeerConnectionStateDisconnected is disconnected state of peer connection
 	PeerConnectionStateDisconnected
+	// PeerConnectionStateFailed is failed state of peer connection
 	PeerConnectionStateFailed
 )
 
+// String is to convert state of peer connection to corresponding string
 func (s PeerConnectionState) String() string {
 	return EnumToStringSafe(int(s), []string{
 		"New",
@@ -76,15 +87,23 @@ func (s PeerConnectionState) String() string {
 }
 
 const (
+	// IceConnectionStateNew is new state of ice connection
 	IceConnectionStateNew IceConnectionState = iota
+	// IceConnectionStateChecking is checking state of ice connection
 	IceConnectionStateChecking
+	// IceConnectionStateConnected is connected state of ice connection
 	IceConnectionStateConnected
+	// IceConnectionStateCompleted is completed state of ice connection
 	IceConnectionStateCompleted
+	// IceConnectionStateFailed is failed state of ice connection
 	IceConnectionStateFailed
+	// IceConnectionStateDisconnected is disconnected state of ice connection
 	IceConnectionStateDisconnected
+	// IceConnectionStateClosed is closed state of ice connection
 	IceConnectionStateClosed
 )
 
+// String is to convert state of ice connection to corresponding string
 func (s IceConnectionState) String() string {
 	return EnumToStringSafe(int(s), []string{
 		"New",
@@ -98,11 +117,15 @@ func (s IceConnectionState) String() string {
 }
 
 const (
+	// IceGatheringStateNew is the new state of ice gathering
 	IceGatheringStateNew IceGatheringState = iota
+	// IceGatheringStateGathering is gathering state
 	IceGatheringStateGathering
+	// IceGatheringStateComplete means gathering complete
 	IceGatheringStateComplete
 )
 
+// String is to convert state of ice gathering to string
 func (s IceGatheringState) String() string {
 	return EnumToStringSafe(int(s), []string{
 		"New",
@@ -111,15 +134,12 @@ func (s IceGatheringState) String() string {
 	})
 }
 
+// PCMap is map of peer connection
 var PCMap = NewCGOMap()
 
-/* WebRTC PeerConnection
-
-This is the main container of WebRTC functionality - from handling the ICE
-negotiation to setting up Data Channels.
-
-See: https://w3c.github.io/webrtc-pc/#idl-def-RTCPeerConnection
-*/
+// PeerConnection is the structure to store peer connection parameters
+// This is the main container of WebRTC functionality - from handling the ICE negotiation to setting up Data Channels.
+// See: https://w3c.github.io/webrtc-pc/#idl-def-RTCPeerConnection
 type PeerConnection struct {
 	localDescription        *SessionDescription
 	remoteDescription       *SessionDescription
@@ -127,6 +147,7 @@ type PeerConnection struct {
 
 	// Event handlers
 	OnNegotiationNeeded        func()
+	OnAddTrack                 func(*RtpReceiver, []*MediaStream)
 	OnIceCandidate             func(IceCandidate)
 	OnIceCandidateError        func()
 	OnIceComplete              func() // Possibly to be removed.
@@ -142,93 +163,97 @@ type PeerConnection struct {
 	index   int        // Index into the PCMap
 }
 
-/* Construct a WebRTC PeerConnection.
-
-For a successful connection, provide at least one ICE server (stun or turn)
-in the |Configuration| struct.
-*/
+// NewPeerConnection construct a WebRTC PeerConnection.
+// For a successful connection, provide at least one ICE server (stun or turn) in the |Configuration| struct.
 func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	if nil == config {
-		return nil, errors.New("PeerConnection requires a Configuration.")
+		return nil, errors.New("PeerConnection requires a Configuration")
 	}
 	pc := new(PeerConnection)
 	pc.index = PCMap.Set(pc)
 	// Internal CGO Peer wraps the native webrtc::PeerConnectionInterface.
 	pc.cgoPeer = C.CGO_InitializePeer(C.int(pc.index))
 	if nil == pc.cgoPeer {
-		return pc, errors.New("PeerConnection: failed to initialize.")
+		return pc, errors.New("PeerConnection: failed to initialize")
 	}
 	pc.config = *config
 	cConfig := config._CGO()
 	defer freeConfig(cConfig)
 	if 0 != C.CGO_CreatePeerConnection(pc.cgoPeer, cConfig) {
-		return nil, errors.New("PeerConnection: could not create from config.")
+		return nil, errors.New("PeerConnection: could not create from config")
 	}
 	INFO.Println("Created PeerConnection: ", pc, pc.cgoPeer)
+	go pc.pullAudio()
 	return pc, nil
 }
 
-//
-// === Session Description Protocol ===
-//
-
 /*
-CreateOffer prepares an SDP "offer" message, which should be set as the local
-description, then sent to the remote peer over a signalling channel. This
-should only be called by the peer initiating the connection.
-
-This method is blocking, and should occur within a separate goroutine.
+The webrtc.org mechanism for decoding audio data and passing it to audio tracks
+is driven by an audio device periodically requesting audio for playout.
+Instead of requiring a real audio device, we implement this mechanism here.
 */
+func (pc *PeerConnection) pullAudio() {
+	const (
+		samplesPerSec = 48000
+		pullsPerSec   = 100
+	)
+	audioSamples := [samplesPerSec / pullsPerSec]uint16{}
+
+	next := time.Now()
+	for {
+		C.CGO_PullAudio(pc.cgoPeer, (*C.uint16_t)(&audioSamples[0]), C.int(len(audioSamples)), samplesPerSec)
+		next = next.Add(time.Second / pullsPerSec)
+		time.Sleep(next.Sub(time.Now()))
+	}
+}
+
+// CreateOffer prepares an SDP "offer" message, which should be set as the local description,
+// then sent to the remote peer over a signalling channel. This should only be called by the peer initiating the connection.
+// This method is blocking, and should occur within a separate goroutine.
 func (pc *PeerConnection) CreateOffer() (*SessionDescription, error) {
 	sdp := C.CGO_CreateOffer(pc.cgoPeer)
 	if nil == sdp {
-		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
+		return nil, errors.New("CreateOffer: could not prepare SDP offer")
 	}
 	offer := NewSessionDescription("offer", sdp)
 	if offer == nil {
-		return nil, errors.New("CreateOffer: could not prepare SDP offer.")
+		return nil, errors.New("CreateOffer: could not prepare SDP offer")
 	}
 	return offer, nil
 }
 
-/*
-CreateAnswer prepares an SDP "answer" message. This should only happen in
-response to an offer received and set as the remote description. Once generated,
-this answer should then be set as the local description and sent back over the
-signaling channel to the remote peer.
-
-This method is blocking, and should occur within a separate goroutine.
-*/
+// CreateAnswer prepares an SDP "answer" message. This should only happen in response to an offer received and
+// set as the remote description. Once generated, this answer should then be set as the local description and
+// sent back over the signaling channel to the remote peer.
+// This method is blocking, and should occur within a separate goroutine.
 func (pc *PeerConnection) CreateAnswer() (*SessionDescription, error) {
 	sdp := C.CGO_CreateAnswer(pc.cgoPeer)
 	if nil == sdp {
-		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
+		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer")
 	}
 	answer := NewSessionDescription("answer", sdp)
 	if answer == nil {
-		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer.")
+		return nil, errors.New("CreateAnswer failed: could not prepare SDP offer")
 	}
 	return answer, nil
 }
 
-/*
-Set a |SessionDescription| as the local description. The description should be
-generated from the local peer's CreateOffer or CreateAnswer, and not be a
-description received over the signaling channel.
-*/
+// SetLocalDescription Set a |SessionDescription| as the local description.
+// The description should be generated from the local peer's CreateOffer or CreateAnswer,
+// and not be a description received over the signaling channel.
 func (pc *PeerConnection) SetLocalDescription(sdp *SessionDescription) error {
 	if nil == sdp {
-		return errors.New("Cannot use nil SessionDescription.")
+		return errors.New("cannot use nil SessionDescription")
 	}
 	r := C.CGO_SetLocalDescription(pc.cgoPeer, sdp.GoStringToCgoSdp())
 	if 0 != r {
-		return errors.New("SetLocalDescription failed.")
+		return errors.New("SetLocalDescription failed")
 	}
 	pc.localDescription = sdp
 	return nil
 }
 
-// readonly localDescription
+// LocalDescription returns readonly localDescription
 func (pc *PeerConnection) LocalDescription() (sdp *SessionDescription) {
 	// Refresh SDP; it might have changed by ICE candidate gathering.
 	if pc.localDescription != nil {
@@ -238,26 +263,22 @@ func (pc *PeerConnection) LocalDescription() (sdp *SessionDescription) {
 	return pc.localDescription
 }
 
-/*
-Set a |SessionDescription| as the remote description. This description should
-be one generated by the remote peer's CreateOffer or CreateAnswer, received
-over the signaling channel, and not a description created locally.
-
-If the local peer is the answerer, this must be called before CreateAnswer.
-*/
+// SetRemoteDescription set a |SessionDescription| as the remote description. This description should
+// be one generated by the remote peer's CreateOffer or CreateAnswer, received over the signaling channel,
+// and not a description created locally. If the local peer is the answerer, this must be called before CreateAnswer.
 func (pc *PeerConnection) SetRemoteDescription(sdp *SessionDescription) error {
 	if nil == sdp {
-		return errors.New("Cannot use nil SessionDescription.")
+		return errors.New("cannot use nil SessionDescription")
 	}
 	r := C.CGO_SetRemoteDescription(pc.cgoPeer, sdp.GoStringToCgoSdp())
 	if 0 != r {
-		return errors.New("SetRemoteDescription failed.")
+		return errors.New("SetRemoteDescription failed")
 	}
 	pc.remoteDescription = sdp
 	return nil
 }
 
-// readonly remoteDescription
+// RemoteDescription returns readonly remoteDescription
 func (pc *PeerConnection) RemoteDescription() (sdp *SessionDescription) {
 	if pc.remoteDescription != nil {
 		cgoSdp := C.CGO_GetRemoteDescription(pc.cgoPeer)
@@ -266,28 +287,29 @@ func (pc *PeerConnection) RemoteDescription() (sdp *SessionDescription) {
 	return pc.remoteDescription
 }
 
-// readonly signalingState
+// SignalingState return readonly signalingState
 func (pc *PeerConnection) SignalingState() SignalingState {
 	return (SignalingState)(C.CGO_GetSignalingState(pc.cgoPeer))
 }
 
-// readonly connectionState
+// ConnectionState return readonly connectionState
 func (pc *PeerConnection) ConnectionState() PeerConnectionState {
 	// TODO: Aggregate states according to:
 	// https://w3c.github.io/webrtc-pc/#rtcpeerconnectionstate-enum
 	return (PeerConnectionState)(C.CGO_IceConnectionState(pc.cgoPeer))
 }
 
-// readonly icegatheringstatee
+// IceGatheringState return readonly icegatheringstatee
 func (pc *PeerConnection) IceGatheringState() IceGatheringState {
 	return (IceGatheringState)(C.CGO_IceGatheringState(pc.cgoPeer))
 }
 
-// readonly iceconnectionState
+// IceConnectionState return readonly iceconnectionState
 func (pc *PeerConnection) IceConnectionState() IceConnectionState {
 	return (IceConnectionState)(C.CGO_IceConnectionState(pc.cgoPeer))
 }
 
+// AddIceCandidate add ice candidate
 func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
 	sdpMid := C.CString(ic.SdpMid)
 	defer C.free(unsafe.Pointer(sdpMid))
@@ -301,26 +323,46 @@ func (pc *PeerConnection) AddIceCandidate(ic IceCandidate) error {
 
 	r := C.CGO_AddIceCandidate(pc.cgoPeer, cIC)
 	if 0 != r {
-		return errors.New("AddIceCandidate failed.")
+		return errors.New("AddIceCandidate failed")
 	}
 	return nil
 }
 
+// GetConfiguration get configuration
 func (pc *PeerConnection) GetConfiguration() Configuration {
 	// There does not appear to be a native code version of GetConfiguration -
 	// so we'll keep track of it purely from Go.
 	return pc.config
 }
 
+// SetConfiguration set configuration
 func (pc *PeerConnection) SetConfiguration(config Configuration) error {
 	cConfig := config._CGO()
 	defer freeConfig(cConfig)
 	err := C.CGO_SetConfiguration(pc.cgoPeer, cConfig)
 	if err != 0 {
-		return errors.New(fmt.Sprintf("PeerConnection: could not set configuration. Error ID: %d", err))
+		return fmt.Errorf("PeerConnection: could not set configuration. Error ID: %d", err)
 	}
 	pc.config = config
 	return nil
+}
+
+// AddTrack adds track
+func (pc *PeerConnection) AddTrack(t MediaStreamTrack, s []*MediaStream) *RtpSender {
+	var sp *C.CGO_MediaStream
+	if len(s) > 0 {
+		ss := make([]C.CGO_MediaStream, len(s))
+		for i, s := range s {
+			ss[i] = s.s
+		}
+		sp = &ss[0]
+	}
+	return newRtpSender(C.CGO_PeerConnection_AddTrack(pc.cgoPeer, t.cgoMediaStreamTrack(), sp, C.int(len(s))))
+}
+
+// RemoveTrack removes track
+func (pc *PeerConnection) RemoveTrack(s *RtpSender) {
+	C.CGO_PeerConnection_RemoveTrack(pc.cgoPeer, s.s)
 }
 
 /*
@@ -367,6 +409,7 @@ func Negotiated(negotiated bool) func(*DataChannelInit) {
 	}
 }
 
+// CreateDataChannel create data channel
 func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataChannelInit)) (
 	*DataChannel, error) {
 
@@ -400,13 +443,14 @@ func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataC
 	defer C.free(unsafe.Pointer(l))
 	cDataChannel := C.CGO_CreateDataChannel(pc.cgoPeer, l, cfg)
 	if nil == cDataChannel {
-		return nil, errors.New("Failed to CreateDataChannel")
+		return nil, errors.New("failed to CreateDataChannel")
 	}
 	// Provide internal Data Channel as reference to create the Go wrapper.
 	dc := NewDataChannel(unsafe.Pointer(cDataChannel))
 	return dc, nil
 }
 
+// Close closes peer connection
 func (pc *PeerConnection) Close() error {
 	C.CGO_Close(pc.cgoPeer)
 	return nil
@@ -422,6 +466,22 @@ func cgoOnSignalingStateChange(p int, s SignalingState) {
 	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnSignalingStateChange {
 		pc.OnSignalingStateChange(s)
+	}
+}
+
+//export cgoOnAddTrack
+func cgoOnAddTrack(p int, r C.CGO_RtpReceiver, s *C.CGO_MediaStream, ns int) {
+	INFO.Println("fired OnAddTrack: ", p, r, s, ns)
+	pc := PCMap.Get(p).(*PeerConnection)
+	receiver := newRtpReceiver(r)
+	streams := make([]*MediaStream, ns)
+	sp := uintptr(unsafe.Pointer(s))
+	for i := range streams {
+		s := *(*C.CGO_MediaStream)(unsafe.Pointer(sp + uintptr(i)))
+		streams[i] = newMediaStream(s)
+	}
+	if nil != pc.OnAddTrack {
+		pc.OnAddTrack(receiver, streams)
 	}
 }
 
