@@ -49,8 +49,8 @@ class Peer
     // Due to the different threading model, in order for PeerConnectionFactory
     // to be able to post async messages without getting blocked, we need to use
     // external signalling and worker thread, accounted for in this class.
-    signalling_thread_ = new rtc::Thread();
-    worker_thread_ = new rtc::Thread();
+    signalling_thread_ = std::unique_ptr<rtc::Thread>(new rtc::Thread());
+    worker_thread_ = std::unique_ptr<rtc::Thread>(new rtc::Thread());
     signalling_thread_->SetName("CGO Signalling", NULL);
     worker_thread_->SetName("CGO Worker", NULL);
     signalling_thread_->Start();  // Must start before being passed to
@@ -58,8 +58,8 @@ class Peer
 
     this->fake_audio_ = FakeAudioCaptureModule::Create();
     pc_factory = CreatePeerConnectionFactory(
-      worker_thread_,
-      signalling_thread_,
+      worker_thread_.get(),
+      signalling_thread_.get(),
       this->fake_audio_, NULL, NULL);
     if (!pc_factory.get()) {
       CGO_DBG("Could not create PeerConnectionFactory");
@@ -186,11 +186,22 @@ class Peer
     SetConfig(NULL);
     if (constraints)
       delete constraints;
+
+    // NOTE: Clears these explicitly first since they use the threads
+    observers.clear();
+    pc_ = nullptr;
+    pc_factory = nullptr;
+
+    worker_thread_->Stop();
+    signalling_thread_->Stop();
+
+    worker_thread_ = nullptr;
+    signalling_thread_ = nullptr;
   }
 
  private:
-  rtc::Thread *signalling_thread_;
-  rtc::Thread *worker_thread_;
+  std::unique_ptr<rtc::Thread> signalling_thread_;
+  std::unique_ptr<rtc::Thread> worker_thread_;
   rtc::scoped_refptr<AudioDeviceModule> fake_audio_;
 };  // class Peer
 
