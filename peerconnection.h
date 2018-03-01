@@ -53,6 +53,7 @@ extern "C" {
   } CGO_IceCandidate;
 
   CGO_Peer CGO_InitializePeer(int pc);
+  void CGO_DestroyPeer(CGO_Peer);
 
   // Below are "C methods" for the Peer class, which must be hidden from cgo.
 
@@ -76,6 +77,7 @@ extern "C" {
   int CGO_SetConfiguration(CGO_Peer, CGO_Configuration*);
 
   void* CGO_CreateDataChannel(CGO_Peer, char*, CGO_DataChannelInit);
+  void CGO_DeleteDataChannel(CGO_Peer, void* l);
 
   void CGO_Close(CGO_Peer);
 

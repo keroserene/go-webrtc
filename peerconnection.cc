@@ -243,6 +243,16 @@ CGO_Peer CGO_InitializePeer(int goPc) {
   return localPeer;
 }
 
+void CGO_DestroyPeer(CGO_Peer cgoPeer) {
+  auto cPeer = (Peer*)cgoPeer;
+  localPeers.erase(
+    std::remove_if(localPeers.begin(), localPeers.end(), [cPeer](rtc::scoped_refptr<Peer> localPeer){
+      return localPeer.get() == cPeer;
+    }),
+    localPeers.end()
+  );
+}
+
 // This helper converts RTCConfiguration struct from GO to C++.
 PeerConnectionInterface::RTCConfiguration *castConfig_(
     CGO_Configuration *cgoConfig) {
@@ -467,6 +477,17 @@ void CGO_Close(CGO_Peer peer) {
   CGO_DBG("Closed PeerConnection.");
 }
 
+void CGO_DeleteDataChannel(CGO_Peer cgoPeer, void* l) {
+  auto cPeer = (Peer*)cgoPeer;
+  auto o = (CGoDataChannelObserver*)l;
+  auto observers = &cPeer->observers;
+  observers->erase(
+    std::remove_if(observers->begin(), observers->end(), [o](DCObserver obs){
+      return obs.get() == o;
+    }),
+    observers->end()
+  );
+}
 
 //
 // Test helpers which fake native callbacks.

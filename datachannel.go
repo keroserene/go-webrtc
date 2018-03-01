@@ -58,8 +58,9 @@ type DataChannel struct {
 	OnMessage           func([]byte) // byte slice.
 	OnBufferedAmountLow func()
 
-	cgoChannel C.CGO_Channel // Internal DataChannel functionality.
-	index      int           // Index into the DCMap
+	cgoChannel         C.CGO_Channel // Internal DataChannel functionality.
+	cgoChannelObserver unsafe.Pointer
+	index              int // Index into the DCMap
 }
 
 // Create a Go Channel struct, and prepare internal CGO references / observers.
@@ -74,7 +75,13 @@ func NewDataChannel(o unsafe.Pointer) *DataChannel {
 	c.BinaryType = "blob"
 	cgoChannel := C.CGO_Channel_RegisterObserver(o, C.int(c.index))
 	c.cgoChannel = (C.CGO_Channel)(cgoChannel)
+	c.cgoChannelObserver = o
 	return c
+}
+
+func deleteDataChannel(index int) {
+	DCMap.Delete(index)
+	return
 }
 
 // Send a message over a DataChannel in binary mode.

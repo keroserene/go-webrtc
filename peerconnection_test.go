@@ -247,15 +247,15 @@ func TestPeerConnection(t *testing.T) {
 				So(channel, ShouldNotBeNil)
 				So(err, ShouldBeNil)
 				So(channel.Label(), ShouldEqual, "test")
-				channel.Close()
+				alice.DeleteDataChannel(channel)
 			})
 
-			Convey("Close PeerConnections.", func() {
+			Convey("Destroy PeerConnections.", func() {
 				success := make(chan int, 1)
 				go func() {
-					// err = alice.Close()
+					// err = alice.Destroy()
 					// So(err, ShouldBeNil)
-					err = bob.Close()
+					err = bob.Destroy()
 					// So(err, ShouldBeNil)
 					success <- 1
 				}()

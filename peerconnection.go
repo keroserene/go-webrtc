@@ -168,6 +168,13 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 	return pc, nil
 }
 
+func (pc *PeerConnection) Destroy() error {
+	err := pc.Close()
+	PCMap.Delete(pc.index)
+	C.CGO_DestroyPeer(pc.cgoPeer);
+	return err
+}
+
 //
 // === Session Description Protocol ===
 //
@@ -405,6 +412,13 @@ func (pc *PeerConnection) CreateDataChannel(label string, options ...func(*DataC
 	// Provide internal Data Channel as reference to create the Go wrapper.
 	dc := NewDataChannel(unsafe.Pointer(cDataChannel))
 	return dc, nil
+}
+
+func (pc *PeerConnection) DeleteDataChannel(dc *DataChannel) {
+	dc.Close()
+	C.CGO_DeleteDataChannel(pc.cgoPeer, dc.cgoChannelObserver)
+	deleteDataChannel(dc.index)
+	return
 }
 
 func (pc *PeerConnection) Close() error {

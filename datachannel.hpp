@@ -36,7 +36,9 @@ class CGoDataChannelObserver
   DataChannel dc;
 
  protected:
-  ~CGoDataChannelObserver() {}
+  ~CGoDataChannelObserver() {
+    dc->UnregisterObserver();
+  }
 };  // class DoDataChannelObserver
 
 #endif  // _DATACHANNEL_H
