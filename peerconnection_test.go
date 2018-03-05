@@ -10,25 +10,25 @@ import (
 func TestIceGatheringStateEnums(t *testing.T) {
 	Convey(`Enum: IceGatheringState values should match
 C++ webrtc::PeerConnectionInterface values`, t, func() {
-		So(IceGatheringStateNew, ShouldEqual, _cgoIceGatheringStateNew)
-		So(IceGatheringStateGathering, ShouldEqual, _cgoIceGatheringStateGathering)
-		So(IceGatheringStateComplete, ShouldEqual, _cgoIceGatheringStateComplete)
+		So(_cgoIceGatheringStateNew, ShouldEqual, IceGatheringStateNew)
+		So(_cgoIceGatheringStateGathering, ShouldEqual, IceGatheringStateGathering)
+		So(_cgoIceGatheringStateComplete, ShouldEqual, IceGatheringStateComplete)
 	})
 }
 
 func TestIceConnectionStateEnums(t *testing.T) {
 	Convey(`Enum: IceConnectionState values should match
 C++ webrtc::PeerConnectionInterface values`, t, func() {
-		So(IceConnectionStateNew, ShouldEqual, _cgoIceConnectionStateNew)
-		So(IceConnectionStateChecking, ShouldEqual, _cgoIceConnectionStateChecking)
-		So(IceConnectionStateConnected, ShouldEqual,
-			_cgoIceConnectionStateConnected)
-		So(IceConnectionStateCompleted, ShouldEqual,
-			_cgoIceConnectionStateCompleted)
-		So(IceConnectionStateFailed, ShouldEqual, _cgoIceConnectionStateFailed)
-		So(IceConnectionStateDisconnected, ShouldEqual,
-			_cgoIceConnectionStateDisconnected)
-		So(IceConnectionStateClosed, ShouldEqual, _cgoIceConnectionStateClosed)
+		So(_cgoIceConnectionStateNew, ShouldEqual, IceConnectionStateNew)
+		So(_cgoIceConnectionStateChecking, ShouldEqual, IceConnectionStateChecking)
+		So(_cgoIceConnectionStateConnected, ShouldEqual,
+			IceConnectionStateConnected)
+		So(_cgoIceConnectionStateCompleted, ShouldEqual,
+			IceConnectionStateCompleted)
+		So(_cgoIceConnectionStateFailed, ShouldEqual, IceConnectionStateFailed)
+		So(_cgoIceConnectionStateDisconnected, ShouldEqual,
+			IceConnectionStateDisconnected)
+		So(_cgoIceConnectionStateClosed, ShouldEqual, IceConnectionStateClosed)
 	})
 }
 

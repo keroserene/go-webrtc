@@ -1,3 +1,5 @@
+#if !_WIN32 || WIN_WEBRTC
+
 /**
  * C wrapper around the C++ webrtc::PeerConnectionInterface and related, which
  * allows compatibility with CGO's requirements so that everything may
@@ -41,6 +43,10 @@ class Peer
   : public PeerConnectionObserver,
     public CreateSessionDescriptionObserver {
  public:
+	 Peer() {
+		 signalling_thread_ = NULL;
+		 worker_thread_ = NULL;
+	 }
 
   // Expected to be called before anything else happens for Peer.
   bool Initialize() {
@@ -56,7 +62,7 @@ class Peer
     signalling_thread_->Start();  // Must start before being passed to
     worker_thread_->Start();      // PeerConnectionFactory.
 
-    this->fake_audio_ = FakeAudioCaptureModule::Create();
+    this->fake_audio_ = NULL;//FakeAudioCaptureModule::Create();
     pc_factory = CreatePeerConnectionFactory(
       worker_thread_.get(),
       signalling_thread_.get(),
@@ -207,7 +213,7 @@ class Peer
 
 // Keep track of Peers in global scope to prevent deallocation, due to the
 // required scoped_refptr from implementing the Observer interface.
-vector<rtc::scoped_refptr<Peer>> localPeers;
+map<int,rtc::scoped_refptr<Peer>> localPeers;
 
 class PeerSDPObserver : public SetSessionDescriptionObserver {
  public:
@@ -238,7 +244,7 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
 CGO_Peer CGO_InitializePeer(int goPc) {
   rtc::scoped_refptr<Peer> localPeer = new rtc::RefCountedObject<Peer>();
   localPeer->Initialize();
-  localPeers.push_back(localPeer);
+  localPeers[goPc] = localPeer;
   localPeer->goPeerConnection = goPc;
   return localPeer;
 }
@@ -362,7 +368,8 @@ CGO_sdpString CGO_SerializeSDP(CGO_sdp sdp) {
 // Given a fully serialized SDP string |msg|, return a CGO sdp object.
 CGO_sdp CGO_DeserializeSDP(const char *type, const char *msg) {
   // TODO: Maybe use an enum instead of string for type.
-  auto jsep_sdp = new JsepSessionDescription(type);
+  const string typeS = string(type);
+  auto jsep_sdp = new JsepSessionDescription(typeS);
   SdpParseError err;
   std::string msg_str(msg);
   SdpDeserialize(msg_str, jsep_sdp, &err);
@@ -475,6 +482,10 @@ void CGO_Close(CGO_Peer peer) {
   auto cPeer = (Peer*)peer;
   cPeer->pc_->Close();
   CGO_DBG("Closed PeerConnection.");
+  auto iter = localPeers.find(cPeer->goPeerConnection);
+  if (iter != localPeers.end()) {
+	  localPeers.erase(iter);
+  }
 }
 
 void CGO_DeleteDataChannel(CGO_Peer cgoPeer, void* l) {
@@ -497,3 +508,4 @@ void CGO_fakeIceCandidateError(CGO_Peer peer) {
   cPeer->OnIceConnectionChange(
       PeerConnectionInterface::IceConnectionState::kIceConnectionFailed);
 }
+#endif

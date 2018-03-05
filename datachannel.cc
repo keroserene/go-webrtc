@@ -1,3 +1,4 @@
+#if !_WIN32 || WIN_WEBRTC
 #include "datachannel.h"
 #include "datachannel.hpp"
 
@@ -182,7 +183,8 @@ void CGO_fakeBufferAmount(CGO_Channel channel, int amount) {
   dc->SetBufferedAmount(amount);
 }
 
-const int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting;
-const int CGO_DataStateOpen = DataChannelInterface::DataState::kOpen;
-const int CGO_DataStateClosing = DataChannelInterface::DataState::kClosing;
-const int CGO_DataStateClosed = DataChannelInterface::DataState::kClosed;
+int CGO_DataStateConnecting = DataChannelInterface::DataState::kConnecting;
+int CGO_DataStateOpen = DataChannelInterface::DataState::kOpen;
+int CGO_DataStateClosing = DataChannelInterface::DataState::kClosing;
+int CGO_DataStateClosed = DataChannelInterface::DataState::kClosed;
+#endif

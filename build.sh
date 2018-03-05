@@ -9,7 +9,7 @@ DEPOT_TOOLS_DIR="$THIRD_PARTY_DIR/depot_tools"
 OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
 CONFIG="Release"
-COMMIT="c279861207c5b15fc51069e96595782350e0ac12"  # branch-heads/58
+COMMIT="6f21dc245689c29730002da09534a8d275e6aa92"  # branch-heads/62
 
 # Values are from,
 #   https://github.com/golang/go/blob/master/src/go/build/syslist.go

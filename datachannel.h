@@ -1,7 +1,13 @@
+#ifndef NOMINMAX
+# define NOMINMAX
+#endif
+
 #ifndef _C_DATACHANNEL_H_
 #define _C_DATACHANNEL_H_
 
+#ifndef _WIN32
 #define WEBRTC_POSIX 1
+#endif
 
 #include <stdbool.h>
 
@@ -30,16 +36,19 @@ extern "C" {
   int CGO_Channel_ReadyState(CGO_Channel);
   int CGO_Channel_BufferedAmount(CGO_Channel channel);
 
-  extern const int CGO_DataStateConnecting;
-  extern const int CGO_DataStateOpen;
-  extern const int CGO_DataStateClosing;
-  extern const int CGO_DataStateClosed;
+  extern int CGO_DataStateConnecting;
+  extern int CGO_DataStateOpen;
+  extern int CGO_DataStateClosing;
+  extern int CGO_DataStateClosed;
 
   // Testing helpers:
   CGO_Channel CGO_getFakeDataChannel();
   void CGO_fakeMessage(CGO_Channel channel, void *data, int size);
   void CGO_fakeStateChange(CGO_Channel channel, int state);
   void CGO_fakeBufferAmount(CGO_Channel channel, int amount);
+
+// Windows init
+void CGO_DataChannelInit();
 
 #ifdef __cplusplus
 }
