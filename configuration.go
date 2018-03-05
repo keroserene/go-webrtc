@@ -222,10 +222,8 @@ func (server *IceServer) _CGO() C.CGO_IceServer {
 	if total > 0 {
 		sizeof := unsafe.Sizeof(uintptr(0)) // FIXME(arlolra): sizeof *void
 		cUrls := unsafe.Pointer(C.malloc(C.size_t(sizeof * uintptr(total))))
-		ptr := uintptr(cUrls)
-		for _, url := range server.Urls {
-			*(**C.char)(unsafe.Pointer(ptr)) = C.CString(url)
-			ptr += sizeof
+		for i, url := range server.Urls {
+			*(**C.char)(unsafe.Pointer(uintptr(cUrls) + sizeof*uintptr(i))) = C.CString(url)
 		}
 		cServer.urls = (**C.char)(cUrls)
 	}
@@ -264,10 +262,8 @@ func (config *Configuration) _CGO() *C.CGO_Configuration {
 	if total > 0 {
 		sizeof := unsafe.Sizeof(C.CGO_IceServer{})
 		cServers := unsafe.Pointer(C.malloc(C.size_t(sizeof * uintptr(total))))
-		ptr := uintptr(cServers)
-		for _, server := range config.IceServers {
-			*(*C.CGO_IceServer)(unsafe.Pointer(ptr)) = server._CGO()
-			ptr += sizeof
+		for i, server := range config.IceServers {
+			*(*C.CGO_IceServer)(unsafe.Pointer(uintptr(cServers) + sizeof*uintptr(i))) = server._CGO()
 		}
 		c.iceServers = (*C.CGO_IceServer)(cServers)
 	}

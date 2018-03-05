@@ -171,7 +171,7 @@ func NewPeerConnection(config *Configuration) (*PeerConnection, error) {
 func (pc *PeerConnection) Destroy() error {
 	err := pc.Close()
 	PCMap.Delete(pc.index)
-	C.CGO_DestroyPeer(pc.cgoPeer);
+	C.CGO_DestroyPeer(pc.cgoPeer)
 	return err
 }
 
