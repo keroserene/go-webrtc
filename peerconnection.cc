@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <future>
+#include <mutex>
 
 #include "webrtc/api/test/fakeconstraints.h"
 #include "webrtc/pc/test/fakeaudiocapturemodule.h"
@@ -149,7 +150,9 @@ class Peer
 
   void OnDataChannel(DataChannelInterface* channel) {
     DCObserver obs = new rtc::RefCountedObject<CGoDataChannelObserver>(channel);
-    this->observers.push_back(obs);
+    o_lock.lock();
+    observers.push_back(obs);
+    o_lock.unlock();
     auto o = obs.get();
     channel->RegisterObserver(o);
     cgoOnDataChannel(goPeerConnection, (void *)o);
@@ -180,6 +183,7 @@ class Peer
   // Prevent deallocation of created DataChannels, since they are ref_ptr,
   // by keeping track of them in a vector.
   vector<DCObserver> observers;
+  std::mutex o_lock;
 
  protected:
   ~Peer() {
@@ -208,6 +212,7 @@ class Peer
 // Keep track of Peers in global scope to prevent deallocation, due to the
 // required scoped_refptr from implementing the Observer interface.
 vector<rtc::scoped_refptr<Peer>> localPeers;
+std::mutex lp_lock;
 
 class PeerSDPObserver : public SetSessionDescriptionObserver {
  public:
@@ -238,19 +243,23 @@ class PeerSDPObserver : public SetSessionDescriptionObserver {
 CGO_Peer CGO_InitializePeer(int goPc) {
   rtc::scoped_refptr<Peer> localPeer = new rtc::RefCountedObject<Peer>();
   localPeer->Initialize();
+  lp_lock.lock();
   localPeers.push_back(localPeer);
+  lp_lock.unlock();
   localPeer->goPeerConnection = goPc;
   return localPeer;
 }
 
 void CGO_DestroyPeer(CGO_Peer cgoPeer) {
   auto cPeer = (Peer*)cgoPeer;
+  lp_lock.lock();
   localPeers.erase(
     std::remove_if(localPeers.begin(), localPeers.end(), [cPeer](rtc::scoped_refptr<Peer> localPeer){
       return localPeer.get() == cPeer;
     }),
     localPeers.end()
   );
+  lp_lock.unlock();
 }
 
 // This helper converts RTCConfiguration struct from GO to C++.
@@ -464,7 +473,9 @@ void* CGO_CreateDataChannel(CGO_Peer cgoPeer, char *label, CGO_DataChannelInit d
     return NULL;
   }
   DCObserver obs = new rtc::RefCountedObject<CGoDataChannelObserver>(channel);
+  cPeer->o_lock.lock();
   cPeer->observers.push_back(obs);
+  cPeer->o_lock.unlock();
   auto o = obs.get();
   channel->RegisterObserver(o);
   return (void *)o;
@@ -481,12 +492,14 @@ void CGO_DeleteDataChannel(CGO_Peer cgoPeer, void* l) {
   auto cPeer = (Peer*)cgoPeer;
   auto o = (CGoDataChannelObserver*)l;
   auto observers = &cPeer->observers;
+  cPeer->o_lock.lock();
   observers->erase(
     std::remove_if(observers->begin(), observers->end(), [o](DCObserver obs){
       return obs.get() == o;
     }),
     observers->end()
   );
+  cPeer->o_lock.unlock();
 }
 
 //
