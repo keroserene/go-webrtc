@@ -10,10 +10,12 @@
 #include <future>
 #include <mutex>
 
-#include "webrtc/api/test/fakeconstraints.h"
-#include "webrtc/pc/test/fakeaudiocapturemodule.h"
-#include "webrtc/api/jsepsessiondescription.h"
-#include "webrtc/pc/webrtcsdp.h"
+#include "api/audio_codecs/builtin_audio_decoder_factory.h"
+#include "api/audio_codecs/builtin_audio_encoder_factory.h"
+#include "api/test/fakeconstraints.h"
+#include "pc/test/fakeaudiocapturemodule.h"
+#include "api/jsepsessiondescription.h"
+#include "pc/webrtcsdp.h"
 
 #define SUCCESS 0
 #define FAILURE -1
@@ -61,7 +63,10 @@ class Peer
     pc_factory = CreatePeerConnectionFactory(
       worker_thread_.get(),
       signalling_thread_.get(),
-      this->fake_audio_, NULL, NULL);
+      this->fake_audio_,
+      CreateBuiltinAudioEncoderFactory(),
+      CreateBuiltinAudioDecoderFactory(),
+      NULL, NULL);
     if (!pc_factory.get()) {
       CGO_DBG("Could not create PeerConnectionFactory");
       return false;
@@ -106,10 +111,10 @@ class Peer
   }
 
   // This is required for the Media API.
-  void OnAddStream(webrtc::MediaStreamInterface* stream) {
+  void OnAddStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
     CGO_DBG("unimplemented OnAddStream");
   }
-  void OnRemoveStream(webrtc::MediaStreamInterface* stream) {
+  void OnRemoveStream(rtc::scoped_refptr<webrtc::MediaStreamInterface> stream) {
     CGO_DBG("unimplemented OnRemoveStream");
   }
 
@@ -148,7 +153,7 @@ class Peer
     cgoOnIceGatheringStateChange(goPeerConnection, new_state);
   }
 
-  void OnDataChannel(DataChannelInterface* channel) {
+  void OnDataChannel(rtc::scoped_refptr<DataChannelInterface> channel) {
     DCObserver obs = new rtc::RefCountedObject<CGoDataChannelObserver>(channel);
     o_lock.lock();
     observers.push_back(obs);
