@@ -1,5 +1,5 @@
 #include "ctestenums.h"
-#include "webrtc/api/peerconnectioninterface.h"
+#include "api/peerconnectioninterface.h"
 
 using namespace webrtc;
 

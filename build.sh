@@ -9,7 +9,7 @@ DEPOT_TOOLS_DIR="$THIRD_PARTY_DIR/depot_tools"
 OS=$(go env GOOS)
 ARCH=$(go env GOARCH)
 CONFIG="Release"
-COMMIT="c279861207c5b15fc51069e96595782350e0ac12"  # branch-heads/58
+COMMIT="88f5d9180eae78a6162cccd78850ff416eb82483"  # branch-heads/64
 
 # Values are from,
 #   https://github.com/golang/go/blob/master/src/go/build/syslist.go
@@ -90,14 +90,14 @@ popd
 
 echo "Building webrtc ..."
 pushd $WEBRTC_SRC
-gn gen out/$CONFIG --args="target_os=\"$TARGET_OS\" target_cpu=\"$TARGET_CPU\" is_debug=false" || exit 1
+gn gen out/$CONFIG --args="target_os=\"$TARGET_OS\" target_cpu=\"$TARGET_CPU\" is_debug=false use_custom_libcxx=false" || exit 1
 ninja -C out/$CONFIG webrtc field_trial metrics_default pc_test_utils || exit 1
 popd
 
 echo "Copying headers ..."
 pushd $WEBRTC_SRC || exit 1
 rm -rf "$INCLUDE_DIR"
-for h in $(find webrtc/ -type f -name '*.h')
+for h in $(find . -type f -name '*.h')
 do
 	mkdir -p "$INCLUDE_DIR/$(dirname $h)"
 	cp $h "$INCLUDE_DIR/$h"

@@ -63,7 +63,7 @@ to really begin at the last dash. Reasons:
 
 ### Building
 
-Latest tested native webrtc archive: `f33698296719f956497d2dbff81b5080864a8804`
+Latest tested native webrtc archive: `88f5d9180eae78a6162cccd78850ff416eb82483`
 
 There are currently two ways to build gowebrtc: the easy way, and the hard way.
 
