@@ -110,13 +110,13 @@ popd
 echo "Concatenating libraries ..."
 pushd $WEBRTC_SRC/out/$CONFIG
 if [ "$OS" = "darwin" ]; then
-	find . -name '*.o' > filelist
+	find obj -name '*.o' > filelist
 	libtool -static -o libwebrtc-magic.a -filelist filelist
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
 elif [ "$ARCH" = "arm" ]; then
-	arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
+	arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find obj -name '*.o')
 else
-	ar crs libwebrtc-magic.a $(find . -name '*.o' -not -name '*.main.o')
+	ar crs libwebrtc-magic.a $(find obj -name '*.o')
 fi
 OUT_LIBRARY=$LIB_DIR/libwebrtc-$OS-$ARCH-magic.a
 mv libwebrtc-magic.a ${OUT_LIBRARY}
