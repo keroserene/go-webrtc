@@ -4,18 +4,23 @@
 *.swm
 *.test
 .DS_Store
-third_party/
-demo/demo
-demo/chat/chat
+
+/third_party/
+/demo/demo
+/demo/chat/chat
 
 # When updating .h, make sure not to include unnecessary directories.
-include/webrtc/build
-include/webrtc/call
-include/webrtc/common_audio
-include/webrtc/examples
-include/webrtc/libjingle
-include/webrtc/sdk
-include/webrtc/test
-include/webrtc/tools
-include/webrtc/video
-include/webrtc/voice_engine
+/include/build/
+/include/buildtools/
+/include/common_audio/
+/include/examples/
+/include/out/
+/include/sdk/
+/include/stats/
+/include/test/
+/include/testing/
+/include/third_party/
+/include/tools/
+/include/tools_webrtc/
+/include/video/
+/include/voice_engine/
