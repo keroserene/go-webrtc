@@ -9,6 +9,7 @@ package webrtc
 /*
 #cgo CXXFLAGS: -std=c++0x
 #cgo LDFLAGS: -L${SRCDIR}/lib
+#cgo android pkg-config: webrtc-android-armeabi-v7a.pc
 #cgo linux,arm pkg-config: webrtc-linux-arm.pc
 #cgo linux,386 pkg-config: webrtc-linux-386.pc
 #cgo linux,amd64 pkg-config: webrtc-linux-amd64.pc

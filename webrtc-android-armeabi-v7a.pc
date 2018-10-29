@@ -1,0 +1,17 @@
+pc=${pcfiledir}
+
+Name: webrtc
+Description: webrtc
+Version: 1
+
+Cflags: \
+	-I${pc}/include \
+	-DPOSIX \
+	-DWEBRTC_ANDROID
+
+Libs: \
+	-L${pc}/lib \
+	-lwebrtc-android-arm-magic \
+	-lOpenSLES \
+	-llog \
+	-ldl
