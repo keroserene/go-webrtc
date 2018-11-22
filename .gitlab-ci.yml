@@ -1,0 +1,164 @@
+
+# use the packages for Go
+.ubuntu-template: &ubuntu-template
+  variables:
+    DEBIAN_FRONTEND: noninteractive
+    GOPATH: /usr/share/gocode
+  before_script:
+    - apt-get -qy update
+    - apt-get -qy install --no-install-recommends
+        build-essential
+        git
+        golang-github-smartystreets-goconvey-dev
+        golang-race-detector-runtime
+        libx11-dev
+        locales
+        pkg-config
+    - mkdir -p $GOPATH
+
+# use Go installed as part of the official, Debian-based Docker images
+.golang-docker-debian-template: &golang-docker-debian-template
+  variables:
+    DEBIAN_FRONTEND: noninteractive
+  before_script:
+    - apt-get -qy update
+    - apt-get -qy install --no-install-recommends
+        ca-certificates
+        git
+        lbzip2
+        libx11-dev
+        locales
+        pkg-config
+        wget
+        xz-utils
+    - go get github.com/smartystreets/goconvey/convey
+
+.build_env_setup: &build_env_setup |
+  set -x
+  cat /etc/apt/sources.list | sed 's,^deb,deb-src,' >> /etc/apt/sources.list
+  apt-get -qy update
+  apt-get -qy install --no-install-recommends git locales
+  apt-get -qy build-dep chromium-browser
+  # libwebrtc build wants en_US.UTF-8
+  grep '^en_US.UTF-8 UTF-8' /etc/locale.gen || echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+  locale-gen
+  # Create symbolic links under $GOPATH, this is needed for local build
+  export src=$GOPATH/src
+  mkdir -p $src/github.com/keroserene
+  mkdir -p $src/gitlab.com/$CI_PROJECT_NAMESPACE
+  ln -s $CI_PROJECT_DIR $src/github.com/keroserene/go-webrtc
+  ln -s $CI_PROJECT_DIR $src/gitlab.com/$CI_PROJECT_PATH
+    # build libwebrtc binaries
+  git config --global user.name "John Doe"
+  git config --global user.email "jdoe@email.com"
+  git config --global core.autocrlf false
+  git config --global core.filemode false
+  rm -rf include/ lib/
+  set +x
+
+.artifacts-template: &artifacts-template
+  artifacts:
+    name: "${CI_PROJECT_PATH}_${CI_JOB_STAGE}_${CI_COMMIT_REF_NAME}_${CI_COMMIT_SHA}"
+    paths:
+      - include/
+      - lib/
+    when:
+      always
+    expire_in: 1 day
+  after_script:
+    - echo "Download debug artifacts from https://gitlab.com/${CI_PROJECT_PATH}/-/jobs"
+
+.script-template: &script-template
+  except:
+    - schedules
+  script:
+    # Create symbolic links under $GOPATH, this is needed for local build
+    - export src=$GOPATH/src
+    - mkdir -p $src/github.com/keroserene
+    - mkdir -p $src/gitlab.com/$CI_PROJECT_NAMESPACE
+    - ln -s $CI_PROJECT_DIR $src/github.com/keroserene/go-webrtc
+    - ln -s $CI_PROJECT_DIR $src/gitlab.com/$CI_PROJECT_PATH
+
+    # build it for go
+    - cd $src/github.com/keroserene/go-webrtc
+    - go get -v .
+    - go build -v -x .
+    - go vet -v .
+    - go test -v -race .
+
+
+# -- jobs ------------------------------------------------------------
+
+debian-stretch_go-1.10:
+  image: golang:1.10-stretch
+  <<: *golang-docker-debian-template
+  <<: *artifacts-template
+  <<: *script-template
+
+debian-stretch_go-1.11:
+  image: golang:1.11-stretch
+  <<: *golang-docker-debian-template
+  <<: *artifacts-template
+  <<: *script-template
+
+ubuntu-devel:
+  image: ubuntu:devel
+  <<: *ubuntu-template
+  <<: *artifacts-template
+  <<: *script-template
+
+ubuntu-rolling:
+  image: ubuntu:rolling
+  <<: *ubuntu-template
+  <<: *artifacts-template
+  <<: *script-template
+
+ubuntu-lts:
+  image: ubuntu:latest
+  <<: *ubuntu-template
+  <<: *artifacts-template
+  <<: *script-template
+
+libwebrtc-linux-amd64-magic:
+  only:
+    - schedules
+  image: debian:stretch
+  # this job needs 20+ gigs of disk
+  tags:
+    - largedisk
+  <<: *artifacts-template
+  script:
+    - *build_env_setup
+    - GOOS=linux GOARCH=amd64 ./build.sh
+
+libwebrtc-linux-arm-magic:
+  only:
+    - schedules
+  image: debian:stretch
+  # this job needs 20+ gigs of disk
+  tags:
+    - largedisk
+  <<: *artifacts-template
+  script:
+    - *build_env_setup
+    - apt-get -qy install --no-install-recommends binutils-arm-linux-gnueabihf
+    - GOOS=linux GOARCH=arm ./build.sh
+
+android:
+  image: golang:1.11-stretch
+  # this job needs 20+ gigs of disk
+  tags:
+    - largedisk
+  only:
+    - schedules
+  <<: *golang-docker-debian-template
+  <<: *artifacts-template
+  script:
+    - *build_env_setup
+    - apt-get -qy install --no-install-recommends lsb-release sudo
+    - export WEBRTC_SRC="$CI_PROJECT_DIR/third_party/webrtc/src"
+    - export ANDROID_HOME=$WEBRTC_SRC/third_party/android_tools/sdk
+    - GOOS=android GOARCH=arm ./build.sh || ( $WEBRTC_SRC/build/install-build-deps-android.sh && GOOS=android GOARCH=arm ./build.sh )
+  after_script:
+    - cat third_party/webrtc/.gclient || true
+    - cat third_party/webrtc/.gclient_entries || true
