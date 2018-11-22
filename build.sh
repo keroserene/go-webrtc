@@ -5,8 +5,10 @@
 # For a cross compile:
 #   GOOS=linux GOARCH=amd64 ./build.sh
 #   GOOS=linux GOARCH=arm ./build.sh
-# (For a cross-compile from linux-amd64 to linux-arm, you may need to install the binutils-arm-linux-gnueabihf package.)
+#   GOOS=android GOARCH=arm ./build.sh
 # For macOS (GOOS=darwin GOARCH=amd64), you can currently only do a native compile.
+# For a cross-compile to linux-arm, you need to install the binutils-arm-linux-gnueabihf package.
+# For a cross-compile to android-arm, first run third_party/webrtc/src/build/install-build-deps-android.sh to install needed dependencies.
 
 PROJECT_DIR=$(pwd)
 THIRD_PARTY_DIR="$PROJECT_DIR/third_party"
@@ -22,6 +24,10 @@ COMMIT="88f5d9180eae78a6162cccd78850ff416eb82483"  # branch-heads/64
 # Values are from,
 #   https://github.com/golang/go/blob/master/src/go/build/syslist.go
 #   https://gn.googlesource.com/gn/+/master/docs/reference.md
+#
+# Android steps from:
+#   https://www.chromium.org/developers/gn-build-configuration
+#   https://chromium.googlesource.com/chromium/src/+/master/docs/android_build_instructions.md
 
 oses=",linux:linux,darwin:mac,windows:win,android:android,"
 cpus=",386:x86,amd64:x64,arm:arm,"
@@ -53,8 +59,22 @@ else
 	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $DEPOT_TOOLS_DIR || exit 1
 fi
 
-if [[ -d $WEBRTC_DIR ]]; then
-	echo "Syncing webrtc ..."
+if [[ ! -d $WEBRTC_DIR ]]; then
+	echo "Getting webrtc ..."
+	mkdir -p $WEBRTC_DIR
+	pushd $WEBRTC_DIR
+	gclient config --name src $WEBRTC_REPO || exit 1
+	popd
+fi
+
+if [[ $TARGET_OS == 'android' ]]; then
+	echo "Setting gclient target_os to android"
+	# Whacky sed to append 'android' to the target_os list, without clobbering what may be there already.
+	sed -i "/^target_os *= *.*\\<android\\>/{p;h;d}; /^target_os *= */{s/ *]/, 'android'&/;p;h;d}; \${x;s/^target_os/&/;tx;atarget_os = [ 'android' ]"$'\n'";:x x}" $WEBRTC_DIR/.gclient
+fi
+
+echo "Syncing webrtc ..."
+if [[ -d $WEBRTC_SRC ]]; then
 	pushd $WEBRTC_SRC || exit 1
 	if ! git diff-index --quiet HEAD --; then
 		echo -en "\nOpen files present in $WEBRTC_SRC\nReset them? (y/N): "
@@ -66,18 +86,18 @@ if [[ -d $WEBRTC_DIR ]]; then
 		git reset --hard HEAD || exit 1
 	fi
 	popd
-
-	pushd $WEBRTC_DIR
-	gclient sync --with_branch_heads -r $COMMIT || exit 1
-	popd
-else
-	echo "Getting webrtc ..."
-	mkdir -p $WEBRTC_DIR
-	pushd $WEBRTC_DIR
-	gclient config --name src $WEBRTC_REPO || exit 1
-	gclient sync --with_branch_heads -r $COMMIT || exit 1
-	popd
 fi
+pushd $WEBRTC_DIR
+# "echo n" is to say "no" to the Google Play services license agreement and download.
+echo n | gclient sync --with_branch_heads -r $COMMIT || exit 1
+# Delete where the Google Play services downloads to, just to be sure.
+# First check that an ancestor directory of what we're deleting exists, so we're more likely to notice a source reorganization.
+if [[ $TARGET_OS == 'android' && ! -d "$WEBRTC_SRC/third_party/android_tools/sdk/extras/google/m2repository" ]]; then
+	echo "Didn't find Google Play services directory for removal, please check" 1>&2
+	exit 1
+fi
+rm -rf "$WEBRTC_SRC/third_party/android_tools/sdk/extras/google/m2repository/com/google/android/gms"
+popd
 
 if [ "$ARCH" = "arm" ]; then
 	echo "Manually fetching arm sysroot"
@@ -121,6 +141,9 @@ if [ "$OS" = "darwin" ]; then
 	find obj -name '*.o' -print0 \
 		| xargs -0 -- libtool -static -o libwebrtc-magic.a
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
+elif [ "$OS" = "android" ]; then
+	find obj -name '*.o' -print0 | sort -z \
+		| xargs -0 -- $WEBRTC_SRC/third_party/android_tools/ndk/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin/arm-linux-androideabi-ar crsD libwebrtc-magic.a
 elif [ "$ARCH" = "arm" ]; then
 	find obj -name '*.o' -print0 | sort -z \
 		| xargs -0 -- arm-linux-gnueabihf-ar crsD libwebrtc-magic.a
