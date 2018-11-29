@@ -6,7 +6,6 @@ Version: 1
 
 Cflags: \
 	-I${pc}/include \
-	-D_GLIBCXX_USE_CXX11_ABI=0 \
 	-DPOSIX \
 	-DWEBRTC_MAC
 
