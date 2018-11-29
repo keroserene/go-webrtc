@@ -11,7 +11,7 @@ addons:
 matrix:
     include:
         - os: linux
-          dist: trusty
+          dist: xenial
           sudo: required
           go: 1.6
           env: CC="gcc-5" CXX="g++-5" OS="linux"
