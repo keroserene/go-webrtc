@@ -25,4 +25,4 @@ script:
     - go vet .
     - go test -v -race .
     # Only linux until https://github.com/golang/go/issues/16150 is fixed.
-    - if [[ "$OS" == "linux" ]]; then CGO_CFLAGS="-fsanitize=address" CGO_LDFLAGS="-fsanitize=address -fuse-ld=gold" go test -v .; fi
+    - if [[ "$OS" == "linux" ]]; then CGO_CFLAGS="-fsanitize=address" CGO_CXXFLAGS="-fsanitize=address" CGO_LDFLAGS="-fsanitize=address -fuse-ld=gold" go test -v .; fi
