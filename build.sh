@@ -5,8 +5,8 @@
 # For a cross compile:
 #   GOOS=linux GOARCH=amd64 ./build.sh
 #   GOOS=linux GOARCH=arm ./build.sh
-#   GOOS=darwin GOARCH=amd64 ./build.sh
 # (For a cross-compile from linux-amd64 to linux-arm, you may need to install the binutils-arm-linux-gnueabihf package.)
+# For macOS (GOOS=darwin GOARCH=amd64), you can currently only do a native compile.
 
 PROJECT_DIR=$(pwd)
 THIRD_PARTY_DIR="$PROJECT_DIR/third_party"
