@@ -24,5 +24,4 @@ script:
     - test -z "$(go fmt .)"
     - go vet .
     - go test -v -race .
-    # Disabled until https://github.com/golang/go/issues/16150 is fixed.
-    # CGO_CFLAGS="-fsanitize=address" CGO_CXXFLAGS="-fsanitize=address" CGO_LDFLAGS="-fsanitize=address -fuse-ld=gold" go test -v .
+    - CGO_CFLAGS="-fsanitize=address" CGO_CXXFLAGS="-fsanitize=address" CGO_LDFLAGS="-fsanitize=address" go test -v .
