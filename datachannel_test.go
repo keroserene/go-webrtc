@@ -86,9 +86,11 @@ func TestDataStateEnums(t *testing.T) {
 				cgoFakeStateChange(c, DataStateConnecting)
 				cgoFakeStateChange(c, DataStateClosing)
 
-				So(func() {
-					cgoFakeStateChange(c, 999)
-				}, ShouldPanic)
+				// Disabled until https://github.com/golang/go/issues/16150 is fixed.
+				// See the discussion in https://github.com/keroserene/go-webrtc/issues/95
+				// So(func() {
+				// 	cgoFakeStateChange(c, 999)
+				// }, ShouldPanic)
 			})
 
 			Convey("OnBufferedAmountLow", func() {
