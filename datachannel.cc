@@ -155,12 +155,13 @@ class FakeDataChannel : public DataChannelInterface {
   DataState state_ = DataState::kClosed;
 };
 
-rtc::scoped_refptr<CGoDataChannelObserver> test_observer;
+std::vector<rtc::scoped_refptr<CGoDataChannelObserver>> test_observers;
 
 void* CGO_getFakeDataChannel() {
   rtc::scoped_refptr<FakeDataChannel> test_dc = new rtc::RefCountedObject<FakeDataChannel>();
-  test_observer = new rtc::RefCountedObject<CGoDataChannelObserver>(test_dc);
-  auto o = test_observer.get();
+  rtc::scoped_refptr<CGoDataChannelObserver> to = new rtc::RefCountedObject<CGoDataChannelObserver>(test_dc);
+  test_observers.push_back(to);
+  auto o = to.get();
   test_dc->RegisterObserver(o);
   return (void *)o;
 }
