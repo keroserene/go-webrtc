@@ -98,7 +98,7 @@ popd
 
 echo "Building webrtc ..."
 pushd $WEBRTC_SRC
-gn gen out/$CONFIG --args="target_os=\"$TARGET_OS\" target_cpu=\"$TARGET_CPU\" is_debug=false use_custom_libcxx=false" || exit 1
+gn gen out/$CONFIG --args="target_os=\"$TARGET_OS\" target_cpu=\"$TARGET_CPU\" is_debug=false symbol_level=0 use_custom_libcxx=false" || exit 1
 ninja -C out/$CONFIG webrtc field_trial metrics_default pc_test_utils || exit 1
 popd
 
