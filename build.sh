@@ -122,10 +122,10 @@ if [ "$OS" = "darwin" ]; then
 		| xargs -0 -- libtool -static -o libwebrtc-magic.a
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
 elif [ "$ARCH" = "arm" ]; then
-	find obj -name '*.o' -print0 \
+	find obj -name '*.o' -print0 | sort -z \
 		| xargs -0 -- arm-linux-gnueabihf-ar crs libwebrtc-magic.a
 else
-	find obj -name '*.o' -print0 \
+	find obj -name '*.o' -print0 | sort -z \
 		| xargs -0 -- ar crs libwebrtc-magic.a
 fi
 OUT_LIBRARY=$LIB_DIR/libwebrtc-$OS-$ARCH-magic.a
