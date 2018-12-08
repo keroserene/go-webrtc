@@ -105,9 +105,9 @@ popd
 echo "Copying headers ..."
 pushd $WEBRTC_SRC || exit 1
 rm -rf "$INCLUDE_DIR"
-for h in $(find . -type f -name '*.h')
+find . -type f -name '*.h' -print0 | while IFS= read -r -d '' h;
 do
-	mkdir -p "$INCLUDE_DIR/$(dirname $h)"
+	mkdir -p "$INCLUDE_DIR/$(dirname "$h")"
 	cp $h "$INCLUDE_DIR/$h"
 done
 popd
@@ -118,13 +118,15 @@ popd
 echo "Concatenating libraries ..."
 pushd $WEBRTC_SRC/out/$CONFIG
 if [ "$OS" = "darwin" ]; then
-	find obj -name '*.o' > filelist
-	libtool -static -o libwebrtc-magic.a -filelist filelist
+	find obj -name '*.o' -print0 \
+		| xargs -0 -- libtool -static -o libwebrtc-magic.a
 	strip -S -x -o libwebrtc-magic.a libwebrtc-magic.a
 elif [ "$ARCH" = "arm" ]; then
-	arm-linux-gnueabihf-ar crs libwebrtc-magic.a $(find obj -name '*.o')
+	find obj -name '*.o' -print0 \
+		| xargs -0 -- arm-linux-gnueabihf-ar crs libwebrtc-magic.a
 else
-	ar crs libwebrtc-magic.a $(find obj -name '*.o')
+	find obj -name '*.o' -print0 \
+		| xargs -0 -- ar crs libwebrtc-magic.a
 fi
 OUT_LIBRARY=$LIB_DIR/libwebrtc-$OS-$ARCH-magic.a
 mv libwebrtc-magic.a ${OUT_LIBRARY}
