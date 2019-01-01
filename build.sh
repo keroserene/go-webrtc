@@ -21,7 +21,7 @@ COMMIT="88f5d9180eae78a6162cccd78850ff416eb82483"  # branch-heads/64
 
 # Values are from,
 #   https://github.com/golang/go/blob/master/src/go/build/syslist.go
-#   https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/reference.md
+#   https://gn.googlesource.com/gn/+/master/docs/reference.md
 
 oses=",linux:linux,darwin:mac,windows:win,android:android,"
 cpus=",386:x86,amd64:x64,arm:arm,"
