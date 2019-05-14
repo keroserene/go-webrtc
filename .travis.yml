@@ -14,8 +14,9 @@ matrix:
           dist: xenial
           sudo: required
           go: 1.6
-          env: CC="gcc-5" CXX="g++-5" OS="linux"
+          env: CC="gcc-5" CXX="g++-5" OS="linux" CGO_LDFLAGS_ALLOW="-z|noexecstack"
         - os: osx
+          env: CGO_LDFLAGS_ALLOW="-z|noexecstack"
 
 install:
     - go get -u github.com/smartystreets/goconvey
