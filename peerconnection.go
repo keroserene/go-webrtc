@@ -130,7 +130,6 @@ type PeerConnection struct {
 	OnNegotiationNeeded        func()
 	OnIceCandidate             func(IceCandidate)
 	OnIceCandidateError        func()
-	OnIceComplete              func() // Possibly to be removed.
 	OnSignalingStateChange     func(SignalingState)
 	OnIceConnectionStateChange func(IceConnectionState)
 	OnIceGatheringStateChange  func(IceGatheringState)
@@ -514,11 +513,6 @@ func cgoOnIceGatheringStateChange(p int, state IceGatheringState) {
 	pc := PCMap.Get(p).(*PeerConnection)
 	if nil != pc.OnIceGatheringStateChange {
 		pc.OnIceGatheringStateChange(state)
-	}
-	// Although OnIceComplete is to be deprecated in the native API, and no longer
-	// part of the w3 spec, keeping it for go seems easier for the users.
-	if IceGatheringStateComplete == state && nil != pc.OnIceComplete {
-		pc.OnIceComplete()
 	}
 }
 
