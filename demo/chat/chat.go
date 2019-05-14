@@ -40,9 +40,9 @@ const (
 // creation, followed by subsequent individual ICE candidates.
 //
 // However, to ease the user's copy & paste experience, in this case we forgo
-// the trickle ICE and wait for OnIceComplete to fire, which will contain
-// a full SDP mesasge with all ICE candidates, so the user only has to copy
-// one message.
+// the trickle ICE and wait for IceGatheringStateComplete to fire, which will
+// contain a full SDP mesasge with all ICE candidates, so the user only has to
+// copy one message.
 //
 
 func generateOffer() {
@@ -210,19 +210,14 @@ func start(instigator bool) {
 	}
 	// Once all ICE candidates are prepared, they need to be sent to the remote
 	// peer which will attempt reaching the local peer through NATs.
-	pc.OnIceComplete = func() {
-		fmt.Println("Finished gathering ICE candidates.")
-		sdp := pc.LocalDescription().Serialize()
-		signalSend(sdp)
-	}
-	/*
-		pc.OnIceGatheringStateChange = func(state webrtc.IceGatheringState) {
-			fmt.Println("Ice Gathering State:", state)
-			if webrtc.IceGatheringStateComplete == state {
-				// send local description.
-			}
+	pc.OnIceGatheringStateChange = func(state webrtc.IceGatheringState) {
+		fmt.Println("Ice Gathering State:", state)
+		if webrtc.IceGatheringStateComplete == state {
+			fmt.Println("Finished gathering ICE candidates.")
+			sdp := pc.LocalDescription().Serialize()
+			signalSend(sdp)
 		}
-	*/
+	}
 	// A DataChannel is generated through this callback only when the remote peer
 	// has initiated the creation of the data channel.
 	pc.OnDataChannel = func(channel *webrtc.DataChannel) {
