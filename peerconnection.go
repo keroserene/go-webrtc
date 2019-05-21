@@ -31,7 +31,8 @@ package webrtc
 
 /*
 #cgo CXXFLAGS: -std=c++0x
-#cgo LDFLAGS: -L${SRCDIR}/lib -z noexecstack
+#cgo linux LDFLAGS: -L${SRCDIR}/lib -z noexecstack
+#cgo darwin LDFLAGS: -L${SRCDIR}/lib
 #cgo android pkg-config: webrtc-android-armeabi-v7a.pc
 #cgo linux,arm pkg-config: webrtc-linux-arm.pc
 #cgo linux,386 pkg-config: webrtc-linux-386.pc
