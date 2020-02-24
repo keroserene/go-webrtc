@@ -6,17 +6,9 @@ WebRTC for Golang.
 
 ### Current Status:
 
-This repository is currently fluctuating a lot, and the exposed interfaces will
-change. **Do not rely** on anything in here yet!
-
-- A PeerConnection can be successfully established between two separate machines
-  using this Go library.
-- It is possible to exchange bytes over a real DTLS/SCTP datachannel. (See the
-  chat demo)
-- Video/Audio support from the Media API is not implemented as it's low priority
-  for us -- but pull requests will be gladly taken!
-
-There is still lots of work to do!
+As of October 2019, this repository is not actively maintained.
+The project for which it was developed is now using
+[pion/webrtc](https://github.com/pion/webrtc) instead.
 
 ### Usage
 
